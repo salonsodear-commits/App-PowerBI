@@ -67,8 +67,7 @@
     font-size:13.5px;color:var(--text);position:relative;
   }
   .node-row:hover{background:var(--panel)}
-  .node-row.active{background:#1d3050;color:#fff;box-shadow:inset 0 0 0 1px #2f5party}
-  .node-row.active{background:#16314f;box-shadow:inset 0 0 0 1px #27496f}
+  .node-row.active{background:#16314f;color:#fff;box-shadow:inset 0 0 0 1px #27496f}
   .node-row .tw{width:14px;flex:0 0 auto;color:var(--faint);font-size:10px;transition:transform .15s;text-align:center}
   .node-row.collapsed .tw{transform:rotate(-90deg)}
   .node-row .ic{flex:0 0 auto;font-size:13px;width:16px;text-align:center}
@@ -2085,6 +2084,319 @@ N({ id:'sim-9', parent:'simuladores', title:'Escenario 9 · Funcionamiento Inter
   <p>Por eso la misma medida de simulación funciona en todos a la vez: no depende del tipo de visual, sino del contexto de filtro que cada uno genera.</p>`)}
 
   ${best('La regla mental definitiva del simulador', `<p><b>El visual aporta las coordenadas (qué celda). El slicer desconectado aporta los parámetros (qué hacer). La medida compara coordenadas con parámetros y decide. CALCULATE/transición trae la base correcta de cada coordenada.</b> Con esas cuatro frases puedes reconstruir cualquiera de los 9 escenarios desde cero.</p>`)}
+  `
+});
+
+/* ===================== PERFORMANCE ===================== */
+N({ id:'performance', parent:null, title:'Performance y Optimización', icon:'🚀⭐',
+  importancia:'★★★★☆', dificultad:'🔴 Avanzado', uso:'Modelos productivos',
+  subtitle:'Por qué una medida es lenta y cómo arreglarlo: motor de almacenamiento vs motor de fórmulas, antipatrones, uso correcto de variables y optimización de modelo y medidas.',
+  deps:['modelado','transicion'], related:['fn-variables','fn-iteradores'], fns:['fn-variables','calculate'],
+  html: ()=> `
+  ${why('La performance se diseña, no se parchea', `<p>Un informe lento mata la adopción: nadie usa un tablero que tarda 20 segundos por clic. La mayoría de los problemas de performance nacen en el <b>modelo</b> (cardinalidad, relaciones, columnas innecesarias), no en las medidas. Entender los dos motores internos te dice <i>dónde</i> está el cuello de botella.</p>`)}
+
+  <h3>Los dos motores de DAX</h3>
+  ${diagram(`
+   ┌────────────────────────────┐     ┌─────────────────────────────┐
+   │  STORAGE ENGINE (VertiPaq)  │     │  FORMULA ENGINE (FE)        │
+   │  ─────────────────────────  │     │  ─────────────────────────  │
+   │  • Comprime y guarda datos  │     │  • Ejecuta la lógica DAX    │
+   │  • Escanea columnas (rápido)│     │  • Itera, transición, CALC  │
+   │  • Multinúcleo, cacheable   │     │  • Un solo núcleo, sin caché│
+   │  • Operaciones simples      │     │  • Operaciones complejas    │
+   └────────────────────────────┘     └─────────────────────────────┘
+        ▲  rápido y paralelo                 ▲  lento si hace mucho
+   OBJETIVO: que el trabajo lo haga el SE; minimizar el FE.`)}
+  ${engine('La regla de oro de performance', `<p>El <b>Storage Engine</b> (SE) es rápido, paralelo y cacheable; el <b>Formula Engine</b> (FE) es secuencial y caro. Una medida lenta casi siempre es una que obliga al FE a iterar fila a fila (muchos "callbacks" al SE). <b>Optimizar = empujar el trabajo al SE y reducir lo que hace el FE.</b> Lo mides con DAX Studio (Server Timings: tiempo SE vs FE).</p>`)}
+
+  <h3>Antipatrones más comunes ❌</h3>
+  ${tbl(['Antipatrón','Por qué es lento','Solución'],[
+    ['Iterar la tabla de hechos con una medida dentro','Transición por millones de filas (FE)','Itera la dimensión: <code class="inl">SUMX(VALUES(Dim[Clave]),[M])</code>'],
+    ['Columnas calculadas que podrían ser medidas','Ocupan memoria, no se comprimen bien','Conviértelas en medidas si dependen del contexto'],
+    ['<code class="inl">FILTER</code> sobre tabla entera para un valor','Itera todo en el FE','Predicado simple: <code class="inl">CALCULATE([M], Dim[Col]="x")</code>'],
+    ['Relaciones bidireccionales globales','Propagación cara y ambigua','Simple + <code class="inl">CROSSFILTER</code> puntual en medida'],
+    ['Columnas de texto de alta cardinalidad en hechos','Mala compresión, modelo pesado','Llévalas a dimensiones; deja claves enteras en hechos'],
+    ['<code class="inl">DISTINCTCOUNT</code> innecesario','Costoso en alta cardinalidad','<code class="inl">COUNTROWS</code> si solo cuentas filas'],
+    ['Repetir la misma subexpresión','El FE la recalcula N veces','Guárdala en una <code class="inl">VAR</code>'],
+  ])}
+
+  <h3>Variables: la optimización más fácil</h3>
+  ${dax(`
+-- ❌ [Ventas AA] se calcula 3 veces
+Var Mala = DIVIDE([Ventas]-[Ventas AA],[Ventas AA]) + IF([Ventas AA]>0,1,0)
+
+-- ✅ se calcula 1 vez
+Var Buena =
+VAR AA = [Ventas AA]
+RETURN DIVIDE([Ventas]-AA, AA) + IF(AA>0,1,0)`)}
+  ${best('', `<p>Una <code class="inl">VAR</code> se evalúa una sola vez y se reutiliza. Además de legibilidad, es ganancia directa de performance cuando la expresión es cara (CALCULATE con time intelligence, DISTINCTCOUNT…).</p>`)}
+
+  <h3>Optimización del modelo (mayor impacto)</h3>
+  ${best('Checklist de modelo', `<ul>
+    <li><b>Star schema</b>: dimensiones pequeñas, hechos estrechos. <span class="pill" data-go="modelado">Ver modelado</span>.</li>
+    <li><b>Reduce cardinalidad</b>: claves enteras, no GUIDs/textos; separa fecha y hora en dos columnas.</li>
+    <li><b>Elimina columnas que no usas</b>: cada columna pesa en memoria, aunque no la muestres.</li>
+    <li><b>Evita columnas calculadas</b> que dependan del contexto; prefiere medidas.</li>
+    <li><b>Tipos correctos</b>: enteros para claves, decimales fijos para importes; evita flotantes innecesarios.</li>
+    <li><b>Una sola tabla de fechas</b> marcada; desactiva "Auto fecha/hora" (crea jerarquías ocultas que inflan el modelo).</li>
+  </ul>`)}
+
+  <h3>Optimización de medidas</h3>
+  ${best('', `<ul>
+    <li>Filtra con <b>predicados simples</b> antes que con <code class="inl">FILTER</code>; reserva FILTER para lógica multi-columna.</li>
+    <li>Evita la <b>transición masiva</b>: itera dimensiones, no hechos.</li>
+    <li>Mueve cálculos invariantes <b>fuera</b> de los iteradores (a una VAR previa).</li>
+    <li>Usa <code class="inl">DIVIDE</code> y guards (<code class="inl">HASONEVALUE</code>) para evitar trabajo y errores en totales.</li>
+    <li>Prefiere <code class="inl">SUMMARIZE</code>/<code class="inl">SUMMARIZECOLUMNS</code> bien hechos a iteraciones manuales para agrupar.</li>
+  </ul>`)}
+
+  ${warn('Mide antes de optimizar', `<p>No optimices a ciegas. Usa el <b>Performance Analyzer</b> de Power BI para ver qué visual tarda, y <b>DAX Studio</b> (Server Timings) para separar tiempo de SE y FE. Optimizar la medida equivocada es tiempo perdido: el cuello suele ser un visual con demasiados elementos o un modelo mal comprimido.</p>`)}
+
+  ${exer('Diagnóstico de performance', `<p>Una medida <code class="inl">SUMX(Ventas, [Margen Cliente])</code> sobre 8M de filas tarda 15s. ¿Qué harías?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Solución</summary>
+  <p>El problema es la <b>transición por fila</b> sobre 8M de registros (FE saturado). Reescribir para iterar la <b>dimensión cliente</b> (miles de filas), no los hechos: <code class="inl">SUMX(VALUES(Clientes[ClienteID]), [Margen Cliente])</code>. Si el margen es aditivo, mejor aún evitar el iterador y resolverlo con una agregación directa en el SE. Pasarías de 15s a milisegundos.</p></details>`)}
+  `
+});
+
+/* ===================== CASOS DE NEGOCIO ===================== */
+N({ id:'casos', parent:null, title:'Casos Reales de Negocio', icon:'🏢⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Aplicación profesional',
+  subtitle:'El DAX de los módulos anteriores aplicado a problemas financieros y comerciales reales: P&L (OPEX, CAPEX, EBITDA), tesorería (aging, cobranzas, provisiones), control de gestión (presupuesto, forecast, variaciones) e inteligencia comercial.',
+  deps:['calculate','fn-tiempo'], related:['simuladores','performance'],
+  html: ()=> `
+  ${why('Pensar como controller, no como técnico', `<p>El salto final a senior es traducir una pregunta de negocio ("¿por qué cayó el margen en LATAM?") en un modelo analítico. Estos casos te entrenan en ese músculo: cada uno parte de la <b>pregunta del negocio</b> y llega al DAX, no al revés. Todos usan el modelo financiero del módulo de <span class="pill" data-go="modelado">modelado</span>.</p>`)}
+  <p>Cuatro áreas, cada una con sus medidas canónicas:</p>
+  `
+});
+
+/* ---- Casos P&L ---- */
+N({ id:'casos-pyl', parent:'casos', title:'P&L: OPEX, CAPEX, EBITDA y Margen', icon:'🔴',
+  importancia:'★★★★★', dificultad:'🔴', uso:'Reporting financiero',
+  deps:['casos','fn-filtros'], related:['casos-control','sim-8'], fns:['calculate','fn-filtros'],
+  subtitle:'La cuenta de resultados en DAX: clasificar gastos, construir el EBITDA por bloques y calcular márgenes.',
+  html: ()=> `
+  <h3>El modelo de P&L</h3>
+  <p>Tabla de hechos <code class="inl">Movimientos</code>(Fecha, CuentaID, CECO, Escenario, Importe) + dimensión <code class="inl">PlanCuentas</code> con una columna <code class="inl">Grupo</code> (Ingresos, COGS, OPEX, D&A…) que define la estructura del P&L. <b>La clasificación vive en la dimensión, no en la medida.</b></p>
+
+  <h3>Bloques del EBITDA</h3>
+  ${dax(`
+Ingresos = CALCULATE ( SUM ( Movimientos[Importe] ), PlanCuentas[Grupo] = "Ingresos" )
+COGS     = CALCULATE ( SUM ( Movimientos[Importe] ), PlanCuentas[Grupo] = "COGS" )
+OPEX     = CALCULATE ( SUM ( Movimientos[Importe] ), PlanCuentas[Grupo] = "OPEX" )
+
+Margen Bruto   = [Ingresos] - [COGS]
+% Margen Bruto = DIVIDE ( [Margen Bruto], [Ingresos] )
+EBITDA         = [Margen Bruto] - [OPEX]
+% EBITDA       = DIVIDE ( [EBITDA], [Ingresos] )`)}
+  ${engine('', `<p>Cada bloque <b>reemplaza</b> el filtro de Grupo y <b>conserva</b> el resto del contexto (mes, CECO, escenario). Por eso el mismo <code class="inl">[EBITDA]</code> funciona en cualquier celda: por mes, por unidad de negocio, por región — el contexto lo aporta el visual.</p>`)}
+
+  <h3>OPEX vs CAPEX: la distinción contable</h3>
+  ${warn('CAPEX no va al P&L directamente', `<p>El <b>OPEX</b> (gasto operativo) impacta el resultado del periodo. El <b>CAPEX</b> (inversión en activos) <b>no</b> es gasto del periodo: se capitaliza y golpea el P&L <i>vía amortización</i> (D&A) a lo largo de la vida útil. Modelar esto bien evita el error de "restar el CAPEX del EBITDA".</p>`)}
+  ${dax(`
+CAPEX        = CALCULATE ( SUM ( Movimientos[Importe] ), PlanCuentas[Grupo] = "CAPEX" )
+Amortización = CALCULATE ( SUM ( Movimientos[Importe] ), PlanCuentas[Grupo] = "D&A" )
+EBIT         = [EBITDA] - [Amortización]    -- EBIT sí incluye D&A; EBITDA no`)}
+
+  <h3>OPEX por naturaleza y por centro de coste</h3>
+  ${dax(`
+% OPEX sobre Ingresos = DIVIDE ( [OPEX], [Ingresos] )
+OPEX por CECO         = [OPEX]   -- en una matriz con CECO en filas, se desglosa solo
+Peso CECO en OPEX     = DIVIDE ( [OPEX], CALCULATE ( [OPEX], ALL ( CentrosCoste ) ) )`)}
+
+  ${best('', `<ul>
+    <li>Clasifica en la <b>dimensión de cuentas</b> (Grupo, Subgrupo, signo). Las medidas solo seleccionan grupos.</li>
+    <li>Define el <b>signo</b> de forma coherente (gastos negativos o positivos) y sé consistente en todo el modelo.</li>
+    <li>EBITDA = resultado <b>antes</b> de intereses, impuestos, depreciación y amortización: no restes D&A ni financieros.</li>
+  </ul>`)}
+  ${exer('', `<p>Ingresos 1.000, COGS 600, OPEX 250, D&A 50. ¿EBITDA, % EBITDA y EBIT?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Solución</summary><p>Margen bruto = 400. EBITDA = 400 − 250 = <b>150</b>. % EBITDA = 150/1000 = <b>15%</b>. EBIT = 150 − 50 = <b>100</b>. El D&A separa EBITDA de EBIT.</p></details>`)}
+  `
+});
+
+/* ---- Casos Tesorería ---- */
+N({ id:'casos-tesoreria', parent:'casos', title:'Tesorería: Aging, Cobranzas, Deuda y Provisiones', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴', uso:'Crédito y cobranzas',
+  deps:['casos','fn-tiempo'], related:['relaciones','fn-logica'], fns:['calculate','fn-logica'],
+  subtitle:'Antigüedad de la deuda, días de cobro, provisiones por incobrabilidad: el DAX del circulante.',
+  html: ()=> `
+  <h3>Aging de cuentas por cobrar</h3>
+  <p>Pregunta de negocio: <b>"¿cuánto me deben y desde hace cuánto?"</b> El aging clasifica la deuda pendiente por tramos de antigüedad.</p>
+  ${dax(`
+Días Vencido =
+VAR Hoy = MAX ( Calendario[Fecha] )    -- fecha de corte del análisis
+RETURN
+    SUMX (
+        Facturas,
+        VAR dias = DATEDIFF ( RELATED ( Facturas[FechaVencimiento] ), Hoy, DAY )
+        RETURN dias
+    )`)}
+  ${dax(`
+Tramo Aging =
+SWITCH (
+    TRUE (),
+    [Días Vencido] <= 0,  "Por vencer",
+    [Días Vencido] <= 30, "1-30",
+    [Días Vencido] <= 60, "31-60",
+    [Días Vencido] <= 90, "61-90",
+    "+90 (riesgo)"
+)
+Deuda Vencida +90 =
+CALCULATE ( [Saldo Pendiente], FILTER ( Facturas, [Días Vencido] > 90 ) )`)}
+  ${warn('El aging depende de la fecha de corte', `<p>El tramo cambia según el "hoy". Usa <code class="inl">MAX(Calendario[Fecha])</code> como corte para que el aging respete el slicer de fecha y puedas ver fotos históricas. Mídelo por <b>fecha de vencimiento</b>, no de emisión → suele requerir <span class="pill" data-go="relaciones">USERELATIONSHIP</span>.</p>`)}
+
+  <h3>Días de cobro (DSO) y cobranzas</h3>
+  ${dax(`
+Saldo Pendiente = [Facturado] - [Cobrado]
+DSO =
+DIVIDE ( [Saldo Pendiente], [Facturado] ) * [Días del Periodo]   -- días de venta en la calle
+% Cobrado = DIVIDE ( [Cobrado], [Facturado] )`)}
+
+  <h3>Provisiones por incobrabilidad</h3>
+  ${dax(`
+Provisión Incobrables =
+SUMX (
+    VALUES ( Aging[Tramo] ),
+    VAR saldo = [Saldo Pendiente]
+    VAR pct   = RELATED ( Aging[% Provisión] )   -- % de riesgo por tramo (ej. +90 = 50%)
+    RETURN saldo * pct
+)`)}
+  ${engine('', `<p>Cada tramo de aging tiene un % de provisión (mayor cuanto más vencido). La provisión total es la suma ponderada del saldo por su riesgo. Es el patrón <span class="pill" data-go="sim-3">factor por categoría</span> aplicado a riesgo crediticio.</p>`)}
+
+  <h3>Evolución de la deuda</h3>
+  ${dax(`
+Deuda Inicio Periodo = CALCULATE ( [Saldo Pendiente], DATEADD ( Calendario[Fecha], -1, MONTH ) )
+Variación Deuda      = [Saldo Pendiente] - [Deuda Inicio Periodo]`)}
+
+  ${best('', `<ul>
+    <li>Aging y DSO siempre con <b>fecha de corte</b> explícita (<code class="inl">MAX(Calendario[Fecha])</code>).</li>
+    <li>Provisión por tramos en una <b>tabla de parámetros</b> (% por tramo), no hardcodeada.</li>
+    <li>Separa <b>facturado</b> y <b>cobrado</b> como medidas base; el saldo se deriva.</li>
+  </ul>`)}
+  `
+});
+
+/* ---- Casos Control de Gestión ---- */
+N({ id:'casos-control', parent:'casos', title:'Control de Gestión: Presupuesto, Forecast y Variaciones', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴', uso:'Planning & control',
+  deps:['casos','calculate'], related:['sim-7','sim-8'], fns:['calculate','fn-errores'],
+  subtitle:'Real vs Presupuesto vs Forecast en un mismo modelo: el análisis de variaciones que sostiene cualquier comité de gestión.',
+  html: ()=> `
+  <h3>El patrón de escenarios en una sola tabla</h3>
+  <p>Real, Presupuesto y Forecast conviven en la <b>misma tabla de hechos</b>, diferenciados por una dimensión <code class="inl">Escenario</code>. Una sola estructura, comparaciones triviales.</p>
+  ${dax(`
+Real     = CALCULATE ( SUM ( Movimientos[Importe] ), Escenario[Tipo] = "Real" )
+Ppto     = CALCULATE ( SUM ( Movimientos[Importe] ), Escenario[Tipo] = "Presupuesto" )
+Forecast = CALCULATE ( SUM ( Movimientos[Importe] ), Escenario[Tipo] = "Forecast" )`)}
+
+  <h3>Análisis de variaciones</h3>
+  ${dax(`
+Desvío Ppto        = [Real] - [Ppto]
+Desvío Ppto %      = DIVIDE ( [Desvío Ppto], [Ppto] )
+Cumplimiento Ppto  = DIVIDE ( [Real], [Ppto] )                 -- 1 = 100%
+Desvío Forecast    = [Real] - [Forecast]`)}
+  ${dax(`
+-- Semáforo de desempeño (cuidado con el signo en cuentas de gasto)
+Estado Presupuestario =
+VAR cumpl = [Cumplimiento Ppto]
+RETURN
+    SWITCH (
+        TRUE (),
+        cumpl >= 0.98 && cumpl <= 1.02, "🟢 En línea",
+        cumpl < 0.98,  "🔵 Por debajo",
+        "🔴 Sobre presupuesto"
+    )`)}
+  ${warn('El signo del desvío depende de si es ingreso o gasto ⚠️', `<p>En <b>ingresos</b>, Real &gt; Ppto es bueno. En <b>gastos</b>, Real &gt; Ppto es malo. Un semáforo que no distingue cuenta dará verde a un sobrecoste. Solución: una columna <code class="inl">Sentido</code> en PlanCuentas (+1 ingreso / −1 gasto) y multiplicar el desvío por ella antes de evaluar el color.</p>`)}
+
+  <h3>Bridge de variación (puente Ppto → Real)</h3>
+  ${dax(`
+-- Descomposición precio/volumen del desvío de ingresos
+Efecto Volumen = ( [Unidades Real] - [Unidades Ppto] ) * [Precio Ppto]
+Efecto Precio  = ( [Precio Real]  - [Precio Ppto] )  * [Unidades Real]
+Check Bridge   = [Efecto Volumen] + [Efecto Precio] - [Desvío Ppto]   -- debe dar ≈ 0`)}
+  ${engine('', `<p>El "puente" explica <i>por qué</i> el real difiere del presupuesto separando cuánto es por vender más/menos unidades (volumen) y cuánto por precio. <code class="inl">Check Bridge</code> ≈ 0 valida que la descomposición cuadra: una verificación que todo controller agradece.</p>`)}
+
+  <h3>Forecast = Real YTD + Presupuesto resto del año</h3>
+  ${dax(`
+Forecast Rolling =
+VAR Corte = MAX ( Calendario[Fecha] )
+VAR RealYTD =
+    CALCULATE ( [Real], Calendario[Fecha] <= Corte )
+VAR PptoResto =
+    CALCULATE ( [Ppto], Calendario[Fecha] > Corte )
+RETURN
+    RealYTD + PptoResto`)}
+  ${best('', `<ul>
+    <li>Un único modelo con dimensión <b>Escenario</b>: evita duplicar medidas por versión.</li>
+    <li>Maneja el <b>signo</b> de los desvíos por naturaleza de cuenta.</li>
+    <li>Acompaña el desvío con su <b>descomposición</b> (precio/volumen, mix) — es lo que pide la dirección.</li>
+    <li>Forecast rolling = real hasta el corte + plan después; el corte = <code class="inl">MAX(Calendario[Fecha])</code> o un parámetro.</li>
+  </ul>`)}
+  `
+});
+
+/* ---- Casos Inteligencia Comercial ---- */
+N({ id:'casos-comercial', parent:'casos', title:'Inteligencia Comercial: Clientes, Mix, Pareto y Retención', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴', uso:'Análisis comercial',
+  deps:['casos','fn-ranking'], related:['fn-ranking','sim-1'], fns:['fn-ranking','calculate','fn-filtros'],
+  subtitle:'Concentración de clientes, análisis ABC/Pareto, mix de producto, ticket medio y retención: el DAX que dirige la estrategia comercial.',
+  html: ()=> `
+  <h3>Concentración de clientes (Pareto 80/20)</h3>
+  ${dax(`
+Ventas Top 10 Clientes =
+CALCULATE ( [Ventas], TOPN ( 10, ALLSELECTED ( Clientes[ClienteID] ), [Ventas], DESC ) )
+
+% Concentración Top 10 =
+DIVIDE ( [Ventas Top 10 Clientes], CALCULATE ( [Ventas], ALLSELECTED ( Clientes ) ) )`)}
+  ${dax(`
+-- Pareto acumulado: ¿qué % de clientes hace el 80% de las ventas?
+Ventas Acumuladas % =
+VAR VentaCliente = [Ventas]
+VAR Acumulado =
+    CALCULATE (
+        [Ventas],
+        FILTER ( ALLSELECTED ( Clientes[ClienteID] ), [Ventas] >= VentaCliente )
+    )
+RETURN
+    DIVIDE ( Acumulado, CALCULATE ( [Ventas], ALLSELECTED ( Clientes ) ) )`)}
+  ${engine('', `<p>El Pareto acumulado suma las ventas de todos los clientes con ventas ≥ las del actual (los más grandes) y lo divide por el total. Ordenando clientes por ventas, ves la curva de concentración: si el 20% superior da el 80%, tienes riesgo de dependencia.</p>`)}
+
+  <h3>Clasificación ABC</h3>
+  ${dax(`
+Clase ABC =
+VAR p = [Ventas Acumuladas %]
+RETURN SWITCH ( TRUE (), p <= 0.80, "A", p <= 0.95, "B", "C" )`)}
+
+  <h3>Mix de producto y cross-sell</h3>
+  ${dax(`
+Mix Categoría %  = DIVIDE ( [Ventas], CALCULATE ( [Ventas], ALLSELECTED ( Productos[Categoría] ) ) )
+Categorías x Cliente = AVERAGEX ( VALUES ( Clientes[ClienteID] ), DISTINCTCOUNT ( Ventas[CategoríaID] ) )
+Ticket Medio     = DIVIDE ( [Ventas], DISTINCTCOUNT ( Ventas[FacturaID] ) )`)}
+
+  <h3>Retención y clientes nuevos vs recurrentes</h3>
+  ${dax(`
+Clientes Activos = DISTINCTCOUNT ( Ventas[ClienteID] )
+
+Clientes Nuevos =
+VAR PrimeraCompra =
+    CALCULATE ( MIN ( Ventas[Fecha] ), ALLEXCEPT ( Ventas, Ventas[ClienteID] ) )
+RETURN
+    COUNTROWS (
+        FILTER (
+            VALUES ( Ventas[ClienteID] ),
+            CALCULATE ( MIN ( Ventas[Fecha] ) ) >= STARTOFMONTH ( MAX ( Calendario[Fecha] ) )
+        )
+    )
+
+Clientes Recurrentes = [Clientes Activos] - [Clientes Nuevos]
+Tasa Retención = DIVIDE ( [Clientes Recurrentes], CALCULATE ( [Clientes Activos], PREVIOUSMONTH ( Calendario[Fecha] ) ) )`)}
+  ${warn('"Cliente nuevo" necesita una definición de negocio', `<p>¿Nuevo = primera compra en su vida, o primera en el periodo? Las medidas cambian por completo. Acuérdala con el área comercial antes de codificar; aquí "nuevo" = primera compra dentro del mes analizado.</p>`)}
+  ${best('', `<ul>
+    <li>Concentración y ABC con <code class="inl">ALLSELECTED</code> para respetar los slicers del usuario.</li>
+    <li>Combina con los <span class="pill" data-go="simuladores">simuladores</span>: "¿qué pasa con el mix si subo precios al segmento A?"</li>
+    <li>Define con negocio los conceptos ambiguos (nuevo, activo, churn) y documéntalos en el modelo.</li>
+  </ul>`)}
+
+  ${box('analogy','🎓 Cierre del Atlas', `<p>Has recorrido el camino completo: del <b>motor</b> (cómo piensa DAX) al <b>corazón</b> (CALCULATE), pasando por el <b>catálogo</b> de herramientas, los <b>simuladores</b> que convierten informes en herramientas de decisión, la <b>performance</b> que los hace usables y los <b>casos reales</b> que los conectan con el negocio. Pensar como un desarrollador senior de Power BI en Finanzas no es saber más funciones: es <b>entender el contexto, modelar bien y traducir preguntas de negocio en modelos analíticos</b>. Vuelve a cualquier nodo cuando lo necesites — este Atlas es tu base de conocimiento permanente.</p>`)}
   `
 });
 
