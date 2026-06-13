@@ -1563,6 +1563,168 @@ Ajuste Valor = SELECTEDVALUE ( Ajuste[Ajuste], 0 )   -- 0 = sin ajuste por defec
   `
 });
 
+/* ---- Guía paso a paso desde cero (solo slicers) ---- */
+N({ id:'sim-guia', parent:'simuladores', title:'Guía Paso a Paso desde Cero (solo con slicers)', icon:'🟢⭐',
+  importancia:'★★★★★', dificultad:'🟢 Para empezar (explicado para no expertos)', uso:'Tu primer simulador',
+  deps:['simuladores'], related:['sim-1','sim-2','sim-5'], fns:['fn-tablas','calculate'],
+  subtitle:'Construye, desde cero y con clics reales en Power BI, un simulador donde mueves un SLICER (no editas una tabla) y las ventas se recalculan. Cubre los tres modos: todos los clientes por igual, un solo cliente, y un cliente con un % y el resto con otro.',
+  html: ()=> `
+  ${why('Escrito para quien nunca lo ha hecho', `<p>Esta guía no asume que sepas DAX. Cada paso te dice <b>dónde hacer clic</b> y <b>qué escribir</b>, y después te explica en palabras normales <b>por qué funciona</b>. Vas a interactuar con <b>slicers</b> (esas cajas de botones que filtran), no con una tabla que tengas que editar a mano. Al final tendrás un simulador real funcionando.</p>`)}
+
+  <h3>Parte 0 · Tres palabras que necesitas entender primero</h3>
+  ${analogy('El slicer, el parámetro y la tabla "suelta"', `<ul>
+    <li><b>Slicer (segmentación):</b> una caja con botones o un control deslizante en el informe. Al pulsarlo, <b>filtra</b> lo que se ve. Es el "mando" con el que el usuario juega.</li>
+    <li><b>Parámetro What-If:</b> un asistente de Power BI que, con un par de clics, te crea automáticamente <b>un slicer de porcentajes</b> (por ejemplo de −30% a +30%). Es la forma más fácil de tener un slicer numérico sin escribir nada.</li>
+    <li><b>Tabla "suelta" (desconectada):</b> una tabla que <b>no está unida</b> con flechas al resto del modelo. Sirve para que el slicer te dé un valor <i>sin filtrar los datos</i>. Si estuviera unida, al elegir "+10%" intentaría buscar ventas "del +10%" (que no existen) y saldría vacío.</li>
+  </ul>
+  <p>Idea clave: <b>el slicer te entrega un número; tú, con una fórmula, decides qué hacer con ese número.</b> Power BI no "ajusta solo": tú escribes una medida que multiplica las ventas por ese número.</p>`)}
+
+  <h3>Parte 1 · Preparación (el punto de partida)</h3>
+  <p>Supongamos que ya tienes una tabla de ventas con clientes. Lo mínimo:</p>
+  ${tbl(['Tabla','Columnas','Para qué'],[
+    ['<b>Ventas</b>','Cliente, Importe (y Fecha si la tienes)','Los datos reales que vas a simular'],
+    ['<b>Clientes</b>','Cliente (lista de clientes)','La dimensión; unida a Ventas con una flecha 1→∗'],
+  ])}
+  <p>Crea primero una medida base (lo que vas a ajustar). En la cinta <b>Inicio → Nueva medida</b>, pega:</p>
+  ${dax(`Ventas Base = SUM ( Ventas[Importe] )`)}
+  ${best('Cómo crear una medida (clic a clic)', `<ol>
+    <li>Pestaña <b>Inicio</b> (o <b>Modelado</b>) → botón <b>Nueva medida</b>.</li>
+    <li>En la barra de fórmulas, borra lo que haya y escribe el nombre, un <code class="inl">=</code> y la fórmula.</li>
+    <li>Pulsa <span class="kbd">Enter</span>. La medida aparece en el panel de la derecha con un icono de calculadora.</li>
+    <li>Arrástrala a una <b>tarjeta</b> o a una <b>tabla</b> para verla.</li>
+  </ol>`)}
+
+  <h3>Parte 2 · MODO 1 — Ajustar TODOS los clientes por igual 🟢</h3>
+  <p>Objetivo: un slicer de % que sube o baja las ventas de <b>todos</b> a la vez.</p>
+  ${best('Paso a paso en Power BI', `<ol>
+    <li>Ve a la cinta <b>Modelado → Nuevo parámetro → Rango numérico</b> (en versiones antiguas: <b>Modelado → Nuevo parámetro</b>).</li>
+    <li>Rellena la ventana así:
+      <ul>
+        <li><b>Nombre:</b> <code class="inl">Ajuste %</code></li>
+        <li><b>Tipo de datos:</b> Número decimal</li>
+        <li><b>Mínimo:</b> <code class="inl">-0,30</code> &nbsp; <b>Máximo:</b> <code class="inl">0,30</code> &nbsp; <b>Incremento:</b> <code class="inl">0,05</code> &nbsp; <b>Predeterminado:</b> <code class="inl">0</code></li>
+      </ul>
+    </li>
+    <li>Deja marcada la casilla <b>"Agregar segmentación de datos a esta página"</b> y pulsa <b>Crear</b>.</li>
+    <li>Power BI hace <b>tres cosas solo</b>: crea una tabla suelta llamada <code class="inl">Ajuste %</code>, una medida <code class="inl">Ajuste % Valor</code>, y coloca el <b>slicer</b> en el lienzo. 🎉</li>
+  </ol>`)}
+  ${engine('Qué te creó Power BI por dentro (no tienes que escribirlo, ya está)', `${dax(`
+-- La tabla suelta de valores del slicer:
+Ajuste % = GENERATESERIES ( -0.30, 0.30, 0.05 )
+
+-- La medida que LEE el botón pulsado en el slicer:
+Ajuste % Valor = SELECTEDVALUE ( 'Ajuste %'[Ajuste %], 0 )`)}
+  <p>En palabras: <code class="inl">SELECTEDVALUE</code> mira qué número está elegido en el slicer. Si eliges +10% devuelve 0,10; si no eliges nada, devuelve 0 (sin cambio).</p>`)}
+  <p>Ahora la única medida que escribes tú. <b>Inicio → Nueva medida</b>:</p>
+  ${dax(`
+Ventas Ajustadas =
+[Ventas Base] * ( 1 + [Ajuste % Valor] )`)}
+  ${engine('Léelo en palabras normales', `<p>"Toma las ventas base y multiplícalas por (1 + el porcentaje del slicer)". Si el slicer está en +10% (0,10): <code class="inl">Ventas × (1 + 0,10) = Ventas × 1,10</code> → suben un 10%. Si está en −20%: <code class="inl">× 0,80</code> → bajan un 20%. Como la fórmula no nombra a ningún cliente, <b>el mismo % se aplica a todos por igual</b>: en la fila de cada cliente multiplica las ventas de ese cliente; en el total, el total.</p>`)}
+  ${best('Cómo probarlo', `<ol>
+    <li>Pon una <b>tabla</b> (visual) con <code class="inl">Clientes[Cliente]</code>, <code class="inl">[Ventas Base]</code> y <code class="inl">[Ventas Ajustadas]</code>.</li>
+    <li>Mueve el slicer <code class="inl">Ajuste %</code>. Verás que la columna "Ventas Ajustadas" cambia para todos los clientes a la vez. ✔</li>
+  </ol>`)}
+
+  <h3>Parte 3 · MODO 2 — Ajustar UN SOLO cliente (con dos slicers) 🟡</h3>
+  <p>Objetivo: un slicer para <b>elegir qué cliente</b> y otro para <b>el %</b>. Solo ese cliente cambia; el resto queda igual.</p>
+  ${best('Paso 1 · Crear el slicer de "cliente objetivo" (una lista de clientes SUELTA)', `<ol>
+    <li>Cinta <b>Modelado → Nueva tabla</b>.</li>
+    <li>Escribe:
+      ${dax(`Cliente Objetivo = DISTINCT ( Clientes[Cliente] )`)}
+      Esto crea una <b>copia suelta</b> de la lista de clientes (Power BI <b>no</b> la une con flechas: justo lo que queremos).</li>
+    <li>Inserta un <b>slicer</b> nuevo y arrástrale el campo <code class="inl">Cliente Objetivo[Cliente]</code>. Este será el slicer de "a quién ajustar".</li>
+  </ol>`)}
+  ${warn('¿Por qué una copia SUELTA y no la lista normal de clientes?', `<p>Si usaras el slicer con la tabla <code class="inl">Clientes</code> normal (la que está unida), al elegir "Cliente B" <b>desaparecerían</b> A y C de la tabla: filtrarías los datos. Con la copia suelta, el slicer solo te dice "el objetivo es B" <b>sin esconder</b> a los demás. Así puedes ver a todos y ajustar solo a uno.</p>`)}
+  <p>Paso 2 · Reutiliza el slicer <code class="inl">Ajuste %</code> del Modo 1 (el del porcentaje). Paso 3 · Reescribe la medida:</p>
+  ${dax(`
+Ventas Ajustadas =
+VAR Pct = [Ajuste % Valor]                       -- el % del slicer
+RETURN
+    SUMX (
+        VALUES ( Clientes[Cliente] ),            -- recorre cliente por cliente
+        VAR Base = [Ventas Base]                 -- ventas de ESTE cliente
+        VAR EsObjetivo =                         -- ¿este cliente es el elegido?
+            Clientes[Cliente] IN VALUES ( 'Cliente Objetivo'[Cliente] )
+        RETURN
+            IF ( EsObjetivo, Base * ( 1 + Pct ), Base )  -- sí: ajusta; no: igual
+    )`)}
+  ${engine('Léelo en palabras normales, línea por línea', `<ol>
+    <li><code class="inl">Pct</code> = el porcentaje que pusiste en el slicer.</li>
+    <li><code class="inl">SUMX(VALUES(Clientes[Cliente]), …)</code> = "ve cliente por cliente y al final suma todo".</li>
+    <li><code class="inl">Base</code> = las ventas de <b>ese</b> cliente concreto (la fila en la que estamos).</li>
+    <li><code class="inl">EsObjetivo</code> = pregunta "¿el cliente de esta fila está entre los elegidos en el slicer de objetivo?". Da Verdadero o Falso.</li>
+    <li><code class="inl">IF(...)</code> = si es el objetivo, multiplica por (1 + %); si no, deja sus ventas tal cual.</li>
+  </ol>
+  <p>Resultado: eliges "Cliente B" y "+20%" → solo B sube un 20%; A y C no se tocan. Y como usamos <code class="inl">SUMX</code>, el <b>total</b> también sale bien (suma a B ya ajustado con los demás sin tocar).</p>`)}
+  ${best('Truco útil', `<p>Si <b>no</b> eliges ningún cliente en el slicer de objetivo, <code class="inl">VALUES('Cliente Objetivo'[Cliente])</code> contiene a todos → <b>se comporta como el Modo 1</b> (ajuste a todos). Una sola medida te sirve para los dos modos.</p>`)}
+
+  <h3>Parte 4 · MODO 3 — Un cliente con un %, el resto con otro % 🔴</h3>
+  <p>Objetivo: el cliente (o clientes) que elijas reciben un %, y <b>todos los demás</b> reciben otro % distinto. Todo con slicers.</p>
+  ${best('Paso 1 · Crea DOS parámetros What-If de porcentaje', `<ol>
+    <li><b>Modelado → Nuevo parámetro → Rango numérico</b>, nómbralo <code class="inl">Ajuste Objetivo %</code> (mín −0,30, máx 0,30, incremento 0,05). Marca "agregar segmentación". Crear.</li>
+    <li>Repite y nómbralo <code class="inl">Ajuste Resto %</code>. Ya tienes <b>dos slicers de %</b>: uno para el cliente objetivo y otro para el resto.</li>
+    <li>Mantén el slicer <code class="inl">Cliente Objetivo</code> del Modo 2 para elegir a quién.</li>
+  </ol>`)}
+  <p>Paso 2 · La medida que combina ambos:</p>
+  ${dax(`
+Ventas Ajustadas =
+VAR PctObjetivo = [Ajuste Objetivo % Valor]      -- % para el/los elegidos
+VAR PctResto    = [Ajuste Resto % Valor]         -- % para todos los demás
+RETURN
+    SUMX (
+        VALUES ( Clientes[Cliente] ),
+        VAR Base = [Ventas Base]
+        VAR EsObjetivo =
+            Clientes[Cliente] IN VALUES ( 'Cliente Objetivo'[Cliente] )
+        VAR PctAplicado = IF ( EsObjetivo, PctObjetivo, PctResto )  -- elige el % correcto
+        RETURN
+            Base * ( 1 + PctAplicado )
+    )`)}
+  ${engine('Qué hace, en palabras', `<p>Por cada cliente decide: "¿es de los elegidos? entonces uso el % objetivo; si no, uso el % del resto". Luego multiplica sus ventas por (1 + ese %). Así, con tres slicers (cliente, % objetivo, % resto) puedes decir, por ejemplo: <b>"Cliente B sube +25%, y todos los demás bajan −5%"</b>. Cambias los slicers y todo el informe se recalcula al instante.</p>`)}
+  ${tbl(['Lo que quieres','Cómo dejas los slicers'],[
+    ['Todos igual (+10%)','No elijas cliente · "Resto %" = +10% (o usa el Modo 1)'],
+    ['Solo Cliente B +20%','Cliente = B · "Objetivo %" = +20% · "Resto %" = 0%'],
+    ['B sube +25% y el resto baja −5%','Cliente = B · "Objetivo %" = +25% · "Resto %" = −5%'],
+    ['B y D suben +15%, el resto 0%','Cliente = B y D · "Objetivo %" = +15% · "Resto %" = 0%'],
+  ])}
+  ${warn('"Un cliente con %A y OTRO cliente con %B distinto, a la vez"', `<p>Con slicers, el patrón natural es <b>"objetivo vs resto"</b> (los elegidos comparten un %, los demás otro). Si necesitas que <i>cada</i> cliente tenga un % <b>diferente y simultáneo</b> (B +25%, C −15%, D +40%… todos a la vez), un slicer se queda corto porque solo guarda un valor a la vez. Dos caminos honestos:</p>
+  <ul>
+    <li><b>Por segmentos, con estos mismos slicers:</b> ajustas un grupo (objetivo) frente al resto; suele cubrir el 90% de las necesidades reales de planeamiento.</li>
+    <li><b>Muchos % independientes a la vez:</b> ahí se usa una <b>tabla de factores por cliente</b> (ver <span class="pill" data-go="sim-3">Escenario 3</span>). No es "editar a mano" en el informe: es una tabla del modelo que puede venir de Excel/origen, y cada cliente lleva su %. Es la herramienta correcta cuando los % son muchos y distintos.</li>
+  </ul>`)}
+
+  <h3>Parte 5 · Cómo encaja todo (resumen visual)</h3>
+  ${diagram(`
+   SLICERS (lo que toca el usuario)        MEDIDA (lo que tú escribiste una vez)
+   ───────────────────────────────        ────────────────────────────────────
+   [ Ajuste Objetivo % ] ──┐
+   [ Ajuste Resto %    ] ──┤  SELECTEDVALUE lee cada slicer  →  PctObjetivo / PctResto
+   [ Cliente Objetivo  ] ──┘  IN VALUES(...) dice quién es objetivo
+                                          │
+                                          ▼
+                 Por cada cliente:  Ventas × (1 + % que le toca)
+                                          │
+                                          ▼
+            La tabla / matriz / gráficos se recalculan solos`)}
+
+  ${err('Los 4 errores típicos del principiante', `<ul>
+    <li><b>Unir la tabla del slicer con flechas.</b> Las tablas <code class="inl">Ajuste %</code> y <code class="inl">Cliente Objetivo</code> deben quedar <b>sueltas</b>. Si Power BI creó una relación, bórrala (vista <b>Modelo</b>, clic derecho en la flecha → Eliminar).</li>
+    <li><b>Olvidar el valor por defecto.</b> Si <code class="inl">SELECTEDVALUE</code> no tiene el "0" final y no eliges nada, sale vacío y el informe se queda en blanco.</li>
+    <li><b>Usar el slicer de cliente "normal" (conectado).</b> Esconde a los demás clientes. Usa la <b>copia suelta</b> <code class="inl">Cliente Objetivo</code>.</li>
+    <li><b>No usar SUMX y que el Total no cuadre.</b> Sin <code class="inl">SUMX(VALUES(Clientes[Cliente]),…)</code>, la fila Total no aplica bien los ajustes por cliente.</li>
+  </ul>`)}
+
+  ${best('Checklist final', `<ol>
+    <li>¿Tengo <code class="inl">[Ventas Base]</code>? ✔</li>
+    <li>¿Creé el/los parámetro(s) What-If de % y aparecen como slicers? ✔</li>
+    <li>¿La lista de "cliente objetivo" es una <b>copia suelta</b>? ✔</li>
+    <li>¿Mi medida <code class="inl">Ventas Ajustadas</code> usa <code class="inl">SUMX</code> + <code class="inl">IF</code> con el % del slicer? ✔</li>
+    <li>¿Muevo los slicers y la tabla cambia? ✔ ¡Listo!</li>
+  </ol>`)}
+  <p>Cuando esto te resulte natural, profundiza en el <span class="pill" data-go="sim-9">funcionamiento interno paso a paso</span> y en los <span class="pill" data-go="sim-6">ajustes sobre una matriz</span>.</p>
+  `
+});
+
 /* ---- Escenario 1 ---- */
 N({ id:'sim-1', parent:'simuladores', title:'Escenario 1 · Ajuste Global de Ventas', icon:'🟢',
   importancia:'★★★★☆', dificultad:'🟢 Punto de partida', uso:'Base de todo simulador',
