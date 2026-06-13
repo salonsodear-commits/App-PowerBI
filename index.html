@@ -1888,55 +1888,73 @@ SUMX (
 N({ id:'sim-4', parent:'simuladores', title:'Escenario 4 · Ajuste Global + Ajuste Individual', icon:'🔴⚠️⭐',
   importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Forecast realista',
   deps:['sim-3'], related:['sim-7','calc-leer'], fns:['calculate','fn-iteradores'],
-  subtitle:'Global +10% combinado con ajustes por cliente. A → 100×1,10×1,20. La clave: multiplicar factores sin doble conteo.',
+  subtitle:'Un slicer global + un slicer de % POR cliente. El resultado es una matriz/tabla donde el total de cada cliente queda afectado por su propio porcentaje, todo movido desde las barras de los slicers (sin tablas editadas a mano).',
   html: ()=> `
-  <h3>El problema: dos palancas a la vez</h3>
-  <p>Un escenario realista de forecast tiene un <b>supuesto macro</b> (todo el mercado +10%) y <b>ajustes finos por cuenta</b> (A crece más, B decrece). Resultado esperado:</p>
-  ${tbl(['Cliente','Base','× Global','× Individual','Resultado'],[
-    ['A','100','1,10','1,20','100 × 1,10 × 1,20 = <b>132</b>'],
-    ['B','200','1,10','0,90','200 × 1,10 × 0,90 = <b>198</b>'],
-    ['C','300','1,10','1,00','300 × 1,10 × 1,00 = <b>330</b>'],
+  <h3>Qué vamos a lograr (el resultado final)</h3>
+  <p>Una <b>tabla o matriz</b> con un cliente por fila. Cada fila muestra su venta base y su <b>venta ajustada</b>, donde el ajuste de cada cliente sale de <b>su propio slicer</b> de porcentaje, y además hay un slicer <b>global</b> que afecta a todos a la vez. Así se ve cuando mueves los slicers a Global +10%, A +20%, B −10%, C 0%:</p>
+  ${tbl(['Cliente','Venta Base','Slicer Global','Slicer Individual','<b>Total Ajustado (en la matriz)</b>'],[
+    ['A','100','+10%','+20%','100 × 1,10 × 1,20 = <b>132</b>'],
+    ['B','200','+10%','−10%','200 × 1,10 × 0,90 = <b>198</b>'],
+    ['C','300','+10%','0%','300 × 1,10 × 1,00 = <b>330</b>'],
+    ['<b>Total</b>','<b>600</b>','','','<b>660</b>'],
   ])}
+  <p>Cada total de cliente reacciona a un % distinto; el total general suma los tres ya ajustados.</p>
 
-  <h3>La medida combinada</h3>
+  ${why('La técnica clave: un slicer (parámetro What-If) por cliente', `<p>Como cada cliente necesita su <b>propio</b> porcentaje al mismo tiempo, y un slicer solo guarda un valor, creamos <b>un parámetro What-If por cliente</b> (A, B, C). Cada uno aparece como su propia barra deslizante. La medida luego "enruta" a cada cliente hacia su slicer. Esto funciona perfecto cuando los clientes son pocos y conocidos (como aquí). Para decenas de clientes, ver la nota de escalabilidad al final.</p>`)}
+
+  <h3>Paso 1 · Crear los slicers (clic a clic)</h3>
+  ${best('', `<ol>
+    <li><b>Slicer global:</b> Modelado → Nuevo parámetro → Rango numérico. Nombre <code class="inl">Ajuste Global %</code> (mín −0,30, máx 0,30, incremento 0,05, predet. 0). Marca "agregar segmentación". Crear.</li>
+    <li><b>Un slicer por cliente:</b> repite el asistente tres veces, creando <code class="inl">Ajuste A %</code>, <code class="inl">Ajuste B %</code> y <code class="inl">Ajuste C %</code>. Tendrás 4 barras de slicer en la página.</li>
+    <li>Cada asistente crea su tabla suelta y su medida de lectura (p. ej. <code class="inl">Ajuste A % Valor = SELECTEDVALUE('Ajuste A %'[Ajuste A %], 0)</code>). Ya está hecho por Power BI.</li>
+  </ol>`)}
+
+  <h3>Paso 2 · La medida que enruta cada cliente a su slicer</h3>
   ${dax(`
-Forecast Combinado =
-VAR FactorGlobal = SELECTEDVALUE ( Ajustes[Factor], 1 )     -- palanca macro
+Venta Ajustada =
+VAR Global = [Ajuste Global % Valor]                 -- la barra global (una para todos)
 RETURN
     SUMX (
-        VALUES ( Proyeccion[Cliente] ),
-        VAR Base       = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
-        VAR FactorIndiv = CALCULATE ( SELECTEDVALUE ( AjustesCliente[Factor], 1 ) )
-        RETURN Base * FactorGlobal * FactorIndiv      -- multiplicación, no suma
+        VALUES ( Clientes[Cliente] ),                -- recorre cliente por cliente
+        VAR Base = [Ventas Base]                     -- ventas de ESTE cliente
+        VAR Indiv =                                  -- elige la barra de ESTE cliente
+            SWITCH (
+                SELECTEDVALUE ( Clientes[Cliente] ),
+                "A", [Ajuste A % Valor],
+                "B", [Ajuste B % Valor],
+                "C", [Ajuste C % Valor],
+                0                                    -- si aparece otro cliente: sin ajuste
+            )
+        RETURN
+            Base * ( 1 + Global ) * ( 1 + Indiv )    -- base × global × individual
     )`)}
+  ${engine('Léelo en palabras, línea por línea', `<ol>
+    <li><code class="inl">Global</code> = el % de la barra global (vale para todos).</li>
+    <li><code class="inl">SUMX(VALUES(Clientes[Cliente]), …)</code> = ve cliente por cliente y al final suma.</li>
+    <li><code class="inl">Base</code> = ventas del cliente de la fila actual.</li>
+    <li><code class="inl">SWITCH(SELECTEDVALUE(Clientes[Cliente]), …)</code> = mira QUIÉN es este cliente y devuelve el % de SU barra: si es "A" toma la barra de A, si es "B" la de B, etc.</li>
+    <li><code class="inl">Base × (1+Global) × (1+Indiv)</code> = aplica primero el % global y encima el individual.</li>
+  </ol>
+  <p>Como cada fila de la matriz "es" un cliente, <code class="inl">SELECTEDVALUE(Clientes[Cliente])</code> sabe en qué cliente está y le da el % de su propia barra. Por eso cada total de cliente queda afectado por un porcentaje distinto.</p>`)}
 
-  ${engine('Por qué multiplicar y no sumar los ajustes', `<p>"+10% global y +20% individual" significa aplicar un crecimiento <b>sobre</b> el otro: 1,10 × 1,20 = 1,32 (+32%), no 1,10 + 0,20 = 1,30. Multiplicar modela crecimientos compuestos correctamente. Si el negocio define los ajustes como aditivos, entonces sería <code class="inl">Base * (1 + gGlobal + gIndiv)</code> — pero acláralo con el área de negocio: es una decisión de modelo, no de DAX.</p>`)}
+  <h3>Paso 3 · Armar la visualización</h3>
+  ${best('', `<ol>
+    <li>Inserta una <b>matriz</b> (o una tabla). En <b>Filas</b> pon <code class="inl">Clientes[Cliente]</code>.</li>
+    <li>En <b>Valores</b> pon <code class="inl">[Ventas Base]</code> y <code class="inl">[Venta Ajustada]</code>.</li>
+    <li>Coloca al lado las 4 barras de slicer. Muévelas: cada total de cliente cambia según su propia barra, y todos a la vez según la global. ✔</li>
+  </ol>`)}
 
-  <h3>Cómo evitar el doble conteo ⚠️</h3>
-  ${err('El error clásico: aplicar el global dos veces', `<p>Si calculas <code class="inl">[Venta Ajustada Global] + [Venta Ajustada Individual]</code> por separado y los sumas, el componente base entra <b>dos veces</b>. La forma correcta es <b>una sola medida</b> que multiplica ambos factores sobre <b>una sola base</b>, dentro del mismo SUMX. Nunca sumes dos simuladores que comparten la misma base.</p>`)}
-  ${warn('FactorGlobal va FUERA del SUMX', `<p><code class="inl">FactorGlobal</code> se calcula una vez (es único para todos). <code class="inl">FactorIndiv</code> va <b>dentro</b> del SUMX porque cambia por cliente (necesita transición). Mezclar esto —meter el global dentro y recalcularlo por fila— no rompe el número, pero confunde y resta performance.</p>`)}
+  ${warn('¿Por qué multiplicar y no sumar los % ?', `<p>"+10% global y +20% individual" se aplican <b>uno sobre otro</b>: 1,10 × 1,20 = 1,32 (+32%), no 1,10 + 0,20. Multiplicar modela el crecimiento compuesto. Si tu negocio los define como aditivos, sería <code class="inl">Base × (1 + Global + Indiv)</code>: acláralo con Finanzas, es una decisión de negocio.</p>`)}
+  ${err('No sumes dos medidas que comparten la base (doble conteo)', `<p>Si calcularas "ajuste global" y "ajuste individual" por separado y los sumaras, la venta base entraría <b>dos veces</b>. Por eso todo va en <b>una sola medida</b>, con <b>una sola base</b>, multiplicando los dos factores dentro del mismo <code class="inl">SUMX</code>.</p>`)}
 
-  <h3>Depuración: descomponer en VAR para validar</h3>
-  ${dax(`
-Forecast Debug =
-SUMX (
-    VALUES ( Proyeccion[Cliente] ),
-    VAR Base = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
-    VAR fG   = SELECTEDVALUE ( Ajustes[Factor], 1 )
-    VAR fI   = CALCULATE ( SELECTEDVALUE ( AjustesCliente[Factor], 1 ) )
-    -- RETURN Base   -- ¿la base por cliente es correcta?
-    -- RETURN fI     -- ¿cada cliente toma su factor?
-    RETURN Base * fG * fI
-)`)}
-  <p>Cambia el RETURN para inspeccionar cada pieza en una matriz por cliente. Ver técnicas en <span class="pill" data-go="calc-leer">Leer y depurar</span>.</p>
-
-  ${best('', `<ul>
-    <li>Una sola medida, una sola base, factores multiplicados.</li>
-    <li>Factor global fuera del iterador; factores por cliente dentro (con transición).</li>
-    <li>Documenta si los ajustes son compuestos (×) o aditivos (+): es la fuente nº1 de discrepancias con Finanzas.</li>
+  ${best('Cómo escala esto', `<ul>
+    <li><b>Pocos clientes y conocidos:</b> un parámetro What-If por cliente + <code class="inl">SWITCH</code> (lo de aquí). Totalmente por slicers.</li>
+    <li><b>Muchos clientes:</b> una barra por cliente es inviable. Ahí la herramienta correcta es una <b>tabla de factores</b> en el modelo (un % por cliente, traída de Excel/origen, no editada en el informe) o <b>parámetros de campo</b>. Ver <span class="pill" data-go="sim-3">Escenario 3</span>.</li>
   </ul>`)}
-  ${exer('', `<p>Global = −10%. A base 100, fIndiv 1,20. ¿Resultado de A?</p>
-  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Solución</summary><p>100 × 0,90 × 1,20 = <b>108</b>. El cliente sube pese al recorte global porque su palanca individual lo compensa.</p></details>`)}
+
+  ${exer('Comprueba que lo entendiste', `<p>Mueves: Global = −10%, A = +20%, B = 0%, C = −5%. Bases: A 100, B 200, C 300. ¿Qué muestra cada fila y el total de la matriz?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Ver solución</summary>
+  <p>A: 100 × 0,90 × 1,20 = <b>108</b> · B: 200 × 0,90 × 1,00 = <b>180</b> · C: 300 × 0,90 × 0,95 = <b>256,5</b>. Total = <b>544,5</b>. Cada fila usa su propia barra encima de la global; el total suma las tres ya ajustadas.</p></details>`)}
   `
 });
 
