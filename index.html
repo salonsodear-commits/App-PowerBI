@@ -2023,47 +2023,69 @@ RETURN
 N({ id:'sim-6', parent:'simuladores', title:'Escenario 6 · Matriz de Ventas Proyectadas (Meses × Clientes)', icon:'🔴⚠️⭐',
   importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Vista típica de planning',
   deps:['sim-5','ctx-filtro'], related:['sim-9','evaluacion'], fns:['calculate','fn-tablas'],
-  subtitle:'Filas = Meses, Columnas = Clientes, Valores = Venta Proyectada. Cómo Power BI sabe exactamente qué celda modificar y cuáles dejar igual.',
+  subtitle:'Matriz con MESES en las filas y CLIENTES en las columnas. La misma medida del Escenario 4 (slicer global + un slicer por cliente) funciona igual aunque los clientes estén en columnas: cada columna queda afectada por su propio %.',
   html: ()=> `
-  <h3>La matriz objetivo</h3>
+  <h3>La matriz objetivo (meses en filas, clientes en columnas)</h3>
   ${diagram(`
-            Cliente A   Cliente B   Cliente C
-  Ene-26        100         200         300
-  Feb-26        110         220         310
-  Mar-26        120         230         320`)}
-  <p>Quieres poder: ajustar todos los clientes, uno solo, varios, o combinar global+individual — <b>sobre esta matriz bidimensional</b>.</p>
+   VENTA BASE              Cliente A   Cliente B   Cliente C
+   Ene-26                      100         200         300
+   Feb-26                      110         220         310
+   Mar-26                      120         230         320`)}
+  <p>Queremos que, al mover los slicers, <b>cada columna de cliente</b> se ajuste por <b>su propio %</b>, encima de un % global, en todos los meses. Reutilizamos exactamente los slicers del <span class="pill" data-go="sim-4">Escenario 4</span>: <code class="inl">Ajuste Global %</code> y un What-If por cliente (<code class="inl">Ajuste A %</code>, <code class="inl">Ajuste B %</code>, <code class="inl">Ajuste C %</code>).</p>
 
-  <h3>La idea clave: cada celda es una intersección de filtros ⭐</h3>
-  ${engine('Qué contexto tiene la celda "Feb-26 / Cliente B"', `<p>Esa celda concreta tiene en su contexto de filtro <b>dos coordenadas</b>: <code class="inl">Calendario[Mes]="Feb-26"</code> (de la fila) <b>y</b> <code class="inl">Cliente[Cliente]="B"</code> (de la columna). La medida se evalúa en esa intersección. Por eso Power BI "sabe" qué celda es: <b>se lo dicen las coordenadas del visual</b>. No hay que decirle nada; el visual ya impone fila y columna.</p>`)}
-
-  <h3>La medida que respeta ambas dimensiones</h3>
+  <h3>La gran noticia: la medida es LA MISMA ⭐</h3>
   ${dax(`
-Matriz Ajustada =
-VAR FactorGlobal = SELECTEDVALUE ( Ajustes[Factor], 1 )
-VAR Objetivo     = SELECTEDVALUE ( ClienteObjetivo[Cliente] )   -- desconectado
-VAR FactorIndiv  = SELECTEDVALUE ( AjustesIndiv[Factor], 1 )    -- desconectado
+Venta Ajustada =
+VAR Global = [Ajuste Global % Valor]
 RETURN
     SUMX (
-        VALUES ( Cliente[Cliente] ),                 -- recorre columnas (clientes)
-        VAR ClienteFila = SELECTEDVALUE ( Cliente[Cliente] )
-        VAR Base = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )  -- respeta el MES de la fila
-        VAR Ajuste = IF ( ClienteFila = Objetivo, FactorIndiv, 1 )
-        RETURN Base * FactorGlobal * Ajuste
+        VALUES ( Clientes[Cliente] ),
+        VAR Base  = [Ventas Base]                    -- respeta el MES (fila) y el cliente (columna)
+        VAR Indiv =
+            SWITCH (
+                SELECTEDVALUE ( Clientes[Cliente] ),
+                "A", [Ajuste A % Valor],
+                "B", [Ajuste B % Valor],
+                "C", [Ajuste C % Valor],
+                0
+            )
+        RETURN Base * ( 1 + Global ) * ( 1 + Indiv )
     )`)}
-  ${engine('Por qué el mes "se respeta solo"', `<p><code class="inl">SUM(Proyeccion[VentaProyectada])</code> dentro de la celda "Feb-26/B" ya está filtrado a febrero <b>por la fila de la matriz</b>. No tienes que filtrar el mes manualmente: el contexto de filtro de la celda lo hace. Tú solo gestionas el ajuste por cliente. Esa es la elegancia del modelo: <b>la matriz aporta las coordenadas, tú aportas la lógica de ajuste</b>.</p>`)}
+  ${warn('No cambia nada porque los clientes estén en columnas en vez de filas', `<p>Da igual si pones <code class="inl">Clientes[Cliente]</code> en filas o en columnas: para Power BI, cada <b>celda</b> de la matriz lleva sus dos coordenadas (mes y cliente) en el contexto de filtro. La medida lee el cliente con <code class="inl">SELECTEDVALUE(Clientes[Cliente])</code> sin importar dónde esté colocado. Por eso <b>la misma medida del Escenario 4 sirve tal cual</b>.</p>`)}
 
-  <h3>Las cuatro variantes sobre la misma matriz</h3>
-  ${tbl(['Quiero…','Cómo'],[
-    ['Modificar TODOS los clientes','Solo <code class="inl">FactorGlobal</code> (Escenario 1). El IF de objetivo en 1.'],
-    ['Modificar UN cliente','<code class="inl">Objetivo</code> = ese cliente; IF aplica solo a él (Escenario 2).'],
-    ['Modificar VARIOS clientes','<code class="inl">ClienteFila IN VALUES(ClienteObjetivo[Cliente])</code> (Escenario 5).'],
-    ['Global + individual','<code class="inl">FactorGlobal × Ajuste</code> combinados (Escenario 4).'],
-  ])}
+  <h3>Cómo lo entiende Power BI, celda por celda</h3>
+  ${engine('Celda "Feb-26 / Cliente B"', `<p>Esa celda tiene en su contexto: <code class="inl">Calendario[Mes]="Feb-26"</code> (viene de la <b>fila</b>) y <code class="inl">Clientes[Cliente]="B"</code> (viene de la <b>columna</b>). Entonces:</p>
+  <ol>
+    <li><code class="inl">[Ventas Base]</code> ya está filtrado a Feb-26 y a B → 220. <b>No filtras el mes a mano: lo pone la fila.</b></li>
+    <li><code class="inl">SELECTEDVALUE(Clientes[Cliente])</code> = "B" (lo pone la columna) → el SWITCH toma <code class="inl">[Ajuste B % Valor]</code>.</li>
+    <li>Resultado de la celda: 220 × (1+Global) × (1+%B).</li>
+  </ol>`)}
 
-  ${warn('Subtotales y totales de la matriz', `<p>La fila/columna <b>Total</b> no tiene mes o cliente único. Por eso el patrón usa <code class="inl">SUMX(VALUES(Cliente))</code>: garantiza que el total de cada mes sea la suma de los clientes <i>ya ajustados</i>, no un cálculo sobre un contexto ambiguo. Sin SUMX, los totales no sumarían los ajustes individuales. Ver <span class="pill" data-go="sim-9">funcionamiento interno</span>.</p>`)}
+  <h3>Paso a paso para construir la matriz</h3>
+  ${best('', `<ol>
+    <li>Asegúrate de tener los slicers del Escenario 4 en la página (global + A, B, C) y la medida <code class="inl">Venta Ajustada</code>.</li>
+    <li>Inserta una <b>Matriz</b>.</li>
+    <li><b>Filas</b> → arrastra <code class="inl">Calendario[Mes]</code>.</li>
+    <li><b>Columnas</b> → arrastra <code class="inl">Clientes[Cliente]</code>. (Aquí es donde los clientes quedan en columnas.)</li>
+    <li><b>Valores</b> → arrastra <code class="inl">[Venta Ajustada]</code>.</li>
+    <li>Mueve los slicers: cada <b>columna de cliente</b> reacciona a su propio %, en todos los meses. ✔</li>
+  </ol>`)}
 
-  ${err('Filtrar el mes manualmente', `<p>Añadir <code class="inl">Calendario[Mes]=...</code> en la medida es redundante y rompe la matriz: el mes ya lo impone la fila. Deja que el visual ponga las coordenadas; tu medida solo añade la lógica de simulación.</p>`)}
-  ${best('', `<p>Diseña una <b>única medida de simulación</b> que cubra las cuatro variantes según qué slicers estén activos (objetivo vacío → ajuste global puro). Menos medidas, menos mantenimiento, comportamiento coherente en toda la matriz.</p>`)}
+  <h3>El resultado con Global +10%, A +20%, B −10%, C 0%</h3>
+  ${diagram(`
+   Factores por columna:    A ×1,10×1,20=1,32   B ×1,10×0,90=0,99   C ×1,10×1,00=1,10
+
+   VENTA AJUSTADA           Cliente A   Cliente B   Cliente C   | Total mes
+   Ene-26                       132         198         330     |    660
+   Feb-26                    145,2       217,8         341     |  704,0
+   Mar-26                    158,4       227,7         352     |  738,1
+   ────────────────────────────────────────────────────────────────────
+   Total cliente             435,6       643,5        1023     | 2102,1`)}
+  <p>Cada columna usa su propio factor en todos los meses; la columna "Total mes" y la fila "Total cliente" suman lo ya ajustado.</p>
+
+  ${warn('Por qué los TOTALES salen bien (gracias a SUMX)', `<p>En la columna <b>Total mes</b> (por ejemplo el total de Ene) no hay un cliente único: están A, B y C juntos. <code class="inl">SUMX(VALUES(Clientes[Cliente]),…)</code> recorre los tres, le da a cada uno <b>su</b> %, y luego suma. Sin <code class="inl">SUMX</code>, el total no sabría qué % usar y saldría mal. Lo mismo ocurre con el total general. Ver <span class="pill" data-go="sim-9">funcionamiento interno</span>.</p>`)}
+  ${err('Filtrar el mes dentro de la medida', `<p>No escribas <code class="inl">Calendario[Mes]=...</code> en la medida: el mes ya lo impone la fila de la matriz. Tu medida solo se ocupa del ajuste por cliente; el visual aporta las coordenadas.</p>`)}
+  ${best('', `<p>Una <b>única medida</b> (la del Escenario 4) cubre filas o columnas, un cliente o todos, global o individual. Cambias dónde colocas los campos y qué slicers tocas; la lógica no se duplica.</p>`)}
   `
 });
 
@@ -2071,11 +2093,15 @@ RETURN
 N({ id:'sim-7', parent:'simuladores', title:'Escenario 7 · Forecast Corporativo (Base / Optimista / Pesimista)', icon:'🔴⭐',
   importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Planeamiento financiero',
   deps:['sim-4','fn-tiempo'], related:['sim-8','casos'], fns:['calculate','fn-logica','fn-tiempo'],
-  subtitle:'Tres escenarios de forecast seleccionables con un slicer, partiendo de una base histórica y aplicando supuestos diferenciados.',
+  subtitle:'Un slicer de escenario (Base / Optimista / Pesimista) que recalcula toda la matriz de forecast (meses en filas, clientes en columnas) de golpe. Paso a paso, con el resultado en matriz.',
   html: ()=> `
-  <h3>Arquitectura del forecast multiescenario</h3>
-  <p>La forma profesional: una tabla de <b>Escenarios</b> con los supuestos de cada uno, seleccionada por slicer, que parametriza una medida única.</p>
-  ${dax(`
+  <h3>Qué vamos a lograr</h3>
+  <p>Una <b>matriz</b> con meses en filas y <b>clientes en columnas</b>, donde un <b>slicer</b> permite cambiar entre <b>Base</b>, <b>Optimista</b> y <b>Pesimista</b>. Al pulsar otro escenario, todos los valores (y los KPIs del informe) se recalculan al instante con sus supuestos.</p>
+
+  <h3>Paso 1 · Crear la tabla de escenarios y su slicer</h3>
+  ${best('', `<ol>
+    <li>Cinta <b>Modelado → Nueva tabla</b> y pega lo siguiente (es una tabla <b>suelta</b>, sin unir):
+      ${dax(`
 Escenarios =
 DATATABLE (
     "Escenario", STRING, "Crecimiento", DOUBLE, "Inflación Costos", DOUBLE,
@@ -2084,44 +2110,51 @@ DATATABLE (
         { "Optimista", 0.15, 0.03 },
         { "Pesimista", -0.05, 0.07 }
     }
-)   -- tabla DESCONECTADA: el slicer elige el escenario`)}
+)`)}
+    </li>
+    <li>Inserta un <b>slicer</b> y arrástrale el campo <code class="inl">Escenarios[Escenario]</code>. Ya tienes los tres botones: Base / Optimista / Pesimista.</li>
+  </ol>`)}
 
-  <h3>Medida de forecast de ventas</h3>
+  <h3>Paso 2 · La medida de forecast (lee el slicer)</h3>
   ${dax(`
 Forecast Ventas =
-VAR Crecimiento = SELECTEDVALUE ( Escenarios[Crecimiento], 0 )
-VAR VentaBase   = [Ventas]                         -- histórico/base del contexto
+VAR Crecimiento = SELECTEDVALUE ( Escenarios[Crecimiento], 0 )   -- lee el escenario elegido
 RETURN
-    VentaBase * ( 1 + Crecimiento )`)}
-  <h3>Forecast con estacionalidad (más realista)</h3>
-  ${dax(`
-Forecast Estacional =
-VAR Crecimiento = SELECTEDVALUE ( Escenarios[Crecimiento], 0 )
-RETURN
-    SUMX (
-        VALUES ( Calendario[MesNum] ),
-        VAR VentaAA  = CALCULATE ( [Ventas], SAMEPERIODLASTYEAR ( Calendario[Fecha] ) )
-        VAR PesoMes  = CALCULATE ( [Peso Estacional] )       -- % que pesa ese mes
-        RETURN VentaAA * ( 1 + Crecimiento ) * PesoMes
-    )`)}
-  ${engine('', `<p>El slicer pone <code class="inl">Escenarios[Escenario]="Optimista"</code>. <code class="inl">SELECTEDVALUE</code> lee crecimiento=0,15. La medida proyecta sobre la base (o sobre el año anterior con estacionalidad). Cambiar el slicer recalcula <b>todo el informe</b> al instante: P&L, gráficos, KPIs. Un único motor, tres narrativas.</p>`)}
+    [Ventas Base] * ( 1 + Crecimiento )`)}
+  ${engine('En palabras', `<p>El slicer pone, por ejemplo, <code class="inl">Escenarios[Escenario]="Optimista"</code>. <code class="inl">SELECTEDVALUE(Escenarios[Crecimiento])</code> trae el crecimiento de esa fila (0,15). La medida multiplica las ventas base por 1,15. Como la tabla está <b>suelta</b>, el slicer no filtra los datos: solo entrega el número de crecimiento que tú usas.</p>`)}
 
-  <h3>Forecast de costos (inflación diferenciada)</h3>
+  <h3>Paso 3 · Armar la matriz (clientes en columnas)</h3>
+  ${best('', `<ol>
+    <li>Inserta una <b>Matriz</b>. <b>Filas</b> → <code class="inl">Calendario[Mes]</code>. <b>Columnas</b> → <code class="inl">Clientes[Cliente]</code>. <b>Valores</b> → <code class="inl">[Forecast Ventas]</code>.</li>
+    <li>Pon el slicer de escenario al lado. Cámbialo y la matriz entera se recalcula.</li>
+  </ol>`)}
+  ${diagram(`
+   Escenario = OPTIMISTA  (crecimiento +15% → ×1,15)
+
+   FORECAST VENTAS         Cliente A   Cliente B   Cliente C
+   Ene-26                       115         230         345
+   Feb-26                    126,5         253       356,5
+   Mar-26                       138       264,5         368`)}
+  <p>Cambias a <b>Pesimista</b> (−5% → ×0,95) y toda la matriz baja; a <b>Base</b> (+5%) queda en medio. Un solo slicer, tres narrativas.</p>
+
+  ${analogy('Combínalo con el Escenario 4', `<p>Si quieres, puedes <b>encadenar</b> este slicer de escenario con los slicers por cliente del <span class="pill" data-go="sim-4">Escenario 4</span>: el escenario aporta el crecimiento macro y cada cliente su ajuste fino. Sería <code class="inl">Base × (1 + Crecimiento del escenario) × (1 + % del cliente)</code> dentro del mismo <code class="inl">SUMX</code>.</p>`)}
+
+  <h3>Forecast de costos y margen (palancas independientes)</h3>
   ${dax(`
 Forecast Costos =
 VAR Inflacion = SELECTEDVALUE ( Escenarios[Inflación Costos], 0 )
 RETURN
-    [Costos] * ( 1 + Inflacion )
+    [Costos Base] * ( 1 + Inflacion )
 
 Forecast Margen = [Forecast Ventas] - [Forecast Costos]`)}
+  ${engine('', `<p>Ventas y costos tienen palancas <b>distintas</b> (crecimiento ≠ inflación). En "Pesimista" las ventas caen y los costos suben a la vez → el margen se aprieta de forma realista. El mismo slicer mueve ambos.</p>`)}
 
   ${best('Buenas prácticas de forecast', `<ul>
-    <li>Separa los <b>supuestos</b> (tabla de escenarios) de la <b>lógica</b> (medidas). Cambiar un supuesto no debe tocar DAX.</li>
-    <li>Modela ventas y costos con palancas <b>independientes</b> (crecimiento ≠ inflación): el margen reacciona de forma realista.</li>
-    <li>Para rolling forecast usa <span class="pill" data-go="fn-tiempo">DATESINPERIOD</span> sobre los últimos N meses como base.</li>
-    <li>Guarda los tres escenarios como <b>medidas distintas</b> si necesitas mostrarlos a la vez (gráfico de abanico), o como una sola parametrizada si solo muestras uno.</li>
+    <li>Separa los <b>supuestos</b> (la tabla de escenarios) de la <b>lógica</b> (las medidas): cambiar un número no obliga a tocar DAX.</li>
+    <li>Para <b>rolling forecast</b> (últimos N meses como base) usa <span class="pill" data-go="fn-tiempo">DATESINPERIOD</span>.</li>
+    <li>Si necesitas ver los tres escenarios <b>a la vez</b> (gráfico de abanico), crea tres medidas; si solo muestras uno, la versión con slicer es más limpia.</li>
   </ul>`)}
-  ${warn('Base ≠ Real', `<p>Define claramente qué es la "base" del forecast: ¿el real YTD anualizado? ¿el año anterior? ¿el presupuesto? Es una decisión de negocio que cambia por completo los números. Documenta el supuesto en el propio informe.</p>`)}
+  ${warn('Define qué es la "base"', `<p>¿La base del forecast es el año anterior, el real YTD anualizado, el presupuesto? Cambia por completo los números. Documenta el supuesto en el propio informe para que nadie lo malinterprete.</p>`)}
   `
 });
 
