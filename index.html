@@ -1922,7 +1922,7 @@ SUMX (
     </li>
     <li>Mueve cada barra: el total de su cliente cambia al instante, cada uno con su propio %. ✔</li>
   </ol>`)}
-  ${warn('Esto es lo que un slicer SÍ puede hacer (y su límite)', `<p>Con <b>una barra por cliente</b>, cada cliente tiene su % distinto y simultáneo, en vivo. Funciona muy bien hasta ~5-8 clientes. Con 50 clientes serían 50 barras: inviable. Ahí el <b>Método 1 (tabla)</b> es el correcto. Regla simple: <b>pocos y a mano → slicers; muchos → tabla de factores</b>.</p>`)}
+  ${warn('Esto es lo que un slicer SÍ puede hacer (y su límite)', `<p>Con <b>una barra por cliente</b>, cada cliente tiene su % distinto y simultáneo, en vivo. Funciona muy bien hasta ~5-8 clientes. Con 50 clientes serían 50 barras: inviable. Ahí el <b>Método 1 (tabla)</b> es el correcto. Regla simple: <b>pocos y a mano → slicers; muchos → tabla de factores</b>.</p><p>¿Quieres editar el % de cada cliente <b>en vivo dentro del informe</b> aun con 30-50 clientes? Eso sí se puede, pero ya no con sliders: lo explico paso a paso en <span class="pill" data-go="sim-envivo">Edición dinámica en vivo con muchos clientes</span> (Power Apps/writeback, segmentos e híbrido).</p>`)}
 
   <h3>━━━ MÉTODO 3 · Híbrido (lo mejor de los dos) ⭐ ━━━</h3>
   <p>El patrón que más se usa en la práctica: la <b>tabla de factores</b> guarda el % "fino" de cada cliente, y un <b>slicer global</b> te deja jugar en vivo por encima de todos.</p>
@@ -2031,60 +2031,73 @@ RETURN
 N({ id:'sim-5', parent:'simuladores', title:'Escenario 5 · Selección Dinámica de Cliente', icon:'🔴',
   importancia:'★★★★☆', dificultad:'🔴 Avanzado', uso:'Análisis interactivo',
   deps:['sim-2','relaciones'], related:['sim-6','ctx-filtro'], fns:['fn-tablas','calculate'],
-  subtitle:'Slicer 1 = Cliente, Slicer 2 = Porcentaje. El usuario elige "Cliente B" y "+15%", y solo B se ve afectado, manteniendo a todos visibles.',
+  subtitle:'Slicer 1 = Cliente, Slicer 2 = Porcentaje. El usuario elige "Cliente B" y "+15%" y SOLO B cambia, manteniendo a todos visibles. Paso a paso, con los clics en Power BI.',
   html: ()=> `
-  <h3>Diseño completo</h3>
+  <h3>Qué vamos a lograr</h3>
+  <p>Dos slicers: uno para <b>elegir el cliente</b> y otro para <b>el %</b>. El usuario elige "B" y "+15%", y en la tabla <b>solo la fila de B</b> sube; A, C, D… siguen visibles y sin cambios. La diferencia con el Escenario 2 es que aquí el cliente se elige en un slicer cómodo (no hace falta tocar la medida).</p>
   ${diagram(`
    ┌──────────────────┐        ┌──────────────────┐
-   │ ClienteObjetivo  │        │     Ajustes      │
-   │  (DESCONECTADA)  │        │  (DESCONECTADA)  │
+   │ Cliente Objetivo │        │     Ajuste %     │
+   │  (SUELTA)        │        │  (What-If)       │
    │   slicer 1       │        │    slicer 2      │
    └────────┬─────────┘        └────────┬─────────┘
             │ SELECTEDVALUE              │ SELECTEDVALUE
             ▼                            ▼
-        Objetivo = "B"              Factor = 1,15
-            │                            │
+        Objetivo = "B"              Pct = +15%
             └──────────┬─────────────────┘
                        ▼
-        Medida: por cada cliente de la matriz,
-        si Cliente = Objetivo → Base × Factor, si no → Base
-                       │
-   ┌───────────────────▼────────────────────┐
-   │ Proyeccion (CONECTADA a la dim Cliente) │  ← se muestra COMPLETA
-   └─────────────────────────────────────────┘`)}
+   Por cada cliente: ¿es el objetivo? → Base × (1+Pct), si no → Base
+                       ▼
+   La tabla de Ventas (conectada) se muestra COMPLETA`)}
 
-  <h3>La medida</h3>
+  <h3>Paso 1 · El slicer de % (What-If)</h3>
+  ${best('', `<p>Si ya hiciste la <span class="pill" data-go="sim-guia">Guía</span>, reutiliza <code class="inl">Ajuste %</code>. Si no: Modelado → Nuevo parámetro → Rango numérico, nómbralo <code class="inl">Ajuste %</code> (mín −0,30, máx 0,30, paso 0,05, predet. 0), marca "agregar segmentación". Crear.</p>`)}
+
+  <h3>Paso 2 · El slicer de cliente (una copia SUELTA)</h3>
+  ${best('', `<ol>
+    <li>Modelado → <b>Nueva tabla</b>: <code class="inl">Cliente Objetivo = DISTINCT ( Clientes[Cliente] )</code>. Crea una copia <b>suelta</b> de la lista de clientes (Power BI no la une).</li>
+    <li>Inserta un <b>slicer</b> y arrástrale <code class="inl">Cliente Objetivo[Cliente]</code>. Este será el selector de "a quién ajustar".</li>
+  </ol>`)}
+  ${warn('¿Por qué una copia suelta y no la lista normal?', `<p>Si el slicer usara la tabla <code class="inl">Clientes</code> conectada, al elegir "B" <b>desaparecerían</b> A, C, D de la tabla (filtrarías los datos). Con la copia <b>suelta</b> solo le dices a la medida "el objetivo es B", <b>sin esconder</b> a nadie. Por eso la tabla se ve completa.</p>`)}
+
+  <h3>Paso 3 · La medida</h3>
   ${dax(`
 Simulación Dinámica =
-VAR Objetivo = SELECTEDVALUE ( ClienteObjetivo[Cliente] )   -- slicer 1 (desconectado)
-VAR Factor   = SELECTEDVALUE ( Ajustes[Factor], 1 )         -- slicer 2 (desconectado)
+VAR Objetivo = SELECTEDVALUE ( 'Cliente Objetivo'[Cliente] )   -- a quién (slicer suelto)
+VAR Pct      = [Ajuste % Valor]                                -- cuánto (What-If)
 RETURN
     SUMX (
-        VALUES ( Proyeccion[Cliente] ),
-        VAR ClienteFila = SELECTEDVALUE ( Proyeccion[Cliente] )
-        VAR Base = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
-        RETURN IF ( ClienteFila = Objetivo, Base * Factor, Base )
+        VALUES ( Clientes[Cliente] ),
+        VAR ClienteFila = SELECTEDVALUE ( Clientes[Cliente] )
+        VAR Base = [Ventas Base]
+        RETURN IF ( ClienteFila = Objetivo, Base * ( 1 + Pct ), Base )
     )`)}
+  ${engine('En palabras', `<ol>
+    <li><code class="inl">Objetivo</code> = el cliente elegido en el slicer suelto.</li>
+    <li>Recorre cliente por cliente. En cada uno: <code class="inl">ClienteFila</code> = quién es.</li>
+    <li><code class="inl">IF(ClienteFila = Objetivo, …)</code>: si coincide con el elegido, le aplica el %; si no, deja su base intacta.</li>
+  </ol>
+  <p>Como el slicer es suelto, no esconde a nadie: solo aporta el "a quién". El % y el "a quién" se comparan con cada fila para decidir.</p>`)}
 
-  ${engine('Por qué los demás clientes siguen visibles', `<p>Ambos slicers son <b>desconectados</b>: no filtran <code class="inl">Proyeccion</code>. La tabla de hechos sigue mostrando A, B y C. El slicer solo aporta dos <i>parámetros</i> (a quién, cuánto) que la medida usa para decidir, fila a fila, si ajusta o no. Si el slicer de cliente estuviera <b>conectado</b>, al elegir B desaparecerían A y C — justo lo que NO queremos aquí.</p>`)}
-
-  <h3>Variante: permitir varios clientes objetivo</h3>
+  <h3>Paso 4 · Permitir elegir VARIOS clientes objetivo</h3>
+  ${best('', `<p>¿Quieres seleccionar B y D a la vez (ambos +15%)? Cambia una línea: en vez de comparar con un único objetivo, comprueba <b>pertenencia</b> a la selección.</p>
   ${dax(`
 Simulación Multi-objetivo =
-VAR Factor = SELECTEDVALUE ( Ajustes[Factor], 1 )
+VAR Pct = [Ajuste % Valor]
 RETURN
     SUMX (
-        VALUES ( Proyeccion[Cliente] ),
-        VAR ClienteFila = SELECTEDVALUE ( Proyeccion[Cliente] )
-        VAR Base = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
+        VALUES ( Clientes[Cliente] ),
+        VAR ClienteFila = SELECTEDVALUE ( Clientes[Cliente] )
+        VAR Base = [Ventas Base]
         VAR EsObjetivo =
-            ClienteFila IN VALUES ( ClienteObjetivo[Cliente] )  -- selección múltiple
-        RETURN IF ( EsObjetivo, Base * Factor, Base )
-    )`)}
-  ${warn('SELECTEDVALUE falla con selección múltiple', `<p>Si permites elegir varios clientes en el slicer, <code class="inl">SELECTEDVALUE(ClienteObjetivo[Cliente])</code> devuelve BLANK. Usa <code class="inl">ClienteFila IN VALUES(ClienteObjetivo[Cliente])</code> para comprobar pertenencia a la selección.</p>`)}
+            ClienteFila IN VALUES ( 'Cliente Objetivo'[Cliente] )  -- ¿está en la selección?
+        RETURN IF ( EsObjetivo, Base * ( 1 + Pct ), Base )
+    )`)}`)}
+  ${warn('SELECTEDVALUE se "rompe" con selección múltiple', `<p>Si eliges varios clientes, <code class="inl">SELECTEDVALUE('Cliente Objetivo'[Cliente])</code> devuelve BLANK (no hay "uno solo"). Por eso para varios usas <code class="inl">ClienteFila IN VALUES(...)</code>, que da Verdadero si el cliente está entre los elegidos.</p>`)}
 
-  ${err('Relacionar el slicer de cliente', `<p>Es el error que mata este escenario: si conectas <code class="inl">ClienteObjetivo</code>, filtras la tabla de hechos y pierdes la vista completa. <b>Desconectada siempre.</b></p>`)}
-  ${best('', `<p>Para el slicer de cliente objetivo, una <code class="inl">DISTINCT</code> de la dimensión, desconectada. Comprueba pertenencia con <code class="inl">IN VALUES(...)</code> para soportar uno o varios objetivos sin cambiar la medida.</p>`)}
+  ${err('Relacionar el slicer de cliente', `<p>El error que mata este escenario: si conectas <code class="inl">Cliente Objetivo</code> con flechas, filtras la tabla de hechos y pierdes la vista completa. <b>Suelta siempre.</b></p>`)}
+  ${exer('', `<p>Eliges "C" y "−20%". C base 300, resto 100/200/400. ¿Qué muestra la tabla?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Ver solución</summary><p>Solo C cambia: 300×0,80 = <b>240</b>. Los demás siguen en 100, 200, 400. Total = 100+200+240+400 = <b>940</b>. El slicer suelto no escondió a nadie; la medida solo ajustó a C.</p></details>`)}
   `
 });
 
@@ -2255,23 +2268,35 @@ N({ id:'sim-8', parent:'simuladores', title:'Escenario 8 · Impacto en KPIs (cas
                 ▼          ▼
    [% Margen EBITDA]   [Var vs Presupuesto]`)}
 
-  <h3>Las medidas encadenadas</h3>
-  ${dax(`
-Ventas Ajustadas    = [Ventas] * [Factor Ajuste]
-Costo Variable Aj.  = [Ventas Ajustadas] * [% Costo Variable]   -- escala con ventas
-Margen Bruto Aj.    = [Ventas Ajustadas] - [Costo Variable Aj.]
-EBITDA Ajustado     = [Margen Bruto Aj.] - [OPEX]               -- OPEX fijo aquí
-% Margen EBITDA     = DIVIDE ( [EBITDA Ajustado], [Ventas Ajustadas] )
-Var EBITDA vs Ppto  = [EBITDA Ajustado] - [EBITDA Presupuesto]
-Var %               = DIVIDE ( [Var EBITDA vs Ppto], [EBITDA Presupuesto] )`)}
-
-  ${engine('Qué pasa al mover el slicer a "+20%"', `<ol>
-    <li><code class="inl">[Factor Ajuste]</code> → 1,20.</li>
-    <li><code class="inl">[Ventas Ajustadas]</code> sube 20%.</li>
-    <li><code class="inl">[Costo Variable Aj.]</code> sube proporcionalmente (es % de ventas).</li>
-    <li><code class="inl">[OPEX]</code> NO cambia (es fijo) → <b>apalancamiento operativo</b>: el EBITDA sube <i>más que</i> 20%.</li>
-    <li>El <code class="inl">% Margen EBITDA</code> mejora; la variación vs presupuesto se actualiza. Todo, en un clic.</li>
+  <h3>Paso a paso para construir la cascada</h3>
+  ${best('Crea estas medidas EN ESTE ORDEN (cada una usa la anterior)', `<ol>
+    <li>Parte de tu medida ajustada de cualquiera de los escenarios anteriores, por ejemplo <code class="inl">[Ventas Ajustadas]</code> del <span class="pill" data-go="sim-4">Escenario 4</span> (la que ya reacciona al slicer).</li>
+    <li>Necesitas dos supuestos en el modelo: <code class="inl">[% Costo Variable]</code> (qué porción de la venta es costo que escala, p.ej. 40%) y <code class="inl">[OPEX]</code> (los costos fijos del periodo). Pueden ser medidas o columnas de tu P&L.</li>
+    <li>Crea las medidas de la cascada una a una (Inicio → Nueva medida):
+      ${dax(`
+Costo Variable Aj. = [Ventas Ajustadas] * [% Costo Variable]   -- escala con ventas
+Margen Bruto Aj.   = [Ventas Ajustadas] - [Costo Variable Aj.]
+EBITDA Ajustado    = [Margen Bruto Aj.] - [OPEX]               -- OPEX fijo, NO escala
+% Margen EBITDA    = DIVIDE ( [EBITDA Ajustado], [Ventas Ajustadas] )
+Var EBITDA vs Ppto = [EBITDA Ajustado] - [EBITDA Presupuesto]
+Var %              = DIVIDE ( [Var EBITDA vs Ppto], [EBITDA Presupuesto] )`)}
+    </li>
+    <li>Pon cada una en una <b>tarjeta</b> (o todas en una tabla). Coloca el slicer de ajuste al lado.</li>
+    <li>Mueve el slicer: <b>todas</b> las tarjetas cambian a la vez, porque todas cuelgan de <code class="inl">[Ventas Ajustadas]</code>.</li>
   </ol>`)}
+
+  <h3>Ejemplo numérico completo (slicer en +20%)</h3>
+  <p>Supuestos: Ventas base 1.000, % Costo Variable 40%, OPEX fijo 300, EBITDA Presupuesto 350.</p>
+  ${tbl(['Renglón','Base (slicer 0%)','Ajustado (slicer +20%)','Cómo sale el ajustado'],[
+    ['Ventas','1.000','<b>1.200</b>','1.000 × 1,20'],
+    ['Costo Variable (40%)','−400','<b>−480</b>','1.200 × 40% (escala con ventas)'],
+    ['Margen Bruto','600','<b>720</b>','1.200 − 480'],
+    ['OPEX (fijo)','−300','<b>−300</b>','no cambia'],
+    ['<b>EBITDA</b>','<b>300</b>','<b>420</b>','720 − 300'],
+    ['% Margen EBITDA','30,0%','<b>35,0%</b>','420 / 1.200'],
+    ['Var vs Presupuesto','−50','<b>+70</b>','420 − 350'],
+  ])}
+  ${engine('Lee el ejemplo: el apalancamiento operativo ⭐', `<p>Las ventas suben <b>+20%</b> (1.000→1.200), pero el EBITDA sube <b>+40%</b> (300→420). ¿Por qué el doble? Porque el costo variable subió proporcional, pero el <b>OPEX fijo (300) no se movió</b>: ese costo fijo se "diluye" sobre más ventas. Eso es el <b>apalancamiento operativo</b>, y por eso el % de margen mejora del 30% al 35%. Además, pasaste de estar <b>50 por debajo</b> del presupuesto a <b>70 por encima</b>. Un solo slider cuenta toda esta historia.</p>`)}
 
   ${warn('Costos fijos vs variables: el detalle que da realismo ⚠️', `<p>El error frecuente es escalar <b>todo</b> el costo con las ventas. En la realidad, los <b>variables</b> (materia prima, comisiones) escalan; los <b>fijos</b> (alquileres, estructura, gran parte del OPEX) no. Modelar esa diferencia es lo que hace creíble el simulador ante un CFO y lo que revela el apalancamiento operativo.</p>`)}
 
@@ -2366,6 +2391,121 @@ N({ id:'sim-9', parent:'simuladores', title:'Escenario 9 · Funcionamiento Inter
   <p>Por eso la misma medida de simulación funciona en todos a la vez: no depende del tipo de visual, sino del contexto de filtro que cada uno genera.</p>`)}
 
   ${best('La regla mental definitiva del simulador', `<p><b>El visual aporta las coordenadas (qué celda). El slicer desconectado aporta los parámetros (qué hacer). La medida compara coordenadas con parámetros y decide. CALCULATE/transición trae la base correcta de cada coordenada.</b> Con esas cuatro frases puedes reconstruir cualquiera de los 9 escenarios desde cero.</p>`)}
+  `
+});
+
+/* ---- Edición en vivo con muchos clientes ---- */
+N({ id:'sim-envivo', parent:'simuladores', title:'Edición Dinámica en Vivo con Muchos Clientes (30–50+)', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado (con guía para no expertos)', uso:'Planeamiento a escala',
+  deps:['sim-3'], related:['sim-4','modelado'], fns:['fn-tablas','calculate'],
+  subtitle:'Quieres tocar un % por cliente EN VIVO dentro del informe, pero con 30, 50 o más clientes. Por qué un slider por cliente no escala, y las cuatro soluciones reales explicadas paso a paso: Power Apps (writeback), translytical task flows, segmentos e híbrido.',
+  html: ()=> `
+  ${why('El problema de escala, en una frase', `<p>El <span class="pill" data-go="sim-3">Método 2 del Escenario 3</span> (un slicer What-If por cliente) es genial hasta ~5-8 clientes. Con 30 o 50 necesitarías 30 o 50 barras en la página: imposible de construir y de usar. Aquí están las formas <b>que sí escalan</b> manteniendo interacción en vivo. Te las explico de la más potente a la más sencilla.</p>`)}
+
+  ${warn('Por qué un slider por cliente no llega', `<p>Cada parámetro What-If crea <b>una</b> tabla, <b>una</b> medida y <b>un</b> slicer. Para 50 clientes serían 50 de cada cosa: la página se vuelve inmanejable y el modelo, un caos. La interacción "un % por cliente a la vez" a esa escala necesita <b>guardar</b> los valores en algún sitio (writeback) o <b>agrupar</b> clientes. No hay forma de que 50 barras quepan y se usen bien.</p>`)}
+
+  <h3>━━━ OPCIÓN 1 · Visual de Power Apps (writeback) — la más potente ⭐ ━━━</h3>
+  ${analogy('Qué es', `<p>Incrustas dentro del informe una pequeña aplicación (un <b>visual de Power Apps</b>) que muestra la lista de clientes con una casilla para escribir el % de cada uno, como una mini-hoja editable. Cuando escribes un %, la app lo <b>guarda</b> en una tabla de base de datos. El informe lee esa tabla y se actualiza. Es, literalmente, la <b>tabla de factores del Método 1</b>, pero <b>editable en vivo desde el propio informe</b>.</p>`)}
+  ${best('Paso a paso (visión completa)', `<ol>
+    <li><b>Crea el "almacén" de los %:</b> una tabla en <b>Dataverse</b>, <b>SharePoint</b> o <b>SQL</b> con columnas <code class="inl">Cliente</code> y <code class="inl">Ajuste %</code> (una fila por cliente). Aquí se guardarán los valores que escriba el usuario.</li>
+    <li><b>Conecta esa tabla a Power BI</b> con <b>Get Data</b>. Importante: usa <b>DirectQuery</b> (no Importar) si quieres que los cambios se reflejen casi al instante sin "Actualizar".</li>
+    <li><b>Inserta el visual de Power Apps:</b> en el panel <i>Visualizaciones</i>, elige el icono de Power Apps. Arrastra al visual el campo <code class="inl">Clientes[Cliente]</code> (le da el contexto de qué clientes mostrar).</li>
+    <li><b>Crea/edita la app</b> (botón "Create new" en el visual): un formulario o galería que liste los clientes y permita escribir el % de cada uno, con un botón <b>Guardar</b> que escribe en la tabla del paso 1 (función <code class="inl">Patch()</code> de Power Apps).</li>
+    <li><b>La medida en Power BI</b> es la misma del Método 1 (lee la tabla de factores):
+      ${dax(`
+Venta Ajustada =
+SUMX (
+    VALUES ( Clientes[Cliente] ),
+    VAR Cli  = SELECTEDVALUE ( Clientes[Cliente] )
+    VAR Base = [Ventas Base]
+    VAR Pct  = LOOKUPVALUE ( 'Factores Cliente'[Ajuste %], 'Factores Cliente'[Cliente], Cli, 0 )
+    RETURN Base * ( 1 + Pct )
+)`)}
+    </li>
+    <li><b>Usar:</b> el usuario escribe los % en el visual, pulsa Guardar, y la matriz se recalcula con los nuevos valores. Escala a miles de clientes.</li>
+  </ol>`)}
+  ${tbl(['👍 A favor','👎 En contra'],[
+    ['Edición individual en vivo, dentro del informe','Necesita licencia de Power Apps (suele venir en M365/Power BI) y un sitio donde guardar (Dataverse/SharePoint/SQL)'],
+    ['Escala a miles de clientes','Hay que construir la app (curva de aprendizaje)'],
+    ['Los valores quedan guardados (persisten entre sesiones)','Con Importar hay que Actualizar; con DirectQuery es casi inmediato'],
+  ])}
+  ${engine('Por qué esto sí es "en vivo"', `<p>La diferencia con la tabla de Excel del Método 1 es que aquí <b>el usuario escribe dentro del informe</b> y el dato viaja a la base de datos al momento. Con la tabla de factores en <b>DirectQuery</b>, la medida vuelve a leer la tabla y el número cambia en segundos, sin abrir Excel ni republicar.</p>`)}
+
+  <h3>━━━ OPCIÓN 2 · Translytical task flows (nativo, nuevo) ━━━</h3>
+  ${analogy('Qué es', `<p>Es la función <b>reciente</b> de Power BI (2025) para <b>escribir de vuelta desde el propio informe</b> sin Power Apps. Pones controles nativos (botones, cuadros de número) en el informe; al usarlos, Power BI ejecuta una acción que <b>guarda</b> el valor en una base de datos y refresca el visual.</p>`)}
+  ${best('Cómo funciona (a alto nivel)', `<ol>
+    <li>Tienes una tabla de factores en una base de datos compatible (por ejemplo <b>Azure SQL</b>), conectada en <b>DirectQuery</b>.</li>
+    <li>Defines una <b>función de datos</b> (data function, en Python/Fabric) que recibe el cliente y el % y hace el <code class="inl">UPDATE</code> en esa tabla.</li>
+    <li>En el informe añades un <b>botón</b> o un <b>cuadro de entrada</b> que dispara esa función con el cliente seleccionado y el % escrito.</li>
+    <li>La medida del informe (la misma del Método 1) lee la tabla y refleja el cambio.</li>
+  </ol>`)}
+  ${warn('Madúrez', `<p>Es <b>muy nuevo</b> (vista preliminar/reciente) y requiere Fabric y una base de datos compatible. Es la dirección nativa a futuro, pero para algo productivo <b>hoy</b>, la Opción 1 (Power Apps) está más probada. Tenlo en el radar y valida el estado actual antes de comprometerte.</p>`)}
+
+  <h3>━━━ OPCIÓN 3 · Segmentos / tiers (sin writeback, en vivo) ━━━</h3>
+  ${analogy('La idea', `<p>En vez de un % por cada uno de los 50 clientes, agrupas los clientes en <b>pocos segmentos</b> (por ejemplo Tier A / B / C, o por región o canal) y pones <b>un slider por segmento</b>. 50 clientes → 3-6 sliders manejables, todo en vivo. Cada cliente hereda el % de su segmento.</p>`)}
+  ${best('Paso a paso', `<ol>
+    <li><b>Etiqueta a cada cliente con su segmento.</b> En la dimensión <code class="inl">Clientes</code> añade una columna <code class="inl">Segmento</code> (A/B/C). Se hace en Power Query, o como columna calculada:
+      ${dax(`
+-- Ejemplo simple por tamaño de ventas (columna calculada en Clientes):
+Segmento =
+VAR v = CALCULATE ( SUM ( Ventas[Importe] ) )
+RETURN SWITCH ( TRUE (), v >= 1000000, "A", v >= 200000, "B", "C" )`)}
+    </li>
+    <li><b>Crea un What-If por segmento:</b> Modelado → Nuevo parámetro → Rango numérico, tres veces: <code class="inl">Ajuste Seg A %</code>, <code class="inl">Ajuste Seg B %</code>, <code class="inl">Ajuste Seg C %</code>. Marca "agregar segmentación". Tendrás 3 sliders.</li>
+    <li><b>La medida</b> enruta cada cliente al slider de SU segmento:
+      ${dax(`
+Venta Ajustada =
+SUMX (
+    VALUES ( Clientes[Cliente] ),
+    VAR Base = [Ventas Base]
+    VAR Seg  = CALCULATE ( SELECTEDVALUE ( Clientes[Segmento] ) )   -- segmento de este cliente
+    VAR Pct  =
+        SWITCH ( Seg,
+            "A", [Ajuste Seg A % Valor],
+            "B", [Ajuste Seg B % Valor],
+            "C", [Ajuste Seg C % Valor],
+            0
+        )
+    RETURN Base * ( 1 + Pct )
+)`)}
+    </li>
+    <li><b>Afinar uno puntual:</b> añade el patrón "objetivo vs resto" de la <span class="pill" data-go="sim-guia">Guía (Parte 4)</span> con un slicer de cliente, para sobre-ajustar un cliente concreto encima de su segmento.</li>
+  </ol>`)}
+  ${engine('', `<p>No es "cada cliente 100% independiente", pero en planeamiento real <b>casi siempre</b> los ajustes se piensan por grupos (por tier, región o canal), no cliente a cliente. Por eso esta opción cubre la mayoría de los casos <b>sin montar ninguna infraestructura</b> y con interacción totalmente en vivo.</p>`)}
+
+  <h3>━━━ OPCIÓN 4 · Híbrido (tabla de factores + slider global) ━━━</h3>
+  ${analogy('La idea', `<p>La <b>tabla de factores</b> (Método 1) lleva el % fino de cada uno de los 50 clientes (mantenido en Excel y actualizado), y un <b>slider global</b> te deja jugar en vivo por encima de todos. Combinas la <b>escala</b> de la tabla con la <b>interactividad</b> de un control.</p>`)}
+  ${dax(`
+Venta Ajustada =
+VAR SliderGlobal = [Ajuste Global % Valor]
+RETURN
+    SUMX (
+        VALUES ( Clientes[Cliente] ),
+        VAR Cli  = SELECTEDVALUE ( Clientes[Cliente] )
+        VAR Base = [Ventas Base]
+        VAR PctCliente = LOOKUPVALUE ( 'Factores Cliente'[Ajuste %], 'Factores Cliente'[Cliente], Cli, 0 )
+        RETURN Base * ( 1 + PctCliente ) * ( 1 + SliderGlobal )
+    )`)}
+  ${best('Paso a paso', `<ol>
+    <li>Monta la tabla de factores del <span class="pill" data-go="sim-3">Método 1</span> (50 clientes con su %).</li>
+    <li>Crea un único What-If <code class="inl">Ajuste Global %</code> y su slicer.</li>
+    <li>Usa la medida de arriba. El % fino lo da la tabla; el slicer global escala a todos en vivo.</li>
+  </ol>`)}
+  ${engine('Cuándo es ideal', `<p>Cuando los % por cliente los negocia/define Comercial (van en la tabla) y la Dirección quiere preguntar "¿y si todo el mercado cae un 5% más?" moviendo un solo control. Lo individual no se edita en vivo, pero el escenario global sí.</p>`)}
+
+  <h3>Cómo decidir (en detalle)</h3>
+  ${tbl(['Tu prioridad','Opción','Por qué','Coste / requisito'],[
+    ['Editar el % de cada cliente en vivo, con muchos clientes','<b>1 · Power Apps</b>','Escritura individual desde el informe, escala a miles','Licencia Power Apps + almacén (Dataverse/SharePoint/SQL)'],
+    ['Lo mismo, pero todo nativo Power BI','<b>2 · Translytical</b>','Writeback nativo desde controles del informe','Fabric + BD compatible; función nueva (validar madurez)'],
+    ['Interacción en vivo sin montar infraestructura','<b>3 · Segmentos</b>','Pocos sliders (por grupo), 100% nativo y en vivo','Solo una columna de segmento en el modelo'],
+    ['% finos por cliente + jugar en vivo con un control','<b>4 · Híbrido</b>','Tabla escala + slider global interactivo','Tabla de factores (Excel) + 1 What-If'],
+  ])}
+  ${best('Mi recomendación práctica', `<ul>
+    <li><b>¿De verdad necesitas editar cliente por cliente en vivo?</b> Si sí y tienes el ecosistema Microsoft → <b>Power Apps (Opción 1)</b>.</li>
+    <li><b>¿Tus ajustes se piensan por grupos?</b> (lo más común) → <b>Segmentos (Opción 3)</b>: simple, nativo, en vivo, cero infraestructura.</li>
+    <li><b>¿Quieres lo mejor sin complicarte?</b> → <b>Híbrido (Opción 4)</b>: tabla para el detalle, slider para jugar.</li>
+    <li>Empieza por la Opción 3 o 4 (rápidas); pasa a la 1 solo si el negocio realmente exige edición individual en vivo.</li>
+  </ul>`)}
   `
 });
 
