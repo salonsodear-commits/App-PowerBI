@@ -1,0 +1,2644 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atlas DAX · Artefacto Interactivo de Aprendizaje — Power BI, DAX y Analítica Corporativa</title>
+<style>
+  :root{
+    --bg:#0d1117; --bg2:#111722; --panel:#161b22; --panel2:#1c2430;
+    --border:#283041; --border2:#39435a;
+    --text:#e6edf3; --muted:#9aa7b8; --faint:#6b788a;
+    --accent:#4f9cf9; --accent2:#7ee787; --warn:#f2cc60; --crit:#ff7b72; --star:#d2a8ff;
+    --green:#3fb950; --yellow:#d29922; --red:#f85149; --purple:#bc8cff;
+    --code-bg:#0b1220; --kw:#ff7b72; --fn:#d2a8ff; --num:#79c0ff; --str:#a5d6ff; --com:#8b949e; --tbl:#7ee787;
+    --shadow:0 8px 30px rgba(0,0,0,.45);
+    --radius:12px;
+    --sidebar-w:340px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%}
+  body{
+    font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(180deg,#0b0f16,#0d1117 40%);
+    color:var(--text); font-size:15.5px; line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* ---------- Layout ---------- */
+  .app{display:flex;height:100vh;overflow:hidden}
+  .sidebar{
+    width:var(--sidebar-w);min-width:var(--sidebar-w);height:100%;
+    background:var(--bg2);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;
+  }
+  .sb-head{padding:16px 16px 12px;border-bottom:1px solid var(--border)}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand .logo{
+    width:34px;height:34px;border-radius:9px;flex:0 0 auto;
+    background:linear-gradient(135deg,#4f9cf9,#bc8cff);
+    display:flex;align-items:center;justify-content:center;font-weight:800;color:#0b0f16;font-size:18px;
+    box-shadow:0 2px 10px rgba(79,156,249,.4);
+  }
+  .brand h1{font-size:16px;margin:0;line-height:1.15;letter-spacing:.2px}
+  .brand .sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .search{margin-top:12px;position:relative}
+  .search input{
+    width:100%;padding:9px 32px 9px 32px;border-radius:9px;border:1px solid var(--border2);
+    background:var(--panel);color:var(--text);font-size:13.5px;outline:none;
+  }
+  .search input:focus{border-color:var(--accent)}
+  .search .ico{position:absolute;left:10px;top:9px;color:var(--faint);font-size:13px}
+  .search .clr{position:absolute;right:8px;top:7px;color:var(--faint);cursor:pointer;font-size:14px;display:none;padding:2px 5px;border-radius:6px}
+  .search .clr:hover{background:var(--panel2);color:var(--text)}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:11px;font-size:10.5px;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+
+  .tree{flex:1;overflow-y:auto;padding:8px 8px 40px}
+  .tree::-webkit-scrollbar{width:9px}
+  .tree::-webkit-scrollbar-thumb{background:#222c3a;border-radius:8px}
+  .tree::-webkit-scrollbar-thumb:hover{background:#2c3a4d}
+
+  .node{user-select:none}
+  .node-row{
+    display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:8px;cursor:pointer;
+    font-size:13.5px;color:var(--text);position:relative;
+  }
+  .node-row:hover{background:var(--panel)}
+  .node-row.active{background:#16314f;color:#fff;box-shadow:inset 0 0 0 1px #27496f}
+  .node-row .tw{width:14px;flex:0 0 auto;color:var(--faint);font-size:10px;transition:transform .15s;text-align:center}
+  .node-row.collapsed .tw{transform:rotate(-90deg)}
+  .node-row .ic{flex:0 0 auto;font-size:13px;width:16px;text-align:center}
+  .node-row .lbl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .node-row .badge{flex:0 0 auto;font-size:9px;padding:1px 5px;border-radius:20px;background:var(--panel2);color:var(--muted);border:1px solid var(--border)}
+  .children{margin-left:13px;border-left:1px solid var(--border);padding-left:4px;overflow:hidden}
+  .children.hidden{display:none}
+  .node-row.hit{outline:1px solid var(--accent)}
+  .dim{opacity:.32}
+
+  /* ---------- Main ---------- */
+  .main{flex:1;height:100%;overflow-y:auto;scroll-behavior:smooth}
+  .main::-webkit-scrollbar{width:12px}
+  .main::-webkit-scrollbar-thumb{background:#222c3a;border-radius:8px}
+  .topbar{
+    position:sticky;top:0;z-index:20;backdrop-filter:blur(8px);
+    background:rgba(13,17,23,.82);border-bottom:1px solid var(--border);
+    padding:10px 26px;display:flex;align-items:center;gap:14px;
+  }
+  .crumbs{font-size:12.5px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .crumbs b{color:var(--text)}
+  .nav-btns{display:flex;gap:6px}
+  .nav-btns button{
+    background:var(--panel);border:1px solid var(--border2);color:var(--muted);
+    border-radius:8px;padding:5px 11px;font-size:12.5px;cursor:pointer;
+  }
+  .nav-btns button:hover{background:var(--panel2);color:var(--text)}
+
+  .content{max-width:980px;margin:0 auto;padding:30px 32px 120px}
+  .content.wide{max-width:1180px}
+
+  h2.title{font-size:27px;margin:0 0 6px;line-height:1.2;letter-spacing:-.3px}
+  .meta-bar{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 22px}
+  .chip{font-size:11.5px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--panel);color:var(--muted);display:inline-flex;gap:5px;align-items:center}
+  .chip b{color:var(--text);font-weight:600}
+  .chip.g{border-color:#1f6f33;background:#0f2417;color:#7ee787}
+  .chip.y{border-color:#6f5717;background:#241f0f;color:#f2cc60}
+  .chip.r{border-color:#6f2420;background:#240f0f;color:#ff9d96}
+  .chip.s{border-color:#4b2f6f;background:#1a0f24;color:#d2a8ff}
+
+  .content h3{font-size:20px;margin:34px 0 10px;padding-top:8px;border-top:1px solid var(--border);color:#fff;letter-spacing:-.2px}
+  .content h3:first-of-type{border-top:none;padding-top:0}
+  .content h4{font-size:16px;margin:22px 0 8px;color:var(--accent2)}
+  .content h5{font-size:14px;margin:16px 0 6px;color:var(--star);text-transform:uppercase;letter-spacing:.6px}
+  .content p{margin:10px 0}
+  .content ul,.content ol{margin:10px 0;padding-left:24px}
+  .content li{margin:5px 0}
+  .content li::marker{color:var(--faint)}
+  .lead{font-size:16.5px;color:var(--muted);border-left:3px solid var(--accent);padding:2px 0 2px 16px;margin:0 0 4px}
+
+  code.inl{background:var(--code-bg);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-family:'Cascadia Code',Consolas,Monaco,monospace;font-size:13px;color:#ffa657}
+
+  /* callouts */
+  .box{border-radius:var(--radius);padding:14px 16px 14px 18px;margin:16px 0;border:1px solid var(--border2);background:var(--panel);position:relative}
+  .box .bt{font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+  .box p:last-child,.box ul:last-child{margin-bottom:0}
+  .box.why{border-left:4px solid var(--accent);background:#0e1a2b}
+  .box.why .bt{color:var(--accent)}
+  .box.warn{border-left:4px solid var(--warn);background:#231d0c}
+  .box.warn .bt{color:var(--warn)}
+  .box.err{border-left:4px solid var(--crit);background:#240f0f}
+  .box.err .bt{color:var(--crit)}
+  .box.best{border-left:4px solid var(--green);background:#0f2417}
+  .box.best .bt{color:var(--green)}
+  .box.analogy{border-left:4px solid var(--star);background:#190f24}
+  .box.analogy .bt{color:var(--star)}
+  .box.engine{border-left:4px solid #58c4dd;background:#0a1f26}
+  .box.engine .bt{color:#58c4dd}
+  .box.exer{border-left:4px solid #ff9d5c;background:#241608}
+  .box.exer .bt{color:#ff9d5c}
+
+  /* code blocks */
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;overflow-x:auto;margin:14px 0;position:relative}
+  pre code{font-family:'Cascadia Code',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#c9d1d9;white-space:pre}
+  pre .cap{position:absolute;top:8px;right:12px;font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:1px}
+  .tok-kw{color:var(--kw);font-weight:600}
+  .tok-fn{color:var(--fn)}
+  .tok-num{color:var(--num)}
+  .tok-str{color:var(--str)}
+  .tok-com{color:var(--com);font-style:italic}
+  .tok-tbl{color:var(--tbl)}
+  .tok-op{color:#ff7b72}
+
+  /* tables */
+  .tw-wrap{overflow-x:auto;margin:16px 0;border-radius:10px;border:1px solid var(--border)}
+  table.dx{border-collapse:collapse;width:100%;font-size:13px;min-width:520px}
+  table.dx th{background:var(--panel2);color:#fff;text-align:left;padding:9px 12px;border-bottom:2px solid var(--border2);font-weight:600;position:sticky;top:0}
+  table.dx td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text)}
+  table.dx tr:last-child td{border-bottom:none}
+  table.dx tr:nth-child(even) td{background:rgba(255,255,255,.018)}
+  table.dx tr:hover td{background:rgba(79,156,249,.06)}
+  table.dx td b{color:#fff}
+
+  /* ascii diagrams */
+  .diagram{background:#0a0f18;border:1px dashed var(--border2);border-radius:10px;padding:16px;margin:16px 0;overflow-x:auto}
+  .diagram pre{background:none;border:none;padding:0;margin:0;color:#9fd0ff;font-size:12.5px;line-height:1.45}
+
+  /* relation / dep cards */
+  .rel-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+  @media(max-width:760px){.rel-grid{grid-template-columns:1fr}}
+  .rel-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .rel-card .h{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--faint);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  .pill{display:inline-block;margin:3px 5px 3px 0;padding:3px 9px;border-radius:7px;background:var(--panel2);border:1px solid var(--border2);font-size:12px;cursor:pointer;color:var(--text)}
+  .pill:hover{border-color:var(--accent);color:var(--accent)}
+  .pill.fn{color:#d2a8ff;border-color:#3a2a52}
+  .pill.fn:hover{background:#1a0f24}
+
+  .next-prev{display:flex;justify-content:space-between;gap:14px;margin-top:46px;border-top:1px solid var(--border);padding-top:20px}
+  .np{flex:1;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 16px;cursor:pointer;max-width:48%}
+  .np:hover{border-color:var(--accent)}
+  .np .d{font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:1px}
+  .np .t{font-size:14px;color:var(--text);margin-top:3px}
+  .np.n{text-align:right}
+
+  .kbd{background:var(--panel2);border:1px solid var(--border2);border-bottom-width:2px;border-radius:5px;padding:1px 6px;font-size:11px;font-family:monospace;color:var(--muted)}
+
+  /* progressive level steps for CALCULATE */
+  .levels{counter-reset:lvl;margin:18px 0}
+  .lvl{border:1px solid var(--border);border-radius:10px;margin:10px 0;overflow:hidden;background:var(--panel)}
+  .lvl-h{padding:11px 14px;background:var(--panel2);cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:600}
+  .lvl-h:hover{background:#222c3a}
+  .lvl-h .n{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#4f9cf9,#bc8cff);color:#0b0f16;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex:0 0 auto}
+  .lvl-h .arr{margin-left:auto;color:var(--faint);transition:transform .15s}
+  .lvl.open .lvl-h .arr{transform:rotate(90deg)}
+  .lvl-b{padding:4px 16px 14px;display:none}
+  .lvl.open .lvl-b{display:block}
+
+  .tag-mini{font-size:10px;padding:1px 6px;border-radius:5px;background:var(--panel2);border:1px solid var(--border);color:var(--muted)}
+
+  .hidden{display:none !important}
+  .empty-search{padding:20px;color:var(--muted);font-size:13px;text-align:center}
+  .home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin:22px 0}
+  .home-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:.15s}
+  .home-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
+  .home-card .ic{font-size:22px}
+  .home-card .t{font-size:15px;font-weight:600;margin:8px 0 4px;color:#fff}
+  .home-card .d{font-size:12.5px;color:var(--muted)}
+
+  .footnote{font-size:12px;color:var(--faint);margin-top:8px}
+  .mob-toggle{display:none}
+  @media(max-width:880px){
+    .sidebar{position:fixed;z-index:50;transform:translateX(-100%);transition:transform .2s;box-shadow:var(--shadow)}
+    .sidebar.open{transform:translateX(0)}
+    .mob-toggle{display:inline-flex}
+    .content{padding:22px 18px 100px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-head">
+      <div class="brand">
+        <div class="logo">Σ</div>
+        <div>
+          <h1>Atlas DAX</h1>
+          <div class="sub">Artefacto interactivo · Power BI · DAX · Analítica Corporativa</div>
+        </div>
+      </div>
+      <div class="search">
+        <span class="ico">🔍</span>
+        <input id="searchInput" type="text" placeholder="Buscar conceptos, funciones, escenarios…" autocomplete="off">
+        <span class="clr" id="searchClear">✕</span>
+      </div>
+      <div class="legend">
+        <span>🟢 Fundamental</span>
+        <span>🟡 Importante</span>
+        <span>🔴 Avanzado</span>
+        <span>⭐ Crítico senior</span>
+        <span>⚠️ Suele confundir</span>
+      </div>
+    </div>
+    <nav class="tree" id="tree"></nav>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="topbar">
+      <button class="nav-btns mob-toggle" id="mobToggle" style="border:1px solid var(--border2);background:var(--panel);color:var(--muted);border-radius:8px;padding:5px 11px;cursor:pointer">☰</button>
+      <div class="crumbs" id="crumbs"></div>
+      <div class="nav-btns">
+        <button id="btnPrev">← Anterior</button>
+        <button id="btnNext">Siguiente →</button>
+      </div>
+    </div>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   ATLAS DAX — Motor de navegación
+   El contenido vive en el array NODES (data-driven).
+   Cada nodo: {id, parent, title, icon, importancia, dificultad,
+               uso, deps[], related[], fns[], html}
+   ============================================================ */
+const NODES = [];
+/* ---------- Helpers para escribir nodos de forma compacta ---------- */
+const N = o => NODES.push(o);
+function _esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+const dax = (s,cap) => '<pre><span class="cap">'+(cap||'DAX')+'</span><code class="dax">'+_esc(s.replace(/^\n/,'').replace(/\n\s*$/,''))+'</code></pre>';
+const box = (cls,title,body) => '<div class="box '+cls+'"><div class="bt">'+title+'</div>'+body+'</div>';
+const why    = (t,b)=>box('why','💡 Por qué importa'+(t?': '+t:''),b);
+const analogy= (t,b)=>box('analogy','🎭 Analogía'+(t?': '+t:''),b);
+const engine = (t,b)=>box('engine','⚙️ Qué ocurre internamente'+(t?': '+t:''),b);
+const warn   = (t,b)=>box('warn','⚠️ '+(t||'Cuidado'),b);
+const err    = (t,b)=>box('err','❌ '+(t||'Error frecuente'),b);
+const best   = (t,b)=>box('best','✅ '+(t||'Mejores prácticas'),b);
+const exer   = (t,b)=>box('exer','✏️ '+(t||'Ejercicio'),b);
+const diagram= s=>'<div class="diagram"><pre>'+_esc(s.replace(/^\n/,'').replace(/\n\s*$/,''))+'</pre></div>';
+function tbl(headers, rows){
+  let h='<div class="tw-wrap"><table class="dx"><thead><tr>'+headers.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>';
+  rows.forEach(r=>{ h+='<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>'; });
+  return h+'</tbody></table></div>';
+}
+
+/* ===================== INICIO ===================== */
+N({ id:'home', parent:null, title:'Inicio · Cómo usar este Atlas', icon:'🏠',
+  importancia:'★★★★★', dificultad:'Lectura', uso:'Empieza aquí',
+  subtitle:'Un único artefacto navegable que funciona a la vez como mapa de conocimiento, roadmap, manual de consulta, wiki técnica y centro de referencia profesional de Power BI / DAX para Finanzas, Planeamiento, Control de Gestión e Inteligencia Comercial.',
+  html: ()=> `
+  ${why('No es un curso lineal', `<p>Este artefacto está pensado para <b>navegación no lineal</b>. No tienes que leerlo en orden. La barra lateral es un <b>árbol de conocimiento</b>: expándelo, busca, salta entre conceptos relacionados y sigue las dependencias. Cada nodo es autocontenido y enseña algo real.</p>`)}
+
+  <h3>Cómo está organizado</h3>
+  <p>El conocimiento está dividido en módulos jerárquicos. Cada nodo declara su <b>importancia</b>, <b>dificultad</b>, <b>requisitos previos</b>, <b>conceptos relacionados</b> y <b>funciones asociadas</b> (todos clicables, para que puedas saltar entre ideas conectadas).</p>
+
+  <div class="home-grid">
+    <div class="home-card" data-go="prioridades"><div class="ic">🗺️</div><div class="t">Mapa de Prioridades DAX</div><div class="d">Las 30 funciones más usadas en proyectos corporativos, rankeadas por frecuencia real.</div></div>
+    <div class="home-card" data-go="motor"><div class="ic">⚙️</div><div class="t">Fundamentos del Motor</div><div class="d">Contexto de fila, de filtro, transición, relaciones y modelado dimensional.</div></div>
+    <div class="home-card" data-go="calculate"><div class="ic">⭐</div><div class="t">CALCULATE (módulo estrella)</div><div class="d">El corazón de DAX, en 9 niveles progresivos. El objetivo central de aprendizaje.</div></div>
+    <div class="home-card" data-go="funciones"><div class="ic">📚</div><div class="t">Catálogo de Funciones</div><div class="d">Agregación, filtros, iteradores, variables, lógica, tablas, ranking y tiempo.</div></div>
+    <div class="home-card" data-go="simuladores"><div class="ic">🎛️</div><div class="t">Simuladores Corporativos</div><div class="d">9 escenarios reales de slicers, What-If y ajustes de forecast paso a paso.</div></div>
+    <div class="home-card" data-go="performance"><div class="ic">🚀</div><div class="t">Performance y Optimización</div><div class="d">Antipatrones, variables, motor de fórmulas vs. almacenamiento.</div></div>
+    <div class="home-card" data-go="casos"><div class="ic">🏢</div><div class="t">Casos Reales de Negocio</div><div class="d">OPEX, CAPEX, EBITDA, aging, cobranzas, provisiones, forecast.</div></div>
+  </div>
+
+  <h3>Indicadores visuales que verás en todo el árbol</h3>
+  ${tbl(['Indicador','Significado','Cómo interpretarlo'],[
+    ['🟢','Fundamental','Base imprescindible. Si esto no está sólido, lo demás se derrumba.'],
+    ['🟡','Importante','Lo usarás de forma habitual en proyectos reales.'],
+    ['🔴','Avanzado','Requiere dominio previo. Aquí se separa el intermedio del senior.'],
+    ['⭐','Crítico para desarrolladores senior','Diferencia a quien "escribe medidas" de quien "diseña soluciones".'],
+    ['⚠️','Suele generar confusión','Punto donde casi todos tropiezan. Léelo dos veces.'],
+  ])}
+
+  <h3>Ruta de aprendizaje recomendada</h3>
+  ${diagram(`
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  1. MODELO MENTAL        2. EL CORAZÓN         3. HERRAMIENTAS        │
+  │  ─────────────────       ─────────────         ───────────────       │
+  │  Motor DAX               CALCULATE  ⭐          Catálogo de           │
+  │   • Contexto de fila  →   • 9 niveles      →    funciones            │
+  │   • Contexto de filtro    • leer/depurar        (filtros, tiempo,    │
+  │   • Transición            • anticipar           iteradores…)         │
+  │   • Relaciones            mentalmente                                 │
+  │   • Star schema                                  │                    │
+  │        │                       │                 ▼                    │
+  │        └───────────────────────┴──────►  4. APLICACIÓN REAL          │
+  │                                          ────────────────            │
+  │                                          • Simuladores (9 escenarios)│
+  │                                          • Performance               │
+  │                                          • Casos de negocio          │
+  └─────────────────────────────────────────────────────────────────────┘`)}
+
+  ${best('Cómo sacarle el máximo', `<ul>
+    <li><b>Lee el "por qué" antes del "cómo".</b> Cada nodo explica primero la intuición y el problema de negocio, luego la técnica.</li>
+    <li><b>Haz los ejercicios mentalmente.</b> No memorices: predice el resultado de cada medida antes de leer la solución.</li>
+    <li><b>Sigue las dependencias.</b> Si un nodo asume algo que no dominas, salta a su requisito previo (los chips son clicables) y vuelve.</li>
+    <li><b>Usa la búsqueda</b> (tecla <span class="kbd">/</span>) para ir directo a una función o concepto. Navega con <span class="kbd">←</span> <span class="kbd">→</span>.</li>
+  </ul>`)}
+
+  ${analogy('El motor DAX como una cocina', `<p>A lo largo del Atlas usaremos una analogía recurrente: el modelo de datos es la <b>despensa</b> (tablas de hechos = ingredientes, dimensiones = etiquetas/categorías), una medida es una <b>receta</b>, el <b>contexto de filtro</b> es la "comanda" que dice qué porción cocinar, y <b>CALCULATE</b> es el chef que reescribe la comanda antes de cocinar. Volveremos a esta cocina muchas veces.</p>`)}
+  `
+});
+
+/* ===================== MAPA DE PRIORIDADES ===================== */
+N({ id:'prioridades', parent:null, title:'Mapa de Prioridades DAX', icon:'🗺️', wide:true,
+  importancia:'★★★★★', dificultad:'🟢 Orientación', uso:'Diario',
+  subtitle:'Ranking de las 30 funciones DAX más utilizadas en proyectos corporativos reales, clasificadas por frecuencia: qué problema resuelven, cuándo se usan y cuándo NO.',
+  related:['calculate','fn-filtros','fn-tiempo'],
+  html: ()=> `
+  ${why('Un mapa de prioridades evita el "parálisis por catálogo"', `<p>DAX tiene cientos de funciones, pero en un proyecto corporativo real el <b>80% del trabajo</b> se hace con unas 25-30. Saber <b>cuáles dominar primero</b> es lo que acelera tu camino a senior. Este ranking refleja la frecuencia con la que aparecen en modelos financieros y comerciales productivos, no la frecuencia en documentación.</p>`)}
+
+  <h3>La pirámide de uso</h3>
+  ${diagram(`
+                         ▲  CASOS ESPECÍFICOS
+                        ╱ ╲  PARALLELPERIOD, DATESINPERIOD,
+                       ╱   ╲ ALLEXCEPT, RANKX, TREATAS…
+                      ╱─────╲
+                     ╱  USO   ╲   TOPN, RANKX, ALLSELECTED,
+                    ╱ OCASIONAL ╲  KEEPFILTERS, LOOKUPVALUE…
+                   ╱─────────────╲
+                  ╱  USO FRECUENTE ╲  FILTER, ALL, SWITCH, DIVIDE,
+                 ╱                  ╲ VALUES, SELECTEDVALUE, SUMX,
+                ╱────────────────────╲ DATESYTD, SAMEPERIODLASTYEAR…
+               ╱     USO DIARIO        ╲  CALCULATE, SUM, IF, VAR/RETURN,
+              ╱  (el pan de cada día)   ╲ RELATED, DISTINCTCOUNT, AVERAGE
+             ╱───────────────────────────╲
+            └─────────────────────────────┘
+       Cuanto más abajo, más veces lo escribes al día.
+       Cuanto más arriba, más "señal de seniority" da dominarlo.`)}
+
+  <h3>🥇 Uso diario — el pan de cada día</h3>
+  <p>Las escribes literalmente todos los días. Si no las dominas en automático, todo lo demás te costará el doble.</p>
+  ${tbl(['#','Función','Categoría','Qué problema resuelve','Cuándo NO usarla'],[
+    ['1','<span class="pill fn" data-go="calculate">CALCULATE</span> ⭐⚠️','Filtro','Modificar el contexto de filtro de un cálculo. El corazón de DAX.','Cuando no necesitas cambiar el contexto (una suma simple ya respeta el contexto).'],
+    ['2','<span class="pill fn" data-go="fn-agregacion">SUM</span> 🟢','Agregación','Sumar una columna numérica respetando el contexto actual.','Si necesitas sumar una <i>expresión por fila</i> (precio×cantidad) → usa SUMX.'],
+    ['3','<span class="pill fn" data-go="fn-variables">VAR / RETURN</span> 🟢⭐','Variables','Guardar resultados intermedios: legibilidad, performance y depuración.','Casi nunca sobran; el "abuso" es no usarlas.'],
+    ['4','<span class="pill fn" data-go="fn-logica">IF</span> 🟢','Lógica','Bifurcar un cálculo según una condición.','Con 3+ ramas → SWITCH es más legible.'],
+    ['5','<span class="pill fn" data-go="fn-errores">DIVIDE</span> 🟢','Errores','Dividir evitando el error de división por cero.','Cuando el denominador nunca puede ser 0 y quieres performance máxima (raro).'],
+    ['6','<span class="pill fn" data-go="fn-tablas">RELATED</span> 🟢','Tablas','Traer un valor de la tabla del lado "uno" de una relación.','Del lado "uno" hacia "muchos" → eso es RELATEDTABLE.'],
+    ['7','<span class="pill fn" data-go="fn-agregacion">DISTINCTCOUNT</span> 🟡','Agregación','Contar valores únicos (clientes activos, SKUs, facturas).','Para contar filas → COUNTROWS es más barato.'],
+    ['8','<span class="pill fn" data-go="fn-tablas">SELECTEDVALUE</span> 🟡⭐','Tablas','Leer la selección de un slicer / la única categoría visible.','Si esperas múltiples valores; devuelve BLANK si hay más de uno.'],
+  ])}
+
+  <h3>🥈 Uso frecuente — varias veces por modelo</h3>
+  ${tbl(['#','Función','Categoría','Qué problema resuelve','Cuándo NO usarla'],[
+    ['9','<span class="pill fn" data-go="fn-filtros">FILTER</span> 🟡⚠️','Filtro','Aplicar condiciones complejas (más de una columna, comparaciones).','Para filtros simples por valor → pásalos directo a CALCULATE (más rápido).'],
+    ['10','<span class="pill fn" data-go="fn-filtros">ALL</span> 🟡⚠️','Filtro','Quitar filtros (para % del total, denominadores, rankings).','Si solo quieres ignorar <i>algunas</i> columnas → ALLEXCEPT / REMOVEFILTERS.'],
+    ['11','<span class="pill fn" data-go="fn-iteradores">SUMX</span> 🟡⭐','Iterador','Sumar una expresión evaluada fila a fila (precio×cantidad, ponderaciones).','Si la columna ya existe calculada → SUM directo es más barato.'],
+    ['12','<span class="pill fn" data-go="fn-logica">SWITCH</span> 🟡','Lógica','Múltiples ramas; selector de medidas; semáforos de KPI.','Para una sola condición → IF.'],
+    ['13','<span class="pill fn" data-go="fn-tablas">VALUES</span> 🟡⭐','Tablas','Obtener los valores distintos visibles en el contexto actual.','Cuando quieres ignorar el contexto → DISTINCT sobre ALL.'],
+    ['14','<span class="pill fn" data-go="fn-tiempo">DATESYTD / TOTALYTD</span> 🟡','Tiempo','Acumulado del año (YTD) para ventas, OPEX, EBITDA.','Si tu cierre fiscal no es 31-dic, define el año fiscal correctamente.'],
+    ['15','<span class="pill fn" data-go="fn-tiempo">SAMEPERIODLASTYEAR</span> 🟡','Tiempo','Comparar contra el mismo periodo del año anterior (YoY).','Para desplazamientos arbitrarios (–3 meses) → DATEADD.'],
+    ['16','<span class="pill fn" data-go="fn-tiempo">DATEADD</span> 🟡⭐','Tiempo','Desplazar fechas N periodos: MoM, YoY, comparativas flexibles.','Si necesitas un rango móvil → DATESINPERIOD.'],
+    ['17','<span class="pill fn" data-go="fn-errores">COALESCE / ISBLANK</span> 🟡','Errores','Reemplazar BLANK por 0 o por un valor por defecto.','No "tapes" un BLANK que en realidad señala un error de modelo.'],
+    ['18','<span class="pill fn" data-go="fn-filtros">REMOVEFILTERS</span> 🟡⭐','Filtro','Versión legible y específica de ALL para limpiar filtros (DAX moderno).','—'],
+    ['19','<span class="pill fn" data-go="fn-agregacion">AVERAGE</span> 🟢','Agregación','Promedio simple (ticket medio, precio medio).','Promedio ponderado → DIVIDE(SUMX(...),SUMX(...)).'],
+    ['20','<span class="pill fn" data-go="fn-agregacion">COUNTROWS</span> 🟡','Agregación','Contar filas de una tabla (nº de facturas, transacciones).','Para únicos → DISTINCTCOUNT.'],
+  ])}
+
+  <h3>🥉 Uso ocasional — herramientas de precisión</h3>
+  ${tbl(['#','Función','Categoría','Qué problema resuelve'],[
+    ['21','<span class="pill fn" data-go="fn-ranking">RANKX</span> 🔴⭐','Ranking','Posiciones: top clientes, ranking de vendedores, deciles.'],
+    ['22','<span class="pill fn" data-go="fn-ranking">TOPN</span> 🔴','Ranking','Tabla con los N mejores/peores para sumar o mostrar.'],
+    ['23','<span class="pill fn" data-go="fn-filtros">ALLSELECTED</span> 🔴⚠️','Filtro','% sobre lo seleccionado en el slicer (no sobre todo).'],
+    ['24','<span class="pill fn" data-go="fn-filtros">KEEPFILTERS</span> 🔴⚠️','Filtro','Añadir un filtro sin sobrescribir el existente (intersección).'],
+    ['25','<span class="pill fn" data-go="fn-filtros">ALLEXCEPT</span> 🔴⚠️','Filtro','Quitar todos los filtros menos los de ciertas columnas.'],
+    ['26','<span class="pill fn" data-go="fn-tablas">LOOKUPVALUE</span> 🟡','Tablas','Buscar un valor sin relación (estilo BUSCARV).'],
+    ['27','<span class="pill fn" data-go="fn-iteradores">AVERAGEX / COUNTX</span> 🟡','Iterador','Promedio/conteo de una expresión fila a fila.'],
+  ])}
+
+  <h3>🎯 Casos específicos — cuando el problema lo pide</h3>
+  ${tbl(['#','Función','Categoría','Cuándo aparece'],[
+    ['28','<span class="pill fn" data-go="fn-tiempo">DATESINPERIOD</span> 🔴','Tiempo','Medias móviles, "últimos 12 meses", rolling forecast.'],
+    ['29','<span class="pill fn" data-go="fn-tiempo">PARALLELPERIOD / PREVIOUSMONTH</span> 🔴','Tiempo','Comparativos de periodos completos desplazados.'],
+    ['30','<span class="pill fn" data-go="fn-tablas">RELATEDTABLE</span> 🔴','Tablas','Iterar las filas "muchas" relacionadas con una fila "uno".'],
+  ])}
+
+  ${best('Estrategia de aprendizaje sobre este mapa', `<ul>
+    <li><b>Semana 1-2:</b> domina las 8 de "uso diario" hasta escribirlas sin pensar. Son el 60% de tu trabajo.</li>
+    <li><b>Semana 3-4:</b> incorpora las de "uso frecuente", especialmente <code class="inl">FILTER</code>, <code class="inl">ALL</code> y la inteligencia de tiempo.</li>
+    <li><b>Después:</b> las de uso ocasional y específico las aprendes <i>cuando el problema aparece</i>, no antes. Memorizarlas en frío no sirve.</li>
+  </ul>`)}
+
+  ${warn('La trampa del principiante', `<p>Muchos intentan aprender DAX como una lista de funciones de Excel. <b>DAX no es Excel.</b> El 90% de la dificultad real no está en las funciones, sino en el <b>contexto de evaluación</b> que las rodea. Por eso este Atlas dedica un módulo entero al <span class="pill" data-go="motor">Motor DAX</span> y otro, enorme, a <span class="pill" data-go="calculate">CALCULATE</span>. Una persona que entiende contexto y CALCULATE con 10 funciones supera a otra que memorizó 100 sin entender el contexto.</p>`)}
+  `
+});
+
+/* ===================== MOTOR DAX ===================== */
+N({ id:'motor', parent:null, title:'Fundamentos del Motor DAX', icon:'⚙️',
+  importancia:'★★★★★', dificultad:'🟢→🔴', uso:'Base de todo',
+  subtitle:'El modelo mental imprescindible: qué ocurre internamente cuando el motor evalúa una medida. Sin esto, DAX parece magia aleatoria; con esto, se vuelve predecible.',
+  related:['calculate','prioridades'],
+  html: ()=> `
+  ${why('Sin el motor, DAX es ensayo y error', `<p>La diferencia entre un usuario intermedio y un desarrollador senior <b>no es cuántas funciones conoce</b>, sino si puede <b>predecir mentalmente</b> qué número va a salir antes de pulsar Enter. Eso solo es posible si entiendes los dos contextos de evaluación y cómo se transforman. Este módulo construye ese modelo mental, pieza a pieza.</p>`)}
+
+  <h3>Las dos preguntas que el motor se hace siempre</h3>
+  <p>Cuando Power BI evalúa una celda (de una matriz, una tarjeta, un gráfico), el motor responde dos preguntas en orden:</p>
+  ${diagram(`
+   ┌────────────────────────────────────────────────────────────┐
+   │  PREGUNTA 1:  ¿Qué filas de datos están "visibles" ahora?    │
+   │  → eso lo decide el CONTEXTO DE FILTRO                        │
+   │                                                              │
+   │  PREGUNTA 2:  Para cada fila que recorro, ¿qué valores       │
+   │               tengo "a mano" en esta fila concreta?          │
+   │  → eso lo decide el CONTEXTO DE FILA                          │
+   └────────────────────────────────────────────────────────────┘
+       Toda medida DAX vive dentro de la combinación de estos dos.`)}
+
+  <h3>El mapa conceptual del motor</h3>
+  ${diagram(`
+   CELDA del visual (matriz/tarjeta/gráfico)
+        │  aporta filtros iniciales (fila, columna, slicers, página)
+        ▼
+   ┌─ CONTEXTO DE FILTRO ───────────────────────────────┐
+   │  conjunto de filtros activos sobre el modelo        │
+   │       │ se propaga por las RELACIONES               │
+   │       ▼                                              │
+   │  TABLA DE HECHOS filtrada  ◄── dimensiones filtran  │
+   └──────────────────────────────────────────────────────┘
+        │
+        ▼
+   La medida se evalúa.  Si hay un ITERADOR (SUMX…) o
+   una columna calculada → se abre un CONTEXTO DE FILA.
+        │
+        ▼
+   CALCULATE puede REESCRIBIR el contexto de filtro
+   (y disparar TRANSICIÓN DE CONTEXTO).`)}
+
+  <p>Recorre los sub-nodos en este orden la primera vez. Cada uno asume el anterior:</p>
+  `
+});
+
+/* ---- Contexto de Fila ---- */
+N({ id:'ctx-fila', parent:'motor', title:'Contexto de Fila', icon:'🟢',
+  importancia:'★★★★☆', dificultad:'🟢 Fundamental', uso:'Iteradores y columnas',
+  subtitle:'"¿En qué fila estoy parado ahora mismo?" El contexto que te da acceso a los valores de una fila concreta.',
+  deps:['motor'], related:['ctx-filtro','transicion'], fns:['fn-iteradores','fn-tablas'],
+  html: ()=> `
+  <h3>1 · Explicación simple</h3>
+  <p>El <b>contexto de fila</b> es la idea de "estar parado en una fila concreta de una tabla". Cuando estás en esa fila, puedes leer el valor de cualquier columna <i>de esa fila</i>. Es exactamente lo que ocurre en Excel cuando escribes una fórmula en la celda <code class="inl">D2</code> que usa <code class="inl">B2*C2</code>: estás "en la fila 2".</p>
+
+  <h3>2 · Explicación conceptual</h3>
+  <p>El contexto de fila aparece en dos situaciones, y solo en dos:</p>
+  <ul>
+    <li><b>Columnas calculadas:</b> se evalúan fila por fila para toda la tabla. Cada fila trae su propio contexto de fila automáticamente.</li>
+    <li><b>Funciones iteradoras</b> (las que terminan en <b>X</b>: <code class="inl">SUMX</code>, <code class="inl">AVERAGEX</code>, <code class="inl">RANKX</code>…, y también <code class="inl">FILTER</code>): recorren una tabla fila a fila y, en cada paso, abren un contexto de fila.</li>
+  </ul>
+  ${analogy('El dedo sobre el renglón', `<p>Imagina que lees una tabla impresa con el dedo apoyado en un renglón. Mientras tu dedo está en la fila de "Juan", puedes leer su sueldo, su área, su antigüedad. El contexto de fila <b>es ese dedo</b>: te da acceso a los valores de la fila donde estás parado, una a la vez.</p>`)}
+
+  <h3>3 · Explicación técnica</h3>
+  <p>El contexto de fila <b>NO filtra el modelo</b>. Esta es la confusión número uno. Estar parado en la fila de "Juan" <b>no</b> filtra automáticamente el resto del modelo a Juan. Solo te da acceso a leer las columnas de esa fila.</p>
+  ${dax(`
+Margen = Ventas[Precio] - Ventas[Costo]   // columna calculada
+// En cada fila, lee Precio y Costo DE ESA FILA. Eso es contexto de fila.`)}
+  ${dax(`
+Ingreso Total =
+SUMX (
+    Ventas,                              -- itera fila a fila sobre Ventas
+    Ventas[Cantidad] * Ventas[Precio]    -- en cada fila lee Cantidad y Precio
+)`)}
+
+  ${engine('', `<p>Internamente, <code class="inl">SUMX(Ventas, ...)</code> hace esto:</p>
+  <ol>
+    <li>Toma la tabla <code class="inl">Ventas</code> <b>ya filtrada por el contexto de filtro actual</b>.</li>
+    <li>Para cada fila, abre un contexto de fila apuntando a esa fila.</li>
+    <li>Evalúa la expresión (<code class="inl">Cantidad * Precio</code>) leyendo los valores de esa fila.</li>
+    <li>Acumula el resultado y pasa a la siguiente fila.</li>
+  </ol>`)}
+
+  <h3>4 · El detalle que separa intermedios de seniors ⚠️</h3>
+  ${warn('Contexto de fila NO recorre relaciones por sí solo', `<p>Si estás en una fila de <code class="inl">Ventas</code> y quieres el nombre de la categoría que vive en la tabla <code class="inl">Productos</code>, <b>el contexto de fila no cruza la relación automáticamente</b>. Necesitas <code class="inl">RELATED</code> para "saltar" del lado muchos al lado uno:</p>
+  ${dax(`
+Venta con Categoría =
+SUMX (
+    Ventas,
+    Ventas[Cantidad] * RELATED ( Productos[Precio] )   -- RELATED cruza la relación
+)`)}
+  <p>Sin <code class="inl">RELATED</code>, el contexto de fila de <code class="inl">Ventas</code> no "ve" las columnas de <code class="inl">Productos</code>.</p>`)}
+
+  <h3>5 · Caso empresarial</h3>
+  <p><b>Cálculo de OPEX ponderado por tipo de cambio.</b> Tienes gastos en distintas monedas y un tipo de cambio por fila. No puedes sumar primero y convertir después; debes convertir <i>fila a fila</i>:</p>
+  ${dax(`
+OPEX en USD =
+SUMX (
+    Gastos,
+    Gastos[Importe Local] * RELATED ( TipoCambio[Tasa USD] )
+)`)}
+
+  <h3>6 · Errores frecuentes</h3>
+  ${err('Usar SUM cuando necesitas SUMX', `<p><code class="inl">SUM(Ventas[Cantidad] * Ventas[Precio])</code> <b>no compila</b>. <code class="inl">SUM</code> solo acepta una columna, no una expresión por fila. Necesitas <code class="inl">SUMX</code> porque hay una operación que debe ocurrir <i>en cada fila</i> antes de sumar.</p>`)}
+  ${err('Creer que el contexto de fila filtra', `<p>Una columna calculada <code class="inl">Total Cliente = SUM(Ventas[Importe])</code> en la tabla de clientes da el <b>gran total para todos</b>, no el total de ese cliente. ¿Por qué? Porque el contexto de fila no se convierte en filtro automáticamente. Para eso necesitas <span class="pill" data-go="transicion">transición de contexto</span> (CALCULATE).</p>`)}
+
+  <h3>7 · Mejores prácticas</h3>
+  ${best('', `<ul>
+    <li>Usa iteradores (X) <b>solo</b> cuando necesitas operar fila a fila. Si la columna ya tiene el valor listo, <code class="inl">SUM</code> es más barato.</li>
+    <li>Prefiere <code class="inl">RELATED</code> dentro de iteradores a crear columnas calculadas que dupliquen datos.</li>
+    <li>Recuerda: <b>contexto de fila = acceso a valores</b>, <b>contexto de filtro = qué filas existen</b>. Son cosas distintas.</li>
+  </ul>`)}
+
+  ${exer('Predice el resultado', `<p>Tabla <code class="inl">Ventas</code>: 3 filas → (Cant 2, Precio 10), (Cant 1, Precio 50), (Cant 4, Precio 5).</p>
+  <p>¿Cuánto da <code class="inl">SUMX(Ventas, Ventas[Cantidad] * Ventas[Precio])</code>?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Ver solución paso a paso</summary>
+  <p>Fila 1: 2×10 = 20 · Fila 2: 1×50 = 50 · Fila 3: 4×5 = 20. SUMX acumula: 20+50+20 = <b>90</b>. Nota que <code class="inl">SUM(Cant)×SUM(Precio)</code> daría 7×65 = 455, ¡completamente distinto! Ese es el sentido del iterador: multiplica <i>dentro</i> de cada fila.</p></details>`)}
+  `
+});
+
+/* ---- Contexto de Filtro ---- */
+N({ id:'ctx-filtro', parent:'motor', title:'Contexto de Filtro', icon:'🟢⚠️',
+  importancia:'★★★★★', dificultad:'🟡 Fundamental pero sutil', uso:'En cada celda',
+  subtitle:'"¿Qué filas del modelo están visibles ahora mismo?" El contexto que define qué datos entran en el cálculo. El concepto más importante de todo DAX después de CALCULATE.',
+  deps:['ctx-fila'], related:['transicion','relaciones','calculate'], fns:['calculate','fn-filtros'],
+  html: ()=> `
+  <h3>1 · Explicación simple</h3>
+  <p>El <b>contexto de filtro</b> es el conjunto de filtros que están activos cuando se evalúa una medida. Responde a: <b>"¿de qué subconjunto de datos estamos hablando ahora?"</b>. En una matriz, la celda de "Marzo / Cliente A" tiene un contexto de filtro = {Mes = Marzo, Cliente = A}.</p>
+
+  <h3>2 · De dónde viene el contexto de filtro</h3>
+  <p>Se construye sumando <b>todas</b> estas fuentes:</p>
+  ${tbl(['Fuente','Ejemplo','Aporta al contexto'],[
+    ['Filas de un visual','La fila "Marzo" de una matriz','Mes = Marzo'],
+    ['Columnas de un visual','La columna "Cliente A"','Cliente = A'],
+    ['Slicers / segmentaciones','Slicer de Año = 2026','Año = 2026'],
+    ['Filtros de página/informe','Filtro de Región = LATAM','Región = LATAM'],
+    ['CALCULATE','Una medida que añade un filtro','Lo que CALCULATE imponga'],
+  ])}
+  ${analogy('La comanda del restaurante', `<p>El contexto de filtro es la <b>comanda</b> que llega a la cocina: "mesa 4, sin gluten, para 2 personas". El cocinero (la medida) solo cocina lo que la comanda especifica. Cada celda de tu informe genera una comanda distinta, y por eso la misma medida da números diferentes en cada celda. <b>Una sola receta, miles de comandas.</b></p>`)}
+
+  <h3>3 · Explicación técnica: filtra el MODELO, no la medida</h3>
+  <p>El contexto de filtro actúa <b>antes</b> de que tu medida se ejecute: filtra físicamente las tablas. Cuando <code class="inl">SUM(Ventas[Importe])</code> corre en la celda "Marzo", el motor ya recortó <code class="inl">Ventas</code> a solo las filas de marzo. Tú no escribiste ningún filtro: <b>lo puso el visual</b>.</p>
+  ${engine('Secuencia exacta en una celda', `<ol>
+    <li>El visual declara sus coordenadas: {Mes=Marzo, Cliente=A}.</li>
+    <li>El motor aplica esos filtros sobre las <b>dimensiones</b> (Calendario, Clientes).</li>
+    <li>Esos filtros se <b>propagan por las relaciones</b> hasta la tabla de hechos <code class="inl">Ventas</code>, recortándola.</li>
+    <li>La medida se evalúa <b>sobre esa tabla ya recortada</b>.</li>
+    <li>El número resultante se pinta en la celda.</li>
+  </ol>`)}
+
+  <h3>4 · El gran total y el problema de "no hay filtro"</h3>
+  ${warn('La fila Total tiene un contexto de filtro distinto', `<p>En la fila <b>Total</b> de una matriz, <b>no</b> hay filtro de Cliente ni de Mes. El contexto de filtro está "vacío" en esas columnas, así que la medida ve <b>todas</b> las filas. Por eso un porcentaje mal hecho da 100% en cada fila pero el total no cuadra: cada celda vive en un contexto distinto. Entender esto es clave para los <span class="pill" data-go="sim-6">simuladores en matriz</span>.</p>`)}
+
+  <h3>5 · Caso empresarial: % sobre el total</h3>
+  <p>Para calcular qué porcentaje del EBITDA total aporta cada unidad de negocio, necesitas <b>dos contextos a la vez</b>: el de la fila (esta UN) y uno sin filtro de UN (el total). Ahí entra <code class="inl">CALCULATE + ALL</code>:</p>
+  ${dax(`
+% sobre Total =
+DIVIDE (
+    [EBITDA],                                    -- contexto de la fila (esta UN)
+    CALCULATE ( [EBITDA], ALL ( UnidadNegocio ) ) -- contexto sin filtro de UN = total
+)`)}
+
+  <h3>6 · Errores frecuentes</h3>
+  ${err('Confundir contexto de filtro con contexto de fila', `<p>Son ortogonales. El contexto de fila te deja <i>leer</i> valores de una fila; el de filtro decide <i>qué filas existen</i> para agregar. Un iterador abre contexto de fila pero <b>NO</b> cambia el de filtro (hasta que metes CALCULATE en medio → transición).</p>`)}
+  ${err('Asumir que un slicer "ya filtró la medida"', `<p>El slicer filtra el <b>modelo</b>, no "la medida". Si dentro usas <code class="inl">ALL()</code>, borras ese filtro y el slicer deja de tener efecto. Saber qué filtros conserva o borra cada función es el núcleo del módulo CALCULATE.</p>`)}
+
+  <h3>7 · Mejores prácticas</h3>
+  ${best('', `<ul>
+    <li>Antes de escribir una medida, pregúntate: <b>"¿en qué contexto de filtro se va a evaluar?"</b> (¿celda de matriz? ¿total? ¿con qué slicers?).</li>
+    <li>Para "romper" el contexto usa funciones explícitas (<code class="inl">ALL</code>, <code class="inl">REMOVEFILTERS</code>, <code class="inl">ALLSELECTED</code>) y entiende exactamente cuál necesitas.</li>
+    <li>Diseña dimensiones limpias: el contexto de filtro funciona mejor con un buen <span class="pill" data-go="modelado">star schema</span>.</li>
+  </ul>`)}
+
+  ${exer('Predice el resultado', `<p>Matriz con Clientes en filas. Medida <code class="inl">Ventas = SUM(Ventas[Importe])</code>. Cliente A tiene 100, B tiene 200, C tiene 300.</p>
+  <p>¿Qué muestra cada celda y qué muestra el Total?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Ver solución</summary>
+  <p>Fila A: contexto {Cliente=A} → 100. Fila B → 200. Fila C → 300. <b>Total:</b> sin filtro de Cliente → ve las tres filas → 600. La <b>misma medida</b> da 4 números distintos porque cada celda impone un contexto de filtro diferente. Esa es toda la magia de Power BI.</p></details>`)}
+  `
+});
+
+/* ---- Transición de Contexto ---- */
+N({ id:'transicion', parent:'motor', title:'Transición de Contexto', icon:'🔴⚠️⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado (clave senior)', uso:'Medidas dentro de iteradores',
+  subtitle:'El mecanismo por el que CALCULATE convierte el contexto de fila en contexto de filtro. El concepto que "desbloquea" el DAX avanzado y el que más errores silenciosos causa.',
+  deps:['ctx-fila','ctx-filtro'], related:['calculate','sim-2','sim-6'], fns:['calculate','fn-iteradores'],
+  html: ()=> `
+  ${why('Es el puente entre los dos contextos', `<p>Hasta ahora tienes dos mundos separados: el contexto de fila (leer valores) y el de filtro (qué filas existen). La <b>transición de contexto</b> es el único puente entre ellos. Entenderla explica por qué una medida dentro de <code class="inl">SUMX</code> "de repente" funciona, por qué una columna calculada con una medida da el valor correcto por fila, y por qué a veces tu cálculo "se filtra solo" sin que lo pidieras.</p>`)}
+
+  <h3>1 · Explicación simple</h3>
+  <p><b>Transición de contexto = "convertir dónde estoy parado en un filtro".</b> Cuando hay un contexto de fila y aparece <code class="inl">CALCULATE</code> (o llamas a una medida, que lleva un CALCULATE implícito), el motor toma los valores de la fila actual y los <b>transforma en filtros</b> sobre el modelo.</p>
+
+  ${analogy('De señalar a aislar', `<p>En el contexto de fila tu dedo señala la fila de "Cliente A" (puedes leer sus datos, pero el resto del modelo sigue completo). La transición de contexto es como decir: <b>"ahora el restaurante entero solo cocina para Cliente A"</b>. Pasaste de <i>señalar una fila</i> a <i>aislar todo el modelo a esa fila</i>. Ese salto lo hace CALCULATE.</p>`)}
+
+  <h3>2 · El disparador: CALCULATE (explícito o implícito)</h3>
+  ${warn('Toda medida lleva un CALCULATE invisible', `<p>Cuando escribes <code class="inl">[Ventas]</code> (una medida) dentro de un iterador, DAX la envuelve automáticamente: se comporta como <code class="inl">CALCULATE([Ventas])</code>. Por eso <b>llamar a una medida dentro de un contexto de fila SIEMPRE dispara transición de contexto</b>, aunque no escribas CALCULATE. Esta es la fuente nº1 de resultados "mágicos" que no entiendes.</p>`)}
+
+  <h3>3 · El ejemplo canónico</h3>
+  <p>Columna calculada en la tabla <code class="inl">Clientes</code>:</p>
+  ${dax(`
+-- ❌ SIN transición: el contexto de fila NO filtra
+Total A = SUM ( Ventas[Importe] )
+-- Resultado: el GRAN TOTAL en cada fila (no filtra por cliente)`)}
+  ${dax(`
+-- ✅ CON transición: CALCULATE convierte la fila en filtro
+Total B = CALCULATE ( SUM ( Ventas[Importe] ) )
+-- Resultado: el total DE ESE cliente en cada fila`)}
+  ${engine('Qué hace CALCULATE en Total B, paso a paso', `<ol>
+    <li>Estamos en la fila de, digamos, "Cliente A" (contexto de fila).</li>
+    <li><code class="inl">CALCULATE</code> detecta que hay contexto de fila activo.</li>
+    <li>Lee <b>todas las columnas de la fila actual</b>: Clientes[ClienteID]=A, Clientes[Nombre]="A", etc.</li>
+    <li>Las convierte en <b>filtros</b>: contexto de filtro += {Clientes[ClienteID]=A …}.</li>
+    <li>Ese filtro se propaga por la relación Clientes→Ventas, recortando Ventas a las de A.</li>
+    <li><code class="inl">SUM(Ventas[Importe])</code> se evalúa ya filtrado → total de A. ✔</li>
+  </ol>`)}
+
+  <h3>4 · Dónde aparece en la práctica</h3>
+  ${tbl(['Situación','¿Hay transición?','Por qué'],[
+    ['Columna calculada que llama a una medida','Sí','La medida = CALCULATE implícito + hay contexto de fila'],
+    ['SUMX(Clientes, [Ventas])','Sí, en cada iteración','La medida [Ventas] dispara transición por cada fila de Clientes'],
+    ['SUMX(Ventas, Ventas[Cant]*Ventas[Precio])','No','No hay medida ni CALCULATE; solo se leen columnas'],
+    ['Medida directa en una tarjeta','No (no hay contexto de fila que convertir)','Solo hay contexto de filtro'],
+  ])}
+
+  <h3>5 · Caso empresarial: clientes por encima de su media</h3>
+  <p>"¿Cuántos clientes facturan más que el promedio de facturación por cliente?" Necesitas, por cada cliente, su propio total (transición) y compararlo:</p>
+  ${dax(`
+Clientes Sobre Media =
+VAR MediaPorCliente =
+    AVERAGEX ( Clientes, [Ventas] )       -- [Ventas] dispara transición: total de cada cliente
+RETURN
+    COUNTROWS (
+        FILTER ( Clientes, [Ventas] > MediaPorCliente )  -- de nuevo transición por fila
+    )`)}
+  <p>Sin transición, <code class="inl">[Ventas]</code> daría el gran total en cada fila y todos serían iguales. La transición es lo que hace que <code class="inl">[Ventas]</code> signifique "las ventas de <i>este</i> cliente".</p>
+
+  <h3>6 · Errores frecuentes</h3>
+  ${err('Performance: transición masiva', `<p><code class="inl">SUMX(TablaGrande, [Medida])</code> dispara una transición de contexto <b>por cada fila</b>. Sobre millones de filas, esto puede ser lentísimo. A menudo se reescribe iterando sobre una dimensión pequeña o evitando la medida dentro del iterador. Ver <span class="pill" data-go="performance">Performance</span>.</p>`)}
+  ${err('Transición no deseada que "ensucia" el filtro', `<p>A veces la transición añade filtros que NO querías (todas las columnas de la fila). Si solo necesitabas filtrar por una clave, usa <code class="inl">VALUES</code>/<code class="inl">SELECTEDVALUE</code> en lugar de confiar en la transición completa.</p>`)}
+
+  <h3>7 · Mejores prácticas</h3>
+  ${best('', `<ul>
+    <li>Cuando veas una <b>medida llamada dentro de un iterador</b>, di mentalmente: "aquí hay transición de contexto". Eso explica el 90% de los resultados extraños.</li>
+    <li>Itera sobre <b>dimensiones pequeñas</b> (Clientes, Productos), no sobre la tabla de hechos, cuando uses transición.</li>
+    <li>Si solo necesitas un valor escalar de la fila, considera capturarlo con <code class="inl">VAR</code> antes de entrar en CALCULATE.</li>
+  </ul>`)}
+
+  ${exer('El clásico que todos fallan', `<p>Columna calculada en <code class="inl">Productos</code>: <code class="inl">Ventas Prod = SUM(Ventas[Importe])</code>. Hay 3 productos. Las ventas totales del modelo son 1000.</p>
+  <p>¿Qué muestra cada fila?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Ver solución</summary>
+  <p>Las tres filas muestran <b>1000</b> (el gran total), porque <code class="inl">SUM</code> sin CALCULATE no convierte el contexto de fila en filtro. Para obtener las ventas de cada producto necesitas <code class="inl">CALCULATE(SUM(Ventas[Importe]))</code> → eso dispara la transición y cada fila muestra su propio total. <b>Recuerda esta diferencia: es la prueba de fuego de si entendiste el concepto.</b></p></details>`)}
+  `
+});
+
+/* ---- Relaciones y Propagación ---- */
+N({ id:'relaciones', parent:'motor', title:'Relaciones, Propagación, Cardinalidad y Dirección', icon:'🟡',
+  importancia:'★★★★★', dificultad:'🟡 Importante', uso:'Diseño de modelo',
+  subtitle:'Cómo viajan los filtros por el modelo: el "sistema circulatorio" que conecta dimensiones y hechos. Cardinalidad (1:*, *:*) y dirección de filtro (simple/bidireccional).',
+  deps:['ctx-filtro'], related:['modelado','transicion','sim-5'], fns:['fn-tablas'],
+  html: ()=> `
+  ${why('Las relaciones deciden qué filtra a qué', `<p>El contexto de filtro nace en las dimensiones, pero el dato vive en los hechos. Las <b>relaciones</b> son las tuberías por donde el filtro viaja de una a otro. Si entiendes la dirección y la cardinalidad, sabes <i>de antemano</i> qué filtra qué; si no, vivirás peleando con números que "no responden" a los slicers.</p>`)}
+
+  <h3>1 · Cardinalidad: cuántas filas se relacionan</h3>
+  ${tbl(['Tipo','Lado','Caso típico','Notas'],[
+    ['1:* (uno a muchos)','Dimensión (1) → Hechos (*)','Clientes(1) → Ventas(*)','El 95% de tus relaciones. La sana por defecto.'],
+    ['1:1 (uno a uno)','Ambos únicos','Empleado → DetalleEmpleado','Raro; suele indicar tablas que deberían fusionarse.'],
+    ['*:* (muchos a muchos)','Ambos con repetidos','Cuentas ↔ Presupuestos por escenario','Potente pero peligroso; ambigüedad y performance.'],
+  ])}
+
+  <h3>2 · Dirección del filtro: por dónde viaja</h3>
+  ${diagram(`
+   DIRECCIÓN SIMPLE (recomendada)          DIRECCIÓN BIDIRECCIONAL (cuidado)
+   ───────────────────────────            ──────────────────────────────
+       Clientes (1)                            Clientes (1)
+           │  el filtro baja                       │ ▲  el filtro va y vuelve
+           ▼  hacia los hechos                     ▼ │
+        Ventas (*)                              Ventas (*)
+
+   El filtro va SIEMPRE del lado "1"        El filtro puede subir de "*" a "1".
+   al lado "*". Predecible y rápido.        Útil a veces, pero crea ambigüedad
+                                            y riesgo de performance.`)}
+  ${engine('Propagación paso a paso', `<p>Al seleccionar "Cliente A" en un slicer:</p>
+  <ol>
+    <li>El filtro se aplica sobre la tabla <code class="inl">Clientes</code> (queda 1 fila visible: A).</li>
+    <li>Por la relación 1:* el filtro <b>desciende</b> a <code class="inl">Ventas</code>: solo filas con ClienteID = A.</li>
+    <li>Cualquier medida sobre <code class="inl">Ventas</code> se evalúa ya sobre ese subconjunto.</li>
+  </ol>
+  <p>El filtro <b>no sube</b> de Ventas a Productos por sí solo (son dos dimensiones distintas que solo se "ven" a través de la tabla de hechos, y solo si la dirección lo permite).</p>`)}
+
+  <h3>3 · Por qué la dirección simple es la mejor práctica</h3>
+  ${warn('La bidireccional es tentadora y traicionera', `<p>Activar filtrado bidireccional "para que todo filtre todo" parece cómodo, pero genera:</p>
+  <ul>
+    <li><b>Ambigüedad:</b> el motor puede tener varios caminos para propagar un filtro y no saber cuál usar.</li>
+    <li><b>Performance:</b> propagación más cara.</li>
+    <li><b>Resultados inesperados:</b> filtros que llegan a tablas donde no los esperabas.</li>
+  </ul>
+  <p>Solución senior: deja todo en <b>simple</b> y, cuando puntualmente necesites que un filtro suba, hazlo <b>dentro de una medida</b> con <code class="inl">CROSSFILTER</code> o <code class="inl">TREATAS</code>, no a nivel de modelo.</p>`)}
+
+  <h3>4 · Relaciones inactivas y USERELATIONSHIP</h3>
+  <p>Puedes tener varias relaciones entre dos tablas (ej. <code class="inl">Ventas[FechaPedido]</code> y <code class="inl">Ventas[FechaEntrega]</code> hacia <code class="inl">Calendario</code>), pero solo una activa. Las demás se activan puntualmente:</p>
+  ${dax(`
+Ventas por Fecha Entrega =
+CALCULATE (
+    [Ventas],
+    USERELATIONSHIP ( Ventas[FechaEntrega], Calendario[Fecha] )
+)`)}
+
+  <h3>5 · Caso empresarial: aging de cobranzas</h3>
+  <p>Una tabla <code class="inl">Facturas</code> con FechaEmisión y FechaVencimiento, ambas hacia el calendario. El <b>aging</b> (antigüedad de deuda) requiere medir por fecha de vencimiento aunque la relación activa sea por emisión → <code class="inl">USERELATIONSHIP</code>.</p>
+
+  ${best('Reglas de oro de modelado relacional', `<ul>
+    <li>Dimensión en el lado "1", hechos en el lado "*". Siempre.</li>
+    <li>Dirección de filtro <b>simple</b> por defecto.</li>
+    <li>Evita relaciones *:* salvo que sepas exactamente por qué; suele resolverse con una tabla puente.</li>
+    <li>Una sola tabla <span class="pill" data-go="modelado">Calendario</span> marcada como tabla de fechas para toda la inteligencia de tiempo.</li>
+  </ul>`)}
+
+  ${exer('Diagnóstico', `<p>Un slicer de "Categoría de Producto" no afecta a una medida que cuenta clientes. ¿Por qué podría ser?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Ver solución</summary>
+  <p>El filtro de Categoría baja de <code class="inl">Productos</code> a <code class="inl">Ventas</code> (1:*), pero para llegar a <code class="inl">Clientes</code> tendría que <b>subir</b> de Ventas a Clientes — y la dirección simple no lo permite. La medida de clientes "no ve" el filtro de categoría. Soluciones: medir clientes <i>que compraron</i> esa categoría con <code class="inl">CALCULATE(DISTINCTCOUNT(Ventas[ClienteID]))</code> (cuenta sobre la tabla de hechos ya filtrada), o usar <code class="inl">CROSSFILTER</code>. La elección correcta depende de la pregunta de negocio.</p></details>`)}
+  `
+});
+
+/* ---- Modelado Dimensional ---- */
+N({ id:'modelado', parent:'motor', title:'Modelado Dimensional: Hechos, Dimensiones, Star vs Snowflake', icon:'🟡⭐',
+  importancia:'★★★★★', dificultad:'🟡 Importante', uso:'Arranque de todo proyecto',
+  subtitle:'La arquitectura del modelo decide si tu DAX será simple o un infierno. Tablas de hechos, dimensiones, esquema en estrella y por qué casi siempre gana al copo de nieve.',
+  deps:['relaciones'], related:['ctx-filtro','performance'], fns:[],
+  html: ()=> `
+  ${why('El 80% de los problemas de DAX son problemas de modelo disfrazados', `<p>Cuando una medida se vuelve imposible de escribir, casi nunca es culpa de DAX: es culpa del modelo. Un buen <b>esquema en estrella</b> hace que las medidas sean cortas y rápidas. Un modelo plano o mal relacionado te obliga a escribir DAX retorcido para compensar. <b>Modelar bien es la decisión de mayor apalancamiento que tomarás.</b></p>`)}
+
+  <h3>1 · Hechos vs Dimensiones</h3>
+  ${tbl(['','Tabla de Hechos','Tabla de Dimensión'],[
+    ['Qué contiene','Eventos medibles (ventas, gastos, asientos)','Contexto descriptivo (quién, qué, cuándo, dónde)'],
+    ['Ejemplos','Ventas, Movimientos, Presupuesto, Cobranzas','Clientes, Productos, Calendario, Cuentas, CECO'],
+    ['Tamaño','Muchas filas (millones)','Pocas filas (cientos/miles)'],
+    ['Columnas típicas','Claves + valores numéricos','Claves + atributos de texto'],
+    ['Rol en el filtro','Recibe filtros (lado *)','Emite filtros (lado 1)'],
+  ])}
+  ${analogy('Hechos = recibos, Dimensiones = etiquetas', `<p>Los hechos son la pila de <b>tickets de caja</b>: cada uno dice "vendí X por Y€ el día Z". Las dimensiones son las <b>etiquetas</b> con las que clasificas esos tickets: por cliente, por producto, por mes. Filtras con las etiquetas, sumas los tickets.</p>`)}
+
+  <h3>2 · Star Schema (esquema en estrella) 🟢</h3>
+  ${diagram(`
+                 ┌───────────┐
+                 │ Calendario│
+                 └─────┬─────┘
+                       │ 1
+        ┌───────┐      │      ┌──────────┐
+        │Clientes├──1──┤      ├──1───────┤ Productos │
+        └───────┘      │      └──────────┘
+                    *  ▼  *
+                 ┌───────────┐
+                 │  VENTAS    │   ◄── tabla de hechos en el centro
+                 │ (hechos)   │
+                 └─────┬─────┘
+                    *  │  *
+        ┌───────┐      │      ┌──────────┐
+        │  CECO  ├──1──┤      ├──1───────┤  Moneda  │
+        └───────┘             └──────────┘
+   Dimensiones alrededor, hechos al centro, relaciones 1:* hacia el centro.`)}
+  <p><b>Ventajas:</b> filtros que viajan en un solo salto, medidas cortas, performance óptima, fácil de entender. Es el estándar de la industria (Kimball).</p>
+
+  <h3>3 · Snowflake (copo de nieve) 🔴</h3>
+  ${diagram(`
+   Calendario──Ventas──Productos──Subcategoría──Categoría──Departamento
+                                   (dimensión normalizada en cadena)`)}
+  <p>El copo de nieve <b>normaliza</b> las dimensiones en varias tablas encadenadas (Producto→Subcategoría→Categoría). Cada salto extra es una relación más que el filtro debe atravesar.</p>
+  ${tbl(['Criterio','Star ⭐','Snowflake'],[
+    ['Performance','Mejor (1 salto)','Peor (saltos en cadena)'],
+    ['Legibilidad DAX','Alta','Menor'],
+    ['Mantenimiento','Simple','Más tablas que cuidar'],
+    ['Cuándo usarlo','Casi siempre','Dimensiones enormes o reutilizadas en muchos modelos'],
+  ])}
+  ${best('Regla práctica', `<p><b>Desnormaliza tus dimensiones a estrella</b> aunque "se sienta redundante". En BI la redundancia controlada en dimensiones pequeñas es deseable: aplana Categoría/Subcategoría dentro de <code class="inl">Productos</code> con columnas, no con tablas encadenadas.</p>`)}
+
+  <h3>4 · La tabla Calendario: la dimensión más importante</h3>
+  ${warn('Sin un calendario dedicado, la inteligencia de tiempo no funciona', `<p>Toda la <span class="pill" data-go="fn-tiempo">inteligencia de tiempo</span> (YTD, YoY, MoM) exige una tabla de fechas <b>continua</b> (sin huecos), que cubra todo el rango, marcada como "Tabla de fechas". Nunca uses la fecha de la tabla de hechos directamente para esto.</p>
+  ${dax(`
+Calendario =
+ADDCOLUMNS (
+    CALENDAR ( DATE(2023,1,1), DATE(2027,12,31) ),
+    "Año", YEAR ( [Date] ),
+    "Mes", FORMAT ( [Date], "MMM" ),
+    "MesNum", MONTH ( [Date] ),
+    "AñoMes", FORMAT ( [Date], "YYYY-MM" ),
+    "Trimestre", "T" & ROUNDUP ( MONTH([Date])/3, 0 )
+)`)}`)}
+
+  <h3>5 · Caso empresarial: modelo financiero típico</h3>
+  ${diagram(`
+   Hechos:        Movimientos (asientos contables: cuenta, CECO, fecha, importe)
+                  Presupuesto (mismas claves, escenario)
+   Dimensiones:   Calendario · PlanCuentas (jerarquía P&L) · CentrosCoste
+                  Escenario (Real/Ppto/Forecast) · UnidadNegocio
+   → Con esto, EBITDA, OPEX, CAPEX y variaciones Real-vs-Ppto salen con
+     medidas de 1-3 líneas. Sin esto, necesitarías DAX retorcido.`)}
+
+  ${exer('Decide la arquitectura', `<p>Tienes ventas con columnas: producto, categoría, subcategoría, marca, cliente, ciudad, país, fecha, importe — todo en una sola tabla plana de 5M de filas. ¿Qué harías?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Ver solución</summary>
+  <p>Separar en estrella: una tabla de hechos <code class="inl">Ventas</code> con solo claves + importe, y dimensiones <code class="inl">Productos</code> (producto/categoría/subcategoría/marca), <code class="inl">Clientes</code> (cliente/ciudad/país) y <code class="inl">Calendario</code>. Beneficios: el modelo comprime mucho mejor (menos cardinalidad en la tabla grande), los slicers son más rápidos y las medidas más simples. La tabla plana de 5M con textos repetidos es el antipatrón clásico.</p></details>`)}
+  `
+});
+
+/* ---- Flujo de evaluación ---- */
+N({ id:'evaluacion', parent:'motor', title:'Flujo Completo de Evaluación de una Medida', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Modelo mental maestro',
+  subtitle:'Juntamos todo: la secuencia exacta, de principio a fin, de qué ocurre internamente desde que se pinta una celda hasta que aparece el número. El "vídeo en cámara lenta" del motor.',
+  deps:['ctx-fila','ctx-filtro','transicion','relaciones'], related:['calculate','calc-leer'], fns:['calculate'],
+  html: ()=> `
+  ${why('Si puedes narrar este flujo, puedes depurar cualquier medida', `<p>Los seniors no "prueban hasta que funciona": <b>simulan el motor en su cabeza</b>. Esta página es ese simulador. Memoriza la secuencia y aplícala a cualquier medida que te confunda.</p>`)}
+
+  <h3>El flujo maestro, en 8 pasos</h3>
+  ${diagram(`
+  ┌──────────────────────────────────────────────────────────────────────┐
+  │ 1. El visual genera el CONTEXTO DE FILTRO INICIAL                       │
+  │    (coordenadas de la celda + slicers + filtros de página)             │
+  ├──────────────────────────────────────────────────────────────────────┤
+  │ 2. CALCULATE (si lo hay) MODIFICA el contexto de filtro                │
+  │    · evalúa sus argumentos de filtro                                   │
+  │    · aplica TRANSICIÓN si venía de un contexto de fila                 │
+  │    · agrega / reemplaza / conserva filtros (ver módulo CALCULATE)      │
+  ├──────────────────────────────────────────────────────────────────────┤
+  │ 3. Los filtros se PROPAGAN por las relaciones                          │
+  │    dimensiones ──1:*──► tabla de hechos (queda recortada)              │
+  ├──────────────────────────────────────────────────────────────────────┤
+  │ 4. Si hay un ITERADOR (SUMX…), se abre un CONTEXTO DE FILA             │
+  │    y se recorre la tabla (ya filtrada) fila a fila                     │
+  ├──────────────────────────────────────────────────────────────────────┤
+  │ 5. Dentro del iterador, una MEDIDA dispara TRANSICIÓN (vuelve a paso 2)│
+  ├──────────────────────────────────────────────────────────────────────┤
+  │ 6. Se calcula la AGREGACIÓN final sobre las filas visibles             │
+  ├──────────────────────────────────────────────────────────────────────┤
+  │ 7. El motor de fórmulas pide los datos al motor de almacenamiento      │
+  │    (VertiPaq) y combina los resultados                                 │
+  ├──────────────────────────────────────────────────────────────────────┤
+  │ 8. El número se PINTA en la celda. Siguiente celda → vuelve al paso 1  │
+  └──────────────────────────────────────────────────────────────────────┘`)}
+
+  <h3>Aplicado a una medida real, narrado</h3>
+  ${dax(`
+% Margen YTD vs AA =
+VAR MargenYTD     = CALCULATE ( [Margen], DATESYTD ( Calendario[Fecha] ) )
+VAR MargenYTD_AA  = CALCULATE ( [Margen], DATESYTD ( SAMEPERIODLASTYEAR ( Calendario[Fecha] ) ) )
+RETURN
+    DIVIDE ( MargenYTD - MargenYTD_AA, MargenYTD_AA )`)}
+  ${engine('Narración en la celda "Marzo 2026 / Región Norte"', `<ol>
+    <li><b>Contexto inicial:</b> {Mes ≤ implícito por la celda = Marzo, Año=2026, Región=Norte} desde el visual y slicers.</li>
+    <li><b>VAR MargenYTD:</b> CALCULATE toma <code class="inl">DATESYTD</code>, que <b>reemplaza</b> el filtro de fecha por "1-ene-2026 … 31-mar-2026". Región=Norte se <b>conserva</b>.</li>
+    <li>El nuevo filtro de fechas se propaga por la relación Calendario→Ventas; queda el Q1 de la región Norte.</li>
+    <li><code class="inl">[Margen]</code> se evalúa sobre ese subconjunto → margen acumulado del trimestre.</li>
+    <li><b>VAR MargenYTD_AA:</b> igual, pero <code class="inl">SAMEPERIODLASTYEAR</code> desplaza el rango a 2025 antes del YTD.</li>
+    <li><b>RETURN:</b> <code class="inl">DIVIDE</code> calcula la variación y evita el error si el año anterior fue 0.</li>
+    <li>Se pinta el % en la celda. La siguiente celda (Abril) reinicia todo el proceso con su propio contexto.</li>
+  </ol>`)}
+
+  ${best('Cómo usar este flujo para depurar', `<ol>
+    <li><b>Identifica el contexto inicial:</b> ¿en qué celda estás? ¿qué slicers hay?</li>
+    <li><b>Localiza cada CALCULATE</b> y pregúntate: ¿qué filtro agrega, reemplaza o conserva?</li>
+    <li><b>Marca los iteradores</b> y recuerda que las medidas dentro disparan transición.</li>
+    <li><b>Sigue la propagación</b> por las relaciones hasta los hechos.</li>
+    <li>Si el número no cuadra, casi siempre el fallo está en el paso 2 (qué hace CALCULATE) o en el 3 (la propagación no llega).</li>
+  </ol>`)}
+
+  <p>Con este modelo mental completo, estás listo para el módulo más importante del Atlas: <span class="pill" data-go="calculate">CALCULATE</span>.</p>
+  `
+});
+
+/* ===================== CALCULATE (MÓDULO ESTRELLA) ===================== */
+N({ id:'calculate', parent:null, title:'CALCULATE — El Corazón de DAX', icon:'⭐⚠️', fnsig:'CALCULATE( expr, [filtro1], [filtro2], … )',
+  importancia:'★★★★★ (máxima)', dificultad:'🔴 Avanzado · el objetivo central', uso:'Diario',
+  subtitle:'La función más importante de DAX y el principal objetivo de aprendizaje de todo este Atlas. Si dominas CALCULATE, dominas DAX. Aquí se explica con mucho más detalle que cualquier otra cosa.',
+  deps:['ctx-filtro','transicion'], related:['calc-niveles','calc-leer','fn-filtros'], fns:['fn-filtros','fn-tiempo'],
+  html: ()=> `
+  ${why('CALCULATE es la única función que cambia el contexto de filtro', `<p>Todo lo demás en DAX <i>lee</i> el contexto de filtro. <b>CALCULATE es la única que lo MODIFICA.</b> Como el contexto de filtro es lo que decide qué datos entran en cada cálculo, controlar ese contexto = controlar Power BI. Por eso el 90% de las medidas no triviales tienen un CALCULATE en su núcleo: comparativos, % del total, time intelligence, simuladores, KPIs… todo pasa por aquí.</p>`)}
+
+  <h3>1 · Explicación simple</h3>
+  <p><code class="inl">CALCULATE</code> hace dos cosas: <b>(1)</b> aplica los filtros que le pasas y <b>(2)</b> calcula la expresión <i>dentro</i> de ese nuevo contexto. Su forma es:</p>
+  ${dax(`CALCULATE ( <expresión a calcular> , <filtro 1> , <filtro 2> , … )`)}
+  <p>Lee "CALCULATE" mentalmente como: <b>"calcula ESTO, pero cambiando el contexto ASÍ"</b>.</p>
+
+  <h3>2 · Explicación conceptual: modificar el contexto</h3>
+  ${analogy('CALCULATE es el chef que reescribe la comanda', `<p>Recuerda la cocina: el contexto de filtro es la comanda. Una medida normal cocina lo que la comanda dice. <b>CALCULATE intercepta la comanda y la reescribe antes de cocinar.</b> Puede tachar líneas ("ignora el filtro de año"), añadir líneas ("solo productos premium") o reemplazar líneas ("cambia 'este mes' por 'todo el año'"). El cocinero entonces prepara el plato según la <i>comanda corregida</i>, no la original.</p>`)}
+
+  <h3>3 · Las tres operaciones sobre filtros ⭐</h3>
+  <p>Esta tabla es el núcleo conceptual de todo el módulo. CALCULATE puede hacer tres cosas con los filtros existentes:</p>
+  ${tbl(['Operación','Qué hace','Cómo se escribe','Ejemplo de negocio'],[
+    ['<b>AGREGAR</b>','Añade una condición nueva manteniendo las existentes','<code class="inl">CALCULATE([V], Productos[Tipo]="Premium")</code>','Ventas, pero solo de productos premium'],
+    ['<b>REEMPLAZAR</b>','Sustituye el filtro de una columna por otro','Filtro sobre una columna ya filtrada por el visual','Cambiar "este mes" por "YTD"'],
+    ['<b>QUITAR / CONSERVAR</b>','Borra filtros (ALL) o los preserva (KEEPFILTERS)','<code class="inl">CALCULATE([V], ALL(Calendario))</code>','Denominador del % del total'],
+  ])}
+
+  <h3>4 · Regla de oro: ¿qué hace con CADA filtro? ⚠️</h3>
+  ${warn('La regla que debes interiorizar', `<p>Cuando CALCULATE recibe un filtro sobre la columna <b>X</b>:</p>
+  <ul>
+    <li><b>Reemplaza</b> cualquier filtro previo que existiera <i>sobre esa misma columna X</i>.</li>
+    <li><b>Conserva</b> todos los filtros sobre las <i>demás</i> columnas.</li>
+  </ul>
+  <p>Ejemplo: la celda tiene {Año=2026, Región=Norte}. Escribes <code class="inl">CALCULATE([V], Calendario[Año]=2025)</code>. Resultado: el filtro de Año pasa a 2025 (<b>reemplazado</b>), pero Región=Norte <b>se conserva</b>. Esta regla explica por qué <code class="inl">SAMEPERIODLASTYEAR</code> solo cambia la fecha y respeta los demás slicers.</p>`)}
+
+  ${engine('Cómo "piensa" el motor cuando encuentra CALCULATE', `<p>Secuencia interna exacta:</p>
+  <ol>
+    <li><b>Detecta contexto de fila.</b> Si CALCULATE se ejecuta dentro de un contexto de fila (iterador, columna calculada), primero hace <b>transición de contexto</b>: convierte la fila actual en filtros. <i>(Esto pasa ANTES de aplicar tus filtros explícitos.)</i></li>
+    <li><b>Evalúa los argumentos de filtro</b> de izquierda a derecha. Cada uno produce una tabla de valores permitidos para una o más columnas.</li>
+    <li><b>Fusiona</b> esos filtros con el contexto existente aplicando la regla de oro (reemplaza por columna, conserva el resto).</li>
+    <li><b>Construye el nuevo contexto de filtro</b> y lo propaga por las relaciones.</li>
+    <li><b>Evalúa la expresión</b> (primer argumento) dentro de ese contexto ya modificado.</li>
+    <li>Al terminar, <b>descarta</b> el contexto modificado: fuera de CALCULATE todo vuelve a la normalidad.</li>
+  </ol>
+  <p><b>Detalle clave de orden:</b> la transición ocurre primero, luego tus filtros. Y tus filtros explícitos pueden sobrescribir incluso lo que trajo la transición.</p>`)}
+
+  <h3>5 · Filtros simples vs filtros tabla (FILTER)</h3>
+  <p>Hay dos formas de pasar filtros a CALCULATE, y la diferencia es importante para performance:</p>
+  ${tbl(['Forma','Sintaxis','Qué es por dentro','Cuándo'],[
+    ['Filtro simple (predicado)','<code class="inl">Productos[Tipo]="Premium"</code>','Azúcar sintáctico; el motor lo convierte en <code class="inl">FILTER(ALL(Productos[Tipo]), Productos[Tipo]="Premium")</code>','Condición sobre UNA columna. Preferido: más rápido.'],
+    ['Filtro tabla','<code class="inl">FILTER(Productos, Productos[Precio]>RELATED(...))</code>','Una tabla evaluada fila a fila','Condiciones complejas o multi-columna.'],
+  ])}
+  ${warn('FILTER no es gratis', `<p><code class="inl">FILTER</code> itera fila a fila: úsalo solo cuando el predicado simple no alcanza. Para "Tipo = Premium" basta el filtro simple; reservar <code class="inl">FILTER</code> para "Precio > promedio del cliente" y similares. Ver <span class="pill" data-go="fn-filtros">módulo de filtros</span>.</p>`)}
+
+  <h3>6 · Cómo interactúa con el resto del modelo</h3>
+  ${tbl(['Interactúa con…','Qué ocurre'],[
+    ['Dimensiones','El filtro que aplicas a una dimensión se propaga 1:* a los hechos. Es la vía normal.'],
+    ['Tablas de hechos','Puedes filtrar hechos directamente, pero rompe propagación a otras dimensiones; úsalo con criterio.'],
+    ['Relaciones','CALCULATE respeta la dirección de filtro. Para alterarla puntualmente: <code class="inl">CROSSFILTER</code> / <code class="inl">USERELATIONSHIP</code> como argumentos.'],
+    ['Dirección de filtros','Dentro de CALCULATE puedes forzar bidireccional sin tocar el modelo: <code class="inl">CROSSFILTER(Tabla1[col],Tabla2[col],BOTH)</code>.'],
+  ])}
+
+  <h3>7 · El error mental más común ⚠️</h3>
+  ${err('Creer que CALCULATE "suma" o "cuenta"', `<p>CALCULATE <b>no agrega nada por sí mismo</b>. No suma, no cuenta, no promedia. Solo <b>cambia el contexto</b> y deja que la expresión interior haga el cálculo. <code class="inl">CALCULATE(123)</code> devuelve 123. Toda la potencia está en los filtros, no en CALCULATE en sí. Internalizar esto evita el 50% de la confusión.</p>`)}
+
+  <h3>8 · El módulo en niveles progresivos</h3>
+  <p>La mejor forma de dominar CALCULATE es por capas. El siguiente nodo desarrolla <b>9 niveles</b>, de lo más simple a casos corporativos avanzados. Hazlos en orden.</p>
+  <div class="home-grid">
+    <div class="home-card" data-go="calc-niveles"><div class="ic">🪜</div><div class="t">CALCULATE en 9 niveles</div><div class="d">Del CALCULATE simple a SUMX + casos corporativos, con ejemplos progresivos.</div></div>
+    <div class="home-card" data-go="calc-leer"><div class="ic">🔍</div><div class="t">Leer, depurar y anticipar</div><div class="d">Cómo leer medidas complejas, depurarlas e identificar errores de contexto.</div></div>
+  </div>
+
+  ${best('Mentalidad CALCULATE', `<ul>
+    <li>Antes de escribir, di en voz alta: <b>"quiero calcular X, cambiando el contexto a Y"</b>. Eso ya es la medida.</li>
+    <li>Pregúntate por cada filtro: ¿lo estoy <b>agregando</b>, <b>reemplazando</b> o <b>quitando</b>?</li>
+    <li>Si el número sale raro, casi siempre es porque un filtro que creías conservado fue reemplazado, o viceversa.</li>
+  </ul>`)}
+  `
+});
+
+/* ---- CALCULATE en 9 niveles ---- */
+N({ id:'calc-niveles', parent:'calculate', title:'CALCULATE en 9 Niveles Progresivos', icon:'🪜⭐',
+  importancia:'★★★★★', dificultad:'🟢→🔴', uso:'Práctica guiada',
+  subtitle:'De CALCULATE simple a casos corporativos avanzados. Cada nivel añade una pieza. Despliega cada uno y predice el resultado antes de leer la explicación.',
+  deps:['calculate'], related:['calc-leer','fn-tiempo','fn-iteradores'], fns:['fn-filtros','fn-tiempo','fn-iteradores'],
+  html: ()=> `
+  <p>Modelo de ejemplo para todos los niveles: <b>Ventas</b>(Fecha, ClienteID, ProductoID, Importe) · <b>Clientes</b> · <b>Productos</b>(Tipo: Premium/Estándar) · <b>Calendario</b>. Medida base: <code class="inl">Ventas = SUM(Ventas[Importe])</code>.</p>
+
+  <div class="levels">
+
+  <div class="lvl open"><div class="lvl-h"><span class="n">1</span> CALCULATE simple — añadir un filtro fijo <span class="tag-mini">🟢</span><span class="arr">▸</span></div><div class="lvl-b">
+    <p>Calcular ventas solo de productos premium, sin importar lo que haya en el visual.</p>
+    ${dax(`Ventas Premium = CALCULATE ( [Ventas], Productos[Tipo] = "Premium" )`)}
+    ${engine('', `<p>CALCULATE <b>agrega</b> el filtro <code class="inl">Tipo="Premium"</code> al contexto existente. Si la celda ya tenía {Mes=Marzo}, ahora es {Mes=Marzo, Tipo=Premium}. La medida suma solo esa intersección.</p>`)}
+    <p><b>Cuándo:</b> KPIs de un segmento fijo (canal premium, una línea de negocio). <b>Resultado:</b> en cada celda, las ventas premium correspondientes a esa celda.</p>
+  </div></div>
+
+  <div class="lvl"><div class="lvl-h"><span class="n">2</span> CALCULATE con varios filtros <span class="tag-mini">🟢</span><span class="arr">▸</span></div><div class="lvl-b">
+    <p>Premium <b>y</b> de la región Norte. Varios filtros = se aplican todos (AND).</p>
+    ${dax(`
+Ventas Premium Norte =
+CALCULATE (
+    [Ventas],
+    Productos[Tipo] = "Premium",
+    Clientes[Región] = "Norte"
+)`)}
+    ${warn('Es un AND, no un OR', `<p>Múltiples argumentos de filtro se combinan con <b>AND</b>. Para un OR sobre la misma columna usa <code class="inl">Productos[Tipo] IN {"Premium","Gold"}</code> o un <code class="inl">FILTER</code> con <code class="inl">||</code>.</p>`)}
+  </div></div>
+
+  <div class="lvl"><div class="lvl-h"><span class="n">3</span> CALCULATE + FILTER — condiciones complejas <span class="tag-mini">🟡</span><span class="arr">▸</span></div><div class="lvl-b">
+    <p>Ventas de pedidos grandes: importe de línea por encima de un umbral que depende de otra columna. El predicado simple no alcanza → FILTER.</p>
+    ${dax(`
+Ventas Pedidos Grandes =
+CALCULATE (
+    [Ventas],
+    FILTER (
+        Ventas,
+        Ventas[Importe] > 1000
+    )
+)`)}
+    ${engine('', `<p><code class="inl">FILTER</code> recorre <code class="inl">Ventas</code> fila a fila (contexto de fila), se queda con las que cumplen, y devuelve esa tabla como filtro a CALCULATE. Más caro que un predicado simple, pero permite lógica que mira varias columnas o usa medidas.</p>`)}
+    ${err('FILTER sobre toda la tabla de hechos', `<p>Si solo filtras una columna por un valor, <b>no</b> uses FILTER: usa el predicado simple (nivel 1). FILTER aquí se justifica por la comparación numérica fila a fila.</p>`)}
+  </div></div>
+
+  <div class="lvl"><div class="lvl-h"><span class="n">4</span> CALCULATE + ALL — el % del total <span class="tag-mini">🟡⚠️</span><span class="arr">▸</span></div><div class="lvl-b">
+    <p><code class="inl">ALL</code> <b>quita</b> filtros. Sirve para denominadores: el total ignorando la fila actual.</p>
+    ${dax(`
+% del Total =
+DIVIDE (
+    [Ventas],
+    CALCULATE ( [Ventas], ALL ( Clientes ) )
+)`)}
+    ${engine('', `<p>En la fila "Cliente A": el numerador respeta {Cliente=A} → ventas de A. El denominador, gracias a <code class="inl">ALL(Clientes)</code>, <b>borra</b> el filtro de cliente → ventas de todos. El cociente es la cuota de A. Nota: <code class="inl">ALL(Clientes)</code> quita filtros de la tabla Clientes pero <b>conserva</b> otros (ej. Año del slicer).</p>`)}
+    ${warn('ALL(Tabla) vs ALL(Columna)', `<p><code class="inl">ALL(Clientes)</code> quita filtros de <b>toda</b> la tabla; <code class="inl">ALL(Clientes[Región])</code> solo de esa columna. Elige el alcance correcto según el denominador que quieras.</p>`)}
+  </div></div>
+
+  <div class="lvl"><div class="lvl-h"><span class="n">5</span> CALCULATE + REMOVEFILTERS — la versión moderna y legible <span class="tag-mini">🟡</span><span class="arr">▸</span></div><div class="lvl-b">
+    <p><code class="inl">REMOVEFILTERS</code> es ALL usado como removedor de filtros, pero con nombre autoexplicativo (DAX moderno).</p>
+    ${dax(`
+% del Total (moderno) =
+DIVIDE (
+    [Ventas],
+    CALCULATE ( [Ventas], REMOVEFILTERS ( Clientes ) )
+)`)}
+    ${best('', `<p>Cuando la intención es "quitar filtros", prefiere <code class="inl">REMOVEFILTERS</code>: hace el código legible para quien lo mantenga. Reserva <code class="inl">ALL</code> para cuando lo usas como <i>tabla</i> (ej. dentro de SUMX). Funcionalmente, como modificador de CALCULATE, son equivalentes.</p>`)}
+  </div></div>
+
+  <div class="lvl"><div class="lvl-h"><span class="n">6</span> CALCULATE + SELECTEDVALUE — leer un slicer <span class="tag-mini">🟡⭐</span><span class="arr">▸</span></div><div class="lvl-b">
+    <p><code class="inl">SELECTEDVALUE</code> lee la selección única de un slicer. Base de todos los <span class="pill" data-go="simuladores">simuladores</span>.</p>
+    ${dax(`
+Ventas Ajustadas =
+VAR Ajuste = SELECTEDVALUE ( Parametro[Factor], 1 )   -- 1 = sin ajuste si nada elegido
+RETURN
+    [Ventas] * Ajuste`)}
+    ${engine('', `<p><code class="inl">SELECTEDVALUE(Parametro[Factor], 1)</code> devuelve el valor si hay exactamente uno seleccionado; si hay varios o ninguno, devuelve el valor por defecto (1). Es <code class="inl">IF(HASONEVALUE(...), VALUES(...), default)</code> en una línea. Aquí no hace falta CALCULATE para leer; sí lo necesitarás cuando el ajuste deba <b>filtrar</b>.</p>`)}
+  </div></div>
+
+  <div class="lvl"><div class="lvl-h"><span class="n">7</span> CALCULATE + Inteligencia del Tiempo <span class="tag-mini">🔴⭐</span><span class="arr">▸</span></div><div class="lvl-b">
+    <p>Las funciones de tiempo son <b>generadores de tablas de fechas</b> que CALCULATE usa para <b>reemplazar</b> el filtro de calendario.</p>
+    ${dax(`
+Ventas YTD       = CALCULATE ( [Ventas], DATESYTD ( Calendario[Fecha] ) )
+Ventas Año Ant.  = CALCULATE ( [Ventas], SAMEPERIODLASTYEAR ( Calendario[Fecha] ) )
+Var % YoY        = DIVIDE ( [Ventas] - [Ventas Año Ant.], [Ventas Año Ant.] )`)}
+    ${engine('', `<p><code class="inl">DATESYTD</code> toma las fechas visibles y devuelve "desde el 1-ene hasta la última fecha visible". CALCULATE <b>reemplaza</b> el filtro de fecha por ese rango y <b>conserva</b> los demás (región, producto). Por eso el YTD respeta tus otros slicers automáticamente. Requiere <span class="pill" data-go="modelado">tabla calendario</span> marcada.</p>`)}
+  </div></div>
+
+  <div class="lvl"><div class="lvl-h"><span class="n">8</span> CALCULATE + SUMX — agregaciones por fila con contexto <span class="tag-mini">🔴⭐</span><span class="arr">▸</span></div><div class="lvl-b">
+    <p>Combinar el cambio de contexto (CALCULATE) con el cálculo fila a fila (SUMX). Ejemplo: forecast = sumar, por cliente, su venta base por su factor de crecimiento.</p>
+    ${dax(`
+Forecast =
+SUMX (
+    VALUES ( Clientes[ClienteID] ),               -- una fila por cliente
+    VAR VentaBase = [Ventas]                       -- transición: ventas de ESE cliente
+    VAR Factor    = [Factor Crecimiento Cliente]   -- su factor individual
+    RETURN VentaBase * Factor
+)`)}
+    ${engine('', `<p><code class="inl">SUMX</code> itera por cliente. En cada fila, <code class="inl">[Ventas]</code> dispara <b>transición de contexto</b> (CALCULATE implícito): filtra a ese cliente y suma. Se multiplica por su factor y se acumula. Aquí conviven los tres conceptos: contexto de fila (SUMX), transición (la medida dentro) y modificación de contexto.</p>`)}
+    ${warn('Itera sobre la dimensión, no sobre los hechos', `<p>Usamos <code class="inl">VALUES(Clientes[ClienteID])</code> (pocas filas), no <code class="inl">Ventas</code> (millones). Iterar la tabla de hechos con transición dentro es un antipatrón de performance.</p>`)}
+  </div></div>
+
+  <div class="lvl"><div class="lvl-h"><span class="n">9</span> Casos corporativos avanzados <span class="tag-mini">🔴⭐⚠️</span><span class="arr">▸</span></div><div class="lvl-b">
+    <h5>9a · Variación Real vs Presupuesto, solo cuentas de OPEX</h5>
+    ${dax(`
+Desvío OPEX =
+VAR Real =
+    CALCULATE ( [Importe], Escenario[Tipo] = "Real",    PlanCuentas[Grupo] = "OPEX" )
+VAR Ppto =
+    CALCULATE ( [Importe], Escenario[Tipo] = "Ppto", PlanCuentas[Grupo] = "OPEX" )
+RETURN
+    Real - Ppto`)}
+    <p>Cada CALCULATE <b>reemplaza</b> el filtro de Escenario y <b>agrega</b> el de grupo de cuentas, conservando el resto del contexto (mes, CECO).</p>
+
+    <h5>9b · Margen contributivo sobre lo seleccionado (ALLSELECTED)</h5>
+    ${dax(`
+% sobre Selección =
+DIVIDE ( [Margen], CALCULATE ( [Margen], ALLSELECTED ( Productos ) ) )`)}
+    <p><code class="inl">ALLSELECTED</code> da el total de <b>lo que el usuario filtró en el slicer</b>, ignorando solo el desglose interno del visual. Distinto de <code class="inl">ALL</code> (que ignoraría también el slicer).</p>
+
+    <h5>9c · Ranking de clientes que respeta filtros, con desempate</h5>
+    ${dax(`
+Ranking Cliente =
+IF (
+    HASONEVALUE ( Clientes[ClienteID] ),
+    RANKX ( ALLSELECTED ( Clientes[ClienteID] ), [Ventas], , DESC, DENSE )
+)`)}
+    ${best('Patrón senior', `<p>Fíjate en la receta repetida: <b>VAR para capturar, CALCULATE para reescribir el contexto, una función de filtro (ALL/ALLSELECTED/REMOVEFILTERS) para definir el universo, y un guard (HASONEVALUE/SELECTEDVALUE) para los totales.</b> Casi toda medida corporativa avanzada es una combinación de estas cuatro piezas.</p>`)}
+  </div></div>
+
+  </div>
+
+  ${exer('Predice antes de desplegar', `<p>Celda "Cliente B / Marzo". Medida: <code class="inl">CALCULATE([Ventas], ALL(Clientes), Calendario[Mes]="Marzo")</code>. B tiene 50 en marzo; todos los clientes juntos tienen 500 en marzo.</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Ver solución</summary>
+  <p><b>500.</b> <code class="inl">ALL(Clientes)</code> borra el filtro Cliente=B (ya no importa que estemos en la fila de B). <code class="inl">Calendario[Mes]="Marzo"</code> reemplaza/confirma el mes. Resultado: ventas de <i>todos</i> los clientes en marzo = 500, en <b>todas</b> las filas de la matriz. Un error clásico: esperar 50 porque "estoy en la fila de B" — pero ALL lo eliminó.</p></details>`)}
+  `
+});
+
+/* ---- Leer, depurar y anticipar ---- */
+N({ id:'calc-leer', parent:'calculate', title:'Leer, Depurar y Anticipar Medidas Complejas', icon:'🔍⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Cada día como senior',
+  subtitle:'La habilidad que define al senior: mirar una medida de 30 líneas y saber qué hará antes de ejecutarla, encontrar el error de contexto y corregirlo con método.',
+  deps:['calculate','evaluacion'], related:['calc-niveles','performance'], fns:['fn-variables'],
+  html: ()=> `
+  ${why('Anticipar mentalmente es lo que separa niveles', `<p>Un intermedio escribe, ejecuta, ve un número raro y prueba otra cosa al azar. Un senior <b>lee la medida como una receta</b>, predice el número, y si no coincide sabe exactamente dónde mirar. Esta página te da el método para leer de dentro hacia afuera y depurar con disciplina.</p>`)}
+
+  <h3>1 · Cómo leer una medida: de dentro hacia afuera</h3>
+  <p>DAX se evalúa <b>desde el paréntesis más interno hacia afuera</b>, y las variables de arriba a abajo. Lee igual:</p>
+  ${dax(`
+Crecimiento Clientes Clave =
+VAR Umbral      = 100000                                    -- (1) un número
+VAR TopClientes =                                          -- (2) tabla de clientes grandes
+    FILTER ( VALUES ( Clientes[ClienteID] ), [Ventas] > Umbral )
+VAR VentaTop    = CALCULATE ( [Ventas], TopClientes )       -- (3) ventas de esos clientes
+VAR VentaTopAA  =                                          -- (4) lo mismo, año anterior
+    CALCULATE ( [Ventas], TopClientes, SAMEPERIODLASTYEAR ( Calendario[Fecha] ) )
+RETURN
+    DIVIDE ( VentaTop - VentaTopAA, VentaTopAA )            -- (5) variación %`)}
+  ${engine('Lectura narrada', `<ol>
+    <li><b>Umbral</b> = 100.000. Constante.</li>
+    <li><b>TopClientes</b>: recorre clientes; <code class="inl">[Ventas]</code> dispara transición → ventas de cada cliente; conserva los que superan el umbral. Es una <i>tabla</i>.</li>
+    <li><b>VentaTop</b>: CALCULATE usa esa tabla como filtro → ventas de los clientes clave en el contexto actual.</li>
+    <li><b>VentaTopAA</b>: mismo filtro de clientes <b>+</b> desplazamiento de fechas al año anterior (dos filtros que se combinan).</li>
+    <li><b>RETURN</b>: variación interanual de los clientes clave.</li>
+  </ol>`)}
+
+  <h3>2 · El "checklist de contexto" para predecir un resultado</h3>
+  ${best('Hazte estas 5 preguntas en cada CALCULATE', `<ol>
+    <li><b>¿Dónde estoy?</b> ¿En qué celda/total se evalúa? ¿Qué slicers hay?</li>
+    <li><b>¿Hay contexto de fila?</b> Si sí, ¿habrá transición que filtre cosas que no esperaba?</li>
+    <li><b>Por cada filtro:</b> ¿lo agrego, lo reemplazo o lo quito? ¿sobre qué columna?</li>
+    <li><b>¿Qué conservo?</b> ¿Qué filtros del visual siguen vivos tras el CALCULATE?</li>
+    <li><b>¿El total cuadra?</b> Mentalmente evalúa también la fila Total (sin filtro de desglose); muchos bugs solo aparecen ahí.</li>
+  </ol>`)}
+
+  <h3>3 · Técnicas de depuración</h3>
+  ${tbl(['Síntoma','Causa probable','Cómo depurar'],[
+    ['Todas las filas muestran el mismo número (el total)','Falta transición de contexto o hay un <code class="inl">ALL</code> de más','Quita el ALL o envuelve en CALCULATE para forzar transición'],
+    ['El total no es la suma de las filas','La medida no es aditiva (% , ratios, DISTINCTCOUNT)','Normal en ratios; si es una suma, revisa filtros que cambian entre fila y total'],
+    ['Un slicer no afecta la medida','Un <code class="inl">ALL/REMOVEFILTERS</code> borra ese filtro, o la relación no propaga','Cambia ALL por ALLSELECTED, o revisa dirección de relación'],
+    ['BLANK inesperado','Año anterior sin datos, división, o filtro que vacía la tabla','Usa <code class="inl">COALESCE</code>/<code class="inl">DIVIDE</code>; aísla cada VAR'],
+    ['Número correcto en celda, raro en total','La medida asume un único valor (SELECTEDVALUE) que en el total no existe','Añade guard <code class="inl">HASONEVALUE</code>'],
+  ])}
+
+  <h3>4 · Aislar variables: el "console.log" de DAX</h3>
+  ${best('Técnica del RETURN temporal', `<p>Para ver qué vale un paso intermedio, cambia temporalmente el RETURN para devolver esa variable:</p>
+  ${dax(`
+Medida Debug =
+VAR A = CALCULATE ( [Ventas], ALL ( Clientes ) )
+VAR B = [Ventas]
+RETURN
+    A          -- ← cambia entre A, B, A-B para inspeccionar cada pieza`)}
+  <p>Pon la medida en una <b>tarjeta</b> y ve cambiando qué VAR devuelve. También usa el panel <b>"Ver como"</b>, el <b>Performance Analyzer</b> y herramientas externas (DAX Studio) para inspeccionar el plan de consulta.</p>`)}
+
+  <h3>5 · Identificar errores de contexto típicos</h3>
+  ${err('El "filtro fantasma" de la transición', `<p>Dentro de un iterador, una medida arrastra <b>todas</b> las columnas de la fila como filtro. Si iteras una tabla con muchas columnas, puedes filtrar por cosas que no querías. Solución: itera sobre <code class="inl">VALUES(Dim[Clave])</code> (solo la clave), no sobre la tabla entera.</p>`)}
+  ${err('Reemplazo no intencionado', `<p>Pasar <code class="inl">Calendario[Año]=2025</code> dentro de una medida que el usuario filtró por 2026 <b>reemplaza</b> su selección sin avisar. Si querías <i>intersectar</i> y no reemplazar, usa <code class="inl">KEEPFILTERS(Calendario[Año]=2025)</code>.</p>`)}
+
+  <h3>6 · Anticipar el resultado: ejercicio final del módulo</h3>
+  ${exer('Lee y predice (nivel senior)', `<p>Contexto de celda: {Año=2026, Región=Sur}. Sur en 2026 = 800; Sur en 2025 = 1000; todas las regiones 2026 = 5000.</p>
+  ${dax(`
+Mix Var =
+VAR A = CALCULATE ( [Ventas], SAMEPERIODLASTYEAR ( Calendario[Fecha] ) )
+VAR B = CALCULATE ( [Ventas], ALL ( Clientes[Región] ) )
+RETURN DIVIDE ( [Ventas], B ) - DIVIDE ( A, B )`)}
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Ver solución</summary>
+  <p><b>A</b> = Sur 2025 = 1000 (reemplaza fecha, conserva Región=Sur). <b>B</b> = quita filtro de Región pero conserva Año=2026 → 5000. <code class="inl">[Ventas]</code> = Sur 2026 = 800.<br>
+  RETURN = 800/5000 − 1000/5000 = 0,16 − 0,20 = <b>−0,04</b> (la cuota de Sur cayó 4 puntos respecto al peso que tendría con sus ventas del año anterior). Si predijiste el signo y las dos divisiones, ya lees DAX como senior.</p></details>`)}
+
+  ${analogy('Depurar es como revisar una receta que salió mal', `<p>No tiras el plato entero: pruebas cada ingrediente. ¿La sal (el filtro de año)? ¿El fuego (la transición)? ¿Olvidaste un paso (un KEEPFILTERS)? El <code class="inl">VAR</code> + RETURN temporal es tu cuchara para probar cada parte por separado.</p>`)}
+  `
+});
+
+/* ===================== CATÁLOGO DE FUNCIONES ===================== */
+N({ id:'funciones', parent:null, title:'Catálogo de Funciones DAX', icon:'📚',
+  importancia:'★★★★☆', dificultad:'🟢→🔴', uso:'Manual de consulta',
+  subtitle:'Referencia organizada por familia funcional. Cada grupo explica qué problema resuelve cada función, su firma, un ejemplo de negocio, cuándo NO usarla y el error frecuente. Pensado para consultar mientras desarrollas.',
+  related:['prioridades','calculate'],
+  html: ()=> `
+  ${why('Una función se entiende por su familia', `<p>Memorizar funciones sueltas es ineficiente. Agruparlas por <b>qué tipo de problema resuelven</b> te permite, ante un reto nuevo, saber a qué cajón ir: "necesito quitar un filtro" → familia de filtros; "necesito comparar periodos" → inteligencia de tiempo. Este catálogo está pensado como cajonera mental.</p>`)}
+  <p>Usa la búsqueda (<span class="kbd">/</span>) para saltar a una función concreta. Las nueve familias:</p>
+  `
+});
+
+/* ---- Agregación ---- */
+N({ id:'fn-agregacion', parent:'funciones', title:'Agregación: SUM, AVERAGE, COUNT, DISTINCTCOUNT, MIN, MAX', icon:'🟢',
+  importancia:'★★★★★', dificultad:'🟢 Fundamental', uso:'Diario',
+  deps:['ctx-filtro'], related:['fn-iteradores'], fns:['fn-iteradores','calculate'],
+  subtitle:'Las funciones que colapsan una columna en un único número, respetando el contexto de filtro. La base de cualquier KPI.',
+  html: ()=> `
+  ${why('Toda métrica empieza en una agregación', `<p>Facturación, ticket medio, nº de clientes, importe máximo de factura… todo arranca aquí. Lo que las hace potentes no es la función en sí (suman, cuentan), sino que <b>respetan el contexto de filtro</b>: la misma <code class="inl">SUM</code> da un número distinto en cada celda.</p>`)}
+
+  ${tbl(['Función','Qué hace','Ejemplo','Cuándo NO usarla'],[
+    ['<b>SUM</b>','Suma una columna numérica','<code class="inl">SUM(Ventas[Importe])</code>','Si necesitas operar fila a fila → SUMX'],
+    ['<b>AVERAGE</b>','Promedio aritmético simple','<code class="inl">AVERAGE(Ventas[Ticket])</code>','Promedio ponderado → DIVIDE(SUMX,SUMX)'],
+    ['<b>COUNT</b>','Cuenta valores no vacíos de una columna','<code class="inl">COUNT(Ventas[FacturaID])</code>','Para contar filas → COUNTROWS'],
+    ['<b>COUNTROWS</b>','Cuenta filas de una tabla','<code class="inl">COUNTROWS(Ventas)</code>','Para únicos → DISTINCTCOUNT'],
+    ['<b>DISTINCTCOUNT</b>','Cuenta valores únicos','<code class="inl">DISTINCTCOUNT(Ventas[ClienteID])</code>','Caro en columnas de alta cardinalidad; mídelo'],
+    ['<b>MIN / MAX</b>','Mínimo / máximo de columna','<code class="inl">MAX(Ventas[Fecha])</code>','Para mín/máx de expresión → MINX/MAXX'],
+  ])}
+
+  <h4>Patrones financieros típicos</h4>
+  ${dax(`
+Facturación        = SUM ( Ventas[Importe] )
+Nº Facturas        = DISTINCTCOUNT ( Ventas[FacturaID] )
+Clientes Activos   = DISTINCTCOUNT ( Ventas[ClienteID] )
+Ticket Medio       = DIVIDE ( [Facturación], [Nº Facturas] )
+Última Venta       = MAX ( Ventas[Fecha] )`)}
+
+  ${err('SUM con una expresión', `<p><code class="inl">SUM(Ventas[Cant] * Ventas[Precio])</code> <b>no compila</b>: SUM toma una columna, no una operación. Necesitas <code class="inl">SUMX</code>. Ver <span class="pill" data-go="fn-iteradores">iteradores</span>.</p>`)}
+  ${warn('DISTINCTCOUNT y performance', `<p><code class="inl">DISTINCTCOUNT</code> sobre columnas de muy alta cardinalidad (millones de IDs) puede ser costoso. Si solo necesitas saber "cuántas filas", <code class="inl">COUNTROWS</code> es mucho más barato.</p>`)}
+  ${best('', `<ul><li>Nombra tus medidas base (Facturación, Margen…) y construye las demás <b>referenciándolas</b>, no repitiendo SUM. Cambias la definición en un solo sitio.</li><li>El total de una media o un DISTINCTCOUNT <b>no es aditivo</b>: no esperes que la fila Total sea la suma de las filas.</li></ul>`)}
+  `
+});
+
+/* ---- Filtros ---- */
+N({ id:'fn-filtros', parent:'funciones', title:'Filtros: CALCULATE, FILTER, ALL, ALLEXCEPT, ALLSELECTED, REMOVEFILTERS, KEEPFILTERS', icon:'🔴⚠️⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Constante',
+  deps:['calculate'], related:['ctx-filtro','calc-niveles'], fns:['calculate'],
+  subtitle:'La familia que manipula el contexto de filtro. Aquí vive casi toda la dificultad real de DAX. Dominar estas siete funciones es dominar el lenguaje.',
+  html: ()=> `
+  ${why('Filtrar bien es el 80% del DAX avanzado', `<p>Comparativos, porcentajes, rankings, simuladores: todo se reduce a <b>qué filtros agregas, quitas o conservas</b>. Estas funciones son los verbos de esa gramática. La confusión entre ALL / ALLSELECTED / ALLEXCEPT / KEEPFILTERS es la causa nº1 de medidas que "casi funcionan".</p>`)}
+
+  ${tbl(['Función','Qué hace con los filtros','Caso de uso','⚠️ Confusión típica'],[
+    ['<b>CALCULATE</b>','Modifica el contexto (agrega/reemplaza)','Todo cálculo con cambio de contexto','Creer que "agrega" números (no, solo cambia contexto)'],
+    ['<b>FILTER</b>','Devuelve una tabla filtrada fila a fila','Condiciones complejas/multi-columna','Usarlo para filtros simples (lento)'],
+    ['<b>ALL</b>','Quita TODOS los filtros de tabla/columna','Denominador del % del total','Olvidar que también ignora el slicer'],
+    ['<b>REMOVEFILTERS</b>','= ALL como removedor, pero legible','Limpiar filtros con intención clara','—'],
+    ['<b>ALLEXCEPT</b>','Quita todo MENOS las columnas indicadas','% dentro de una categoría','Confundir qué se conserva vs qué se quita'],
+    ['<b>ALLSELECTED</b>','Respeta lo del slicer, ignora el desglose del visual','% sobre lo seleccionado','Pensar que es igual a ALL'],
+    ['<b>KEEPFILTERS</b>','Añade filtro SIN reemplazar: intersecta','Sumar varias condiciones acotadas','Esperar que reemplace (no, intersecta)'],
+  ])}
+
+  <h4>ALL vs ALLSELECTED vs ALLEXCEPT — el cuadro que resuelve la confusión ⚠️</h4>
+  ${diagram(`
+  Contexto: slicer Año=2026 ; matriz con Clientes en filas ; estás en Cliente A
+
+  [Ventas]                  → A en 2026                (todo el contexto)
+  ALL(Clientes)             → TODOS los clientes, 2026  (quita Cliente, deja Año)
+  ALLSELECTED(Clientes)     → clientes del slicer, 2026 (quita solo el desglose de fila)
+  ALLEXCEPT(Clientes,[País])→ todos los de MISMO país, 2026 (conserva País)
+  ALL(Ventas)               → TODO, ignora hasta el Año (peligroso)`)}
+
+  <h4>KEEPFILTERS: intersección en vez de reemplazo ⚠️</h4>
+  ${dax(`
+-- Sin KEEPFILTERS: reemplaza. Aunque el visual esté en "Premium",
+-- esto muestra Estándar (sobrescribe el filtro de la celda)
+CALCULATE ( [Ventas], Productos[Tipo] = "Estándar" )
+
+-- Con KEEPFILTERS: intersecta. En la celda "Premium" da BLANK
+-- (Premium ∩ Estándar = ∅); en la celda "Estándar" da su valor
+CALCULATE ( [Ventas], KEEPFILTERS ( Productos[Tipo] = "Estándar" ) )`)}
+  ${engine('Por qué FILTER conserva y un predicado reemplaza', `<p>Un predicado simple <code class="inl">Productos[Tipo]="X"</code> equivale a <code class="inl">FILTER(ALL(Productos[Tipo]), ...)</code>: el <code class="inl">ALL</code> implícito borra el filtro previo de esa columna → por eso <b>reemplaza</b>. <code class="inl">KEEPFILTERS</code> quita ese ALL implícito → por eso <b>intersecta</b>. Entender esto te da control fino sobre cada filtro.</p>`)}
+
+  <h4>Casos de negocio</h4>
+  ${dax(`
+% sobre Total Compañía   = DIVIDE ( [Ventas], CALCULATE ( [Ventas], ALL ( Clientes ) ) )
+% dentro de su País      = DIVIDE ( [Ventas], CALCULATE ( [Ventas], ALLEXCEPT ( Clientes, Clientes[País] ) ) )
+% sobre lo Seleccionado  = DIVIDE ( [Ventas], CALCULATE ( [Ventas], ALLSELECTED ( Clientes ) ) )`)}
+
+  ${err('ALL borra más de lo que crees', `<p><code class="inl">ALL(Ventas)</code> (sobre la tabla de hechos entera) ignora <b>todos</b> los filtros, incluido el año del slicer. Para denominadores casi siempre quieres <code class="inl">ALL(Dimensión)</code> o <code class="inl">REMOVEFILTERS(columna concreta)</code>, no <code class="inl">ALL(TablaHechos)</code>.</p>`)}
+  ${best('Decisión rápida', `<ul>
+    <li>¿Total de toda la compañía ignorando slicers de esa dim? → <b>ALL</b></li>
+    <li>¿Total de lo que el usuario seleccionó en el slicer? → <b>ALLSELECTED</b></li>
+    <li>¿% dentro de una categoría padre? → <b>ALLEXCEPT</b> (conserva la categoría)</li>
+    <li>¿Añadir condición sin pisar la del visual? → <b>KEEPFILTERS</b></li>
+    <li>¿Solo quiero que se lea claro "quitar filtros"? → <b>REMOVEFILTERS</b></li>
+  </ul>`)}
+  `
+});
+
+/* ---- Iteradores ---- */
+N({ id:'fn-iteradores', parent:'funciones', title:'Iteradores: SUMX, AVERAGEX, COUNTX, RANKX', icon:'🟡⭐',
+  importancia:'★★★★☆', dificultad:'🟡 Importante', uso:'Frecuente',
+  deps:['ctx-fila'], related:['transicion','fn-ranking'], fns:['fn-agregacion','fn-ranking'],
+  subtitle:'Funciones que recorren una tabla fila a fila evaluando una expresión. Abren contexto de fila. La "X" significa "expresión por fila".',
+  html: ()=> `
+  ${why('Cuando el cálculo vive dentro de la fila', `<p>Si necesitas multiplicar dos columnas, ponderar, o evaluar una medida por cada elemento de una dimensión, necesitas un iterador. La diferencia con SUM no es cosmética: <b>SUM agrega una columna ya existente; SUMX calcula algo nuevo en cada fila y luego agrega.</b></p>`)}
+
+  ${tbl(['Función','Hace','Ejemplo'],[
+    ['<b>SUMX</b>','Suma una expresión por fila','<code class="inl">SUMX(Ventas, Ventas[Cant]*Ventas[Precio])</code>'],
+    ['<b>AVERAGEX</b>','Promedia una expresión por fila','<code class="inl">AVERAGEX(Clientes,[Ventas])</code> (media por cliente)'],
+    ['<b>COUNTX</b>','Cuenta filas donde la expresión no es vacía','<code class="inl">COUNTX(Ventas, IF(Ventas[Importe]>0,1))</code>'],
+    ['<b>RANKX</b>','Asigna ranking según una expresión','<code class="inl">RANKX(ALL(Clientes),[Ventas])</code>'],
+  ])}
+
+  <h4>El patrón clave: iterar dimensión + medida (transición)</h4>
+  ${dax(`
+-- Media de facturación POR CLIENTE (no media de tickets)
+Facturación Media x Cliente =
+AVERAGEX ( VALUES ( Clientes[ClienteID] ), [Facturación] )`)}
+  ${engine('', `<p>Itera la lista de clientes; <code class="inl">[Facturación]</code> dispara <span class="pill" data-go="transicion">transición</span> y da el total de cada cliente; AVERAGEX promedia esos totales. Muy distinto de <code class="inl">AVERAGE(Ventas[Importe])</code>, que promediaría importes de línea.</p>`)}
+
+  ${warn('Performance: itera lo pequeño', `<p>Iterar la tabla de hechos con una medida dentro (transición por millones de filas) es lento. Itera sobre la <b>dimensión</b> (pocas filas) siempre que puedas. Ver <span class="pill" data-go="performance">Performance</span>.</p>`)}
+  ${err('Olvidar que X necesita una tabla', `<p>El primer argumento de un iterador es <b>una tabla</b>: <code class="inl">SUMX(Ventas, ...)</code>, no <code class="inl">SUMX(Ventas[Importe], ...)</code>. Si pones una columna directamente, conceptualmente piensa "¿sobre qué tabla itero?".</p>`)}
+  ${best('', `<p>Usa iteradores para: precio×cantidad, conversión de moneda fila a fila, ponderaciones, y cálculos "por entidad" (por cliente, por producto) combinados con transición.</p>`)}
+  `
+});
+
+/* ---- Variables ---- */
+N({ id:'fn-variables', parent:'funciones', title:'Variables: VAR / RETURN', icon:'🟢⭐',
+  importancia:'★★★★★', dificultad:'🟢 Fundamental', uso:'Diario',
+  related:['calc-leer','performance'], fns:[],
+  subtitle:'Guardar resultados intermedios con nombre. Mejoran legibilidad, performance y depuración a la vez. La marca de un código profesional.',
+  html: ()=> `
+  ${why('Tres beneficios en una sola herramienta', `<ul>
+    <li><b>Legibilidad:</b> nombras cada paso, la medida se lee como prosa.</li>
+    <li><b>Performance:</b> una VAR se evalúa <b>una sola vez</b> y se reutiliza, en vez de recalcular la misma expresión varias veces.</li>
+    <li><b>Depuración:</b> puedes devolver cualquier VAR temporalmente para inspeccionarla.</li>
+  </ul>`)}
+
+  ${dax(`
+Var % Ventas YoY =
+VAR VentasActual = [Ventas]
+VAR VentasAA     = CALCULATE ( [Ventas], SAMEPERIODLASTYEAR ( Calendario[Fecha] ) )
+VAR Diferencia   = VentasActual - VentasAA
+RETURN
+    DIVIDE ( Diferencia, VentasAA )`)}
+
+  ${warn('Las VAR congelan el contexto donde se definen ⚠️', `<p>Una VAR se evalúa <b>en el momento y contexto de su declaración</b>, no donde se usa. Si defines <code class="inl">VAR x = [Ventas]</code> fuera de un CALCULATE y luego usas <code class="inl">x</code> dentro de ese CALCULATE, <code class="inl">x</code> conserva el valor <b>original</b>, no el modificado. Esto es una herramienta poderosa (capturar un valor antes de cambiar el contexto), pero sorprende a quien no lo sabe.</p>
+  ${dax(`
+Ejemplo =
+VAR VentaCelda = [Ventas]                    -- congela ventas de ESTA celda
+RETURN
+    CALCULATE ( VentaCelda, ALL ( Clientes ) ) -- sigue siendo el valor de la celda,
+                                              -- ALL no lo afecta porque ya está calculado`)}`)}
+
+  ${err('Recalcular en vez de guardar', `<p>Repetir <code class="inl">CALCULATE([Ventas], SAMEPERIODLASTYEAR(...))</code> tres veces en una medida la hace más lenta y frágil. Guárdalo en una VAR y reúsalo.</p>`)}
+  ${best('', `<ul><li>Una VAR por cada concepto con nombre de negocio (<code class="inl">VentasAA</code>, <code class="inl">Umbral</code>), no nombres como <code class="inl">x1</code>.</li><li>Capturar un valor antes de un CALCULATE es un patrón legítimo y útil (sim. de cliente individual).</li><li>No puedes asignar una VAR a otra después; son inmutables. Encadena con varias VAR.</li></ul>`)}
+  `
+});
+
+/* ---- Lógica ---- */
+N({ id:'fn-logica', parent:'funciones', title:'Lógica: IF, SWITCH', icon:'🟢',
+  importancia:'★★★★☆', dificultad:'🟢 Fundamental', uso:'Diario',
+  related:['fn-errores'], fns:['fn-errores'],
+  subtitle:'Bifurcar cálculos según condiciones. SWITCH es IF múltiple legible y la base de selectores de medidas y semáforos de KPI.',
+  html: ()=> `
+  ${tbl(['Función','Cuándo','Ejemplo'],[
+    ['<b>IF</b>','Una condición','<code class="inl">IF([Margen]<0,"Pérdida","Beneficio")</code>'],
+    ['<b>SWITCH</b>','Varias condiciones / selector','Ver abajo'],
+    ['<b>SWITCH(TRUE(),…)</b>','Rangos y condiciones complejas','Semáforos, tramos de aging'],
+  ])}
+
+  <h4>SWITCH(TRUE()) — el patrón de tramos</h4>
+  ${dax(`
+Semáforo Margen =
+SWITCH (
+    TRUE (),
+    [% Margen] >= 0.20, "🟢 Saludable",
+    [% Margen] >= 0.10, "🟡 Ajustado",
+    [% Margen] >= 0,    "🟠 Crítico",
+    "🔴 Pérdida"
+)`)}
+  ${dax(`
+Tramo Aging =
+SWITCH (
+    TRUE (),
+    [Días Vencido] <= 0,  "Al día",
+    [Días Vencido] <= 30, "1-30 días",
+    [Días Vencido] <= 60, "31-60 días",
+    [Días Vencido] <= 90, "61-90 días",
+    "Más de 90 días"
+)`)}
+
+  <h4>Selector de medidas (KPI dinámico por slicer)</h4>
+  ${dax(`
+Medida Seleccionada =
+SWITCH (
+    SELECTEDVALUE ( SelectorKPI[Métrica] ),
+    "Ventas",  [Ventas],
+    "Margen",  [Margen],
+    "EBITDA",  [EBITDA],
+    BLANK ()
+)`)}
+
+  ${warn('SWITCH evalúa de arriba a abajo', `<p>El orden importa: SWITCH(TRUE()) devuelve la <b>primera</b> rama verdadera. Ordena de más restrictivo a menos. Si pones <code class="inl">>=0</code> arriba, capturaría todo lo positivo antes de llegar a <code class="inl">>=0.20</code>.</p>`)}
+  ${err('Anidar IF en cascada', `<p><code class="inl">IF(a, x, IF(b, y, IF(c, z, w)))</code> es ilegible. Reescríbelo como <code class="inl">SWITCH(TRUE(), a,x, b,y, c,z, w)</code>: mismo resultado, mucho más mantenible.</p>`)}
+  ${best('', `<p>Para semáforos y selectores usa <code class="inl">SWITCH(TRUE())</code>. Evita lógica de negocio compleja en medidas; si una clasificación es estable, considera una columna/dimensión en el modelo.</p>`)}
+  `
+});
+
+/* ---- Manejo de errores ---- */
+N({ id:'fn-errores', parent:'funciones', title:'Manejo de Errores: DIVIDE, COALESCE, ISBLANK', icon:'🟢',
+  importancia:'★★★★☆', dificultad:'🟢 Fundamental', uso:'Diario',
+  related:['fn-logica'], fns:[],
+  subtitle:'Evitar que divisiones por cero y valores en blanco rompan o ensucien tus informes. Pequeñas pero omnipresentes.',
+  html: ()=> `
+  ${tbl(['Función','Hace','Ejemplo'],[
+    ['<b>DIVIDE</b>','Divide; si el denominador es 0/BLANK devuelve un valor alternativo (BLANK por defecto)','<code class="inl">DIVIDE([Margen],[Ventas])</code>'],
+    ['<b>COALESCE</b>','Devuelve el primer argumento no vacío','<code class="inl">COALESCE([Ventas],0)</code>'],
+    ['<b>ISBLANK</b>','Comprueba si un valor es BLANK','<code class="inl">IF(ISBLANK([Ventas]),"Sin datos",…)</code>'],
+  ])}
+
+  ${dax(`
+% Margen     = DIVIDE ( [Margen], [Ventas] )            -- nunca error /0
+Ventas (0)   = COALESCE ( [Ventas], 0 )                  -- muestra 0 en vez de vacío
+Var YoY safe = DIVIDE ( [Ventas] - [VentasAA], [VentasAA] ) -- BLANK si no hay año anterior`)}
+
+  ${warn('No "tapes" un BLANK que es una señal', `<p><code class="inl">COALESCE([x],0)</code> es útil para visuales, pero a veces un BLANK significa "esta combinación no existe" y rellenarlo con 0 <b>infla</b> totales y promedios (ej. clientes sin ventas que cuentan como 0 y bajan la media). Decide con criterio de negocio si el cero es real.</p>`)}
+  ${err('Usar "/" en vez de DIVIDE', `<p><code class="inl">[Margen] / [Ventas]</code> da <b>infinito/error</b> cuando Ventas=0, y puede romper el visual. <code class="inl">DIVIDE</code> lo maneja limpio. Salvo micro-optimización con denominador garantizado, usa siempre DIVIDE.</p>`)}
+  ${best('', `<ul><li><code class="inl">DIVIDE</code> por defecto para todo ratio.</li><li><code class="inl">COALESCE</code> para presentación, no para corregir modelos mal diseñados.</li><li>Un BLANK en una medida hace que la fila <b>no se muestre</b> en algunos visuales: a veces es lo que quieres (ocultar combinaciones vacías).</li></ul>`)}
+  `
+});
+
+/* ---- Tablas ---- */
+N({ id:'fn-tablas', parent:'funciones', title:'Tablas: VALUES, DISTINCT, SELECTEDVALUE, RELATED, RELATEDTABLE, LOOKUPVALUE', icon:'🟡⭐',
+  importancia:'★★★★☆', dificultad:'🟡 Importante', uso:'Frecuente',
+  deps:['relaciones'], related:['ctx-fila','simuladores'], fns:['calculate'],
+  subtitle:'Funciones que devuelven tablas o navegan relaciones. La base para leer slicers y traer valores entre tablas.',
+  html: ()=> `
+  ${tbl(['Función','Devuelve','Uso típico','Nota'],[
+    ['<b>VALUES</b>','Valores distintos VISIBLES en el contexto','Universo de iteración; leer selección','Incluye un BLANK si hay filas huérfanas'],
+    ['<b>DISTINCT</b>','Valores distintos','Similar a VALUES','No añade el BLANK de integridad'],
+    ['<b>SELECTEDVALUE</b>','El único valor visible, o un default','Leer slicers (simuladores)','BLANK/default si hay 0 o >1'],
+    ['<b>RELATED</b>','Un valor del lado "1"','Traer precio/categoría a la fila de hechos','Solo de * hacia 1'],
+    ['<b>RELATEDTABLE</b>','Las filas "*" relacionadas','Iterar detalle desde una dim','De 1 hacia *'],
+    ['<b>LOOKUPVALUE</b>','Un valor buscando por clave','BUSCARV sin relación','Más lento que RELATED'],
+  ])}
+
+  <h4>VALUES / SELECTEDVALUE: leer lo que el usuario eligió</h4>
+  ${dax(`
+Cliente Elegido  = SELECTEDVALUE ( Clientes[Nombre], "Todos" )
+Nº Categorías    = COUNTROWS ( VALUES ( Productos[Categoría] ) )
+Título Dinámico  = "Análisis de " & SELECTEDVALUE ( Clientes[Nombre], "todos los clientes" )`)}
+  ${engine('SELECTEDVALUE por dentro', `<p>Equivale a <code class="inl">IF(HASONEVALUE(col), VALUES(col), default)</code>. Devuelve el valor solo si en el contexto actual hay <b>exactamente uno</b>. En un total (varios valores visibles) devuelve el default. Por eso es perfecto para slicers y por eso falla "en el total" si no pones default.</p>`)}
+
+  <h4>RELATED vs RELATEDTABLE: dirección de navegación</h4>
+  ${dax(`
+-- En la fila de Ventas (lado *), traer el precio del producto (lado 1)
+Precio Lista = SUMX ( Ventas, RELATED ( Productos[PrecioLista] ) )
+
+-- En la fila de un Cliente (lado 1), iterar sus ventas (lado *)
+Nº Compras = COUNTROWS ( RELATEDTABLE ( Ventas ) )`)}
+  ${warn('La dirección importa', `<p><code class="inl">RELATED</code> va del lado <b>muchos → uno</b> (necesita contexto de fila en la tabla de hechos). <code class="inl">RELATEDTABLE</code> va de <b>uno → muchos</b>. Confundirlos da error o BLANK.</p>`)}
+
+  <h4>LOOKUPVALUE: cuando no hay relación</h4>
+  ${dax(`
+Tasa = LOOKUPVALUE ( TipoCambio[Tasa], TipoCambio[Moneda], Ventas[Moneda], TipoCambio[Mes], Ventas[Mes] )`)}
+  ${err('Usar LOOKUPVALUE donde había relación', `<p>Si existe una relación, <code class="inl">RELATED</code> es más rápido y limpio que <code class="inl">LOOKUPVALUE</code>. Reserva LOOKUPVALUE para cuando de verdad no puedes (o no quieres) crear la relación.</p>`)}
+  ${best('', `<p><code class="inl">SELECTEDVALUE</code> con default explícito en todo lo que lea slicers. <code class="inl">VALUES</code> como universo de iteración en patrones de ranking y simuladores.</p>`)}
+  `
+});
+
+/* ---- Ranking ---- */
+N({ id:'fn-ranking', parent:'funciones', title:'Ranking: RANKX, TOPN', icon:'🔴⭐',
+  importancia:'★★★☆☆', dificultad:'🔴 Avanzado', uso:'Ocasional',
+  deps:['fn-iteradores','fn-filtros'], related:['casos'], fns:['fn-filtros'],
+  subtitle:'Ordenar y quedarse con los N mejores. Sensibles al contexto: requieren elegir bien el universo sobre el que rankear.',
+  html: ()=> `
+  <h4>RANKX — posición dentro de un universo</h4>
+  ${dax(`
+Ranking Ventas =
+IF (
+    HASONEVALUE ( Clientes[ClienteID] ),
+    RANKX (
+        ALLSELECTED ( Clientes[ClienteID] ),  -- universo: clientes seleccionados
+        [Ventas],                              -- criterio
+        ,                                      -- valor (opcional)
+        DESC,                                  -- mayor primero
+        DENSE                                  -- sin saltos en empates
+    )
+)`)}
+  ${engine('', `<p><code class="inl">RANKX</code> evalúa <code class="inl">[Ventas]</code> para cada elemento del universo, los ordena y devuelve la posición del elemento actual. El <b>universo</b> (1er argumento) lo es todo: <code class="inl">ALL</code> rankea contra todos, <code class="inl">ALLSELECTED</code> contra lo filtrado. El guard <code class="inl">HASONEVALUE</code> evita un ranking absurdo en la fila Total.</p>`)}
+
+  <h4>TOPN — quedarse con los N mejores (devuelve tabla)</h4>
+  ${dax(`
+Ventas Top 5 Clientes =
+CALCULATE (
+    [Ventas],
+    TOPN ( 5, ALLSELECTED ( Clientes[ClienteID] ), [Ventas], DESC )
+)`)}
+  ${dax(`
+-- "Resto" (no-top): total menos top
+Ventas Cola = [Ventas Totales] - [Ventas Top 5 Clientes]`)}
+
+  ${warn('Empates', `<p>En <code class="inl">RANKX</code>, <code class="inl">DENSE</code> no salta posiciones tras empate (1,2,2,3); el modo por defecto sí (1,2,2,4). En <code class="inl">TOPN</code>, si hay empate en el puesto N, <b>devuelve todos los empatados</b>: "Top 5" puede dar 6 filas. Tenlo en cuenta en KPIs de concentración.</p>`)}
+  ${err('Rankear sin fijar el universo', `<p><code class="inl">RANKX(Clientes, ...)</code> sin ALL/ALLSELECTED rankea dentro del contexto de cada fila → casi siempre da 1 en todas. Debes <b>liberar</b> el filtro de la columna que rankeas.</p>`)}
+  ${best('', `<p>Para análisis de concentración (Pareto 80/20, top clientes/productos, ABC) combina TOPN con medidas de "resto". Para tablas de clasificación, RANKX con guard de total. Ver <span class="pill" data-go="casos">Casos de negocio</span>.</p>`)}
+  `
+});
+
+/* ---- Inteligencia del Tiempo ---- */
+N({ id:'fn-tiempo', parent:'funciones', title:'Inteligencia del Tiempo: DATESYTD, TOTALYTD, SAMEPERIODLASTYEAR, DATEADD, DATESINPERIOD, PARALLELPERIOD, PREVIOUSMONTH', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Frecuente',
+  deps:['calculate','modelado'], related:['casos','evaluacion'], fns:['calculate'],
+  subtitle:'Comparar y acumular en el tiempo: YTD, YoY, MoM, móviles. Internamente son generadores de tablas de fechas que CALCULATE usa para reemplazar el filtro de calendario.',
+  html: ()=> `
+  ${why('El lenguaje del reporting financiero', `<p>Todo comité de dirección habla en YTD, variación interanual y forecast móvil. Esta familia traduce esas preguntas a DAX. La clave conceptual: <b>no "calculan tiempo"; generan un conjunto de fechas y se lo pasan a CALCULATE</b>, que reemplaza el filtro de calendario por ese conjunto.</p>`)}
+
+  ${warn('Requisito previo innegociable', `<p>Necesitas una <span class="pill" data-go="modelado">tabla Calendario</span> dedicada, continua (sin huecos), que cubra todo el rango y esté <b>marcada como tabla de fechas</b>. Sin ella, estas funciones dan resultados erróneos o BLANK.</p>`)}
+
+  ${tbl(['Función','Qué genera','Pregunta de negocio'],[
+    ['<b>DATESYTD</b>','Fechas desde el 1-ene hasta hoy visible','Acumulado del año'],
+    ['<b>TOTALYTD</b>','Atajo: CALCULATE + DATESYTD en uno','Ventas YTD en una línea'],
+    ['<b>SAMEPERIODLASTYEAR</b>','El mismo periodo, un año antes','Variación interanual (YoY)'],
+    ['<b>DATEADD</b>','Desplaza N periodos (día/mes/trim/año)','MoM, YoY flexible, comparativos'],
+    ['<b>DATESINPERIOD</b>','Un rango de N periodos desde una fecha','Media móvil 12 meses, rolling'],
+    ['<b>PARALLELPERIOD</b>','Periodo completo desplazado','Mes/trim/año anterior completo'],
+    ['<b>PREVIOUSMONTH</b>','El mes anterior completo','Comparativa mes a mes'],
+  ])}
+
+  <h4>El kit esencial</h4>
+  ${dax(`
+Ventas YTD      = TOTALYTD ( [Ventas], Calendario[Fecha] )
+Ventas YTD (AF) = TOTALYTD ( [Ventas], Calendario[Fecha], "06-30" )   -- año fiscal cierra 30-jun
+Ventas AA       = CALCULATE ( [Ventas], SAMEPERIODLASTYEAR ( Calendario[Fecha] ) )
+Var % YoY       = DIVIDE ( [Ventas] - [Ventas AA], [Ventas AA] )
+Ventas Mes Ant. = CALCULATE ( [Ventas], DATEADD ( Calendario[Fecha], -1, MONTH ) )
+Var % MoM       = DIVIDE ( [Ventas] - [Ventas Mes Ant.], [Ventas Mes Ant.] )`)}
+
+  <h4>Media móvil (rolling) con DATESINPERIOD</h4>
+  ${dax(`
+Ventas Móvil 12M =
+CALCULATE (
+    [Ventas],
+    DATESINPERIOD ( Calendario[Fecha], MAX ( Calendario[Fecha] ), -12, MONTH )
+)
+Promedio Móvil 12M = DIVIDE ( [Ventas Móvil 12M], 12 )`)}
+  ${engine('Cómo encaja con CALCULATE', `<p><code class="inl">DATESINPERIOD(...,-12,MONTH)</code> devuelve las fechas de los últimos 12 meses hasta la última visible. CALCULATE <b>reemplaza</b> el filtro de fecha por ese rango y <b>conserva</b> el resto (producto, región). Por eso el rolling respeta tus otros slicers.</p>`)}
+
+  ${err('DATEADD necesita una columna de fechas, no una medida', `<p><code class="inl">DATEADD([Fecha visible], ...)</code> no funciona: el primer argumento es la <b>columna</b> <code class="inl">Calendario[Fecha]</code>. Además, DATEADD necesita fechas <i>contiguas</i> en el contexto; con selecciones irregulares usa <code class="inl">SAMEPERIODLASTYEAR</code> o revisa el calendario.</p>`)}
+  ${err('YoY que no respeta el año fiscal', `<p>Si tu cierre no es 31-dic, <code class="inl">DATESYTD</code>/<code class="inl">TOTALYTD</code> sin el parámetro de fin de año fiscal dan acumulados incorrectos. Pasa <code class="inl">"06-30"</code> (o el que corresponda) y marca bien la tabla de fechas.</p>`)}
+  ${best('', `<ul>
+    <li>Crea medidas base reutilizables: <code class="inl">[Ventas]</code> → <code class="inl">[Ventas YTD]</code> → <code class="inl">[Var YoY]</code>, encadenadas.</li>
+    <li>Usa <code class="inl">DATEADD</code> para comparativos flexibles; <code class="inl">SAMEPERIODLASTYEAR</code> para el YoY estándar (más legible).</li>
+    <li>Para rolling y forecast móvil, <code class="inl">DATESINPERIOD</code>. Ver <span class="pill" data-go="sim-7">Forecast corporativo</span>.</li>
+  </ul>`)}
+  `
+});
+
+/* ===================== SIMULADORES ===================== */
+N({ id:'simuladores', parent:null, title:'Simuladores Corporativos y Slicers Avanzados', icon:'🎛️⭐',
+  importancia:'★★★★★ (máxima)', dificultad:'🔴 Avanzado', uso:'Planeamiento / Forecast / Comercial',
+  subtitle:'Cómo se construyen los simuladores reales de Planeamiento Financiero, Forecast, Presupuesto e Inteligencia Comercial: tablas desconectadas, What-If, SELECTEDVALUE y CALCULATE trabajando juntos. Desde cero.',
+  deps:['calculate','fn-tablas'], related:['ctx-filtro','fn-tiempo'], fns:['calculate','fn-tablas'],
+  html: ()=> `
+  ${why('Es lo que pide la dirección, y casi nadie sabe hacerlo bien', `<p>"¿Qué pasa con el EBITDA si subimos ventas un 10%?" Esa pregunta convierte un informe estático en una <b>herramienta de decisión</b>. Los simuladores son la habilidad más valorada (y peor entendida) en BI corporativo. El truco común a todos: una <b>tabla desconectada</b> cuyo valor seleccionado se lee con <code class="inl">SELECTEDVALUE</code> y se inyecta en el cálculo. Aquí lo construimos paso a paso, 9 escenarios.</p>`)}
+
+  <h3>El concepto central: la tabla desconectada ⭐</h3>
+  ${analogy('El mando a distancia', `<p>Una <b>tabla desconectada</b> (sin relación con el modelo) es como un <b>mando a distancia</b>: sus botones (los valores del slicer) no están "cableados" a los datos. No filtran nada por sí solos. Es tu medida la que <b>lee qué botón pulsaste</b> (<code class="inl">SELECTEDVALUE</code>) y decide qué hacer con esa señal. Si la tabla estuviera relacionada, filtraría datos en vez de darte un parámetro libre.</p>`)}
+  ${engine('Por qué desconectada y no relacionada', `<ul>
+    <li>Una tabla <b>relacionada</b> filtra los hechos: seleccionar "+10%" intentaría mostrar solo filas "+10%" (que no existen) → BLANK.</li>
+    <li>Una tabla <b>desconectada</b> no filtra nada: solo expone un valor que tú lees y usas como multiplicador/parámetro. El cálculo lo haces tú en DAX.</li>
+  </ul>`)}
+
+  <h3>What-If Parameters: el atajo de Power BI</h3>
+  <p>Modelado de datos → "Nuevo parámetro" genera automáticamente: (1) una tabla desconectada con <code class="inl">GENERATESERIES</code>, (2) una medida <code class="inl">[Valor] = SELECTEDVALUE(Tabla[Valor])</code>, y (3) un slicer. Es exactamente el patrón "tabla desconectada + SELECTEDVALUE", empaquetado.</p>
+  ${dax(`
+-- Lo que genera un What-If de -30% a +30% en pasos de 5%
+Ajuste = GENERATESERIES ( -0.30, 0.30, 0.05 )
+Ajuste Valor = SELECTEDVALUE ( Ajuste[Ajuste], 0 )   -- 0 = sin ajuste por defecto`)}
+
+  <p>Los 9 escenarios van de lo simple (ajuste global) a lo complejo (global + individual, matrices, forecast, KPIs y el funcionamiento interno completo). Hazlos en orden:</p>
+  `
+});
+
+/* ---- Escenario 1 ---- */
+N({ id:'sim-1', parent:'simuladores', title:'Escenario 1 · Ajuste Global de Ventas', icon:'🟢',
+  importancia:'★★★★☆', dificultad:'🟢 Punto de partida', uso:'Base de todo simulador',
+  deps:['simuladores'], related:['sim-2','fn-tablas'], fns:['fn-tablas','calculate'],
+  subtitle:'Un slicer de porcentaje (+5%…−30%) que modifica automáticamente la venta proyectada de TODOS los clientes a la vez.',
+  html: ()=> `
+  <h3>El problema</h3>
+  <p>Tabla <code class="inl">Proyeccion</code>: <code class="inl">Cliente | VentaProyectada</code>. Un slicer con +5%, +10%, +20%, +30%, −5%, −10%, −20%, −30%. Al elegir uno, <b>todas</b> las ventas proyectadas se recalculan.</p>
+
+  <h3>Paso 1 · Crear la tabla desconectada de ajustes</h3>
+  ${dax(`
+Ajustes =
+DATATABLE (
+    "Etiqueta", STRING,
+    "Factor",   DOUBLE,
+    {
+        { "-30%", 0.70 }, { "-20%", 0.80 }, { "-10%", 0.90 }, { "-5%", 0.95 },
+        { "+5%", 1.05 }, { "+10%", 1.10 }, { "+20%", 1.20 }, { "+30%", 1.30 }
+    }
+)`)}
+  ${warn('NO la relaciones con nada', `<p><code class="inl">Ajustes</code> queda <b>flotando</b>, sin relación. Si la conectas, romperás el simulador. El slicer usará <code class="inl">Ajustes[Etiqueta]</code>; el cálculo usará <code class="inl">Ajustes[Factor]</code>.</p>`)}
+
+  <h3>Paso 2 · Leer la selección</h3>
+  ${dax(`
+Factor Ajuste = SELECTEDVALUE ( Ajustes[Factor], 1 )   -- 1 = sin cambio si no se elige nada`)}
+
+  <h3>Paso 3 · La medida del simulador</h3>
+  ${dax(`
+Venta Ajustada =
+SUMX (
+    VALUES ( Proyeccion[Cliente] ),
+    CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) ) * [Factor Ajuste]
+)`)}
+  <p>O, si solo necesitas el total agregado, la versión simple:</p>
+  ${dax(`Venta Ajustada (simple) = SUM ( Proyeccion[VentaProyectada] ) * [Factor Ajuste]`)}
+
+  ${engine('Qué ocurre en cada paso al elegir "+10%"', `<ol>
+    <li>El slicer pone en el contexto <code class="inl">Ajustes[Etiqueta]="+10%"</code>. Como la tabla está desconectada, <b>esto NO filtra Proyeccion</b>.</li>
+    <li><code class="inl">SELECTEDVALUE(Ajustes[Factor],1)</code> ve que hay un único valor visible → devuelve <b>1,10</b>.</li>
+    <li><code class="inl">SUM(Proyeccion[VentaProyectada])</code> se evalúa con el contexto normal (todos los clientes, o el que filtren otros slicers) → la suma base.</li>
+    <li>Se multiplica por 1,10 → todas las ventas suben un 10%. En la versión SUMX, esto pasa cliente a cliente y luego se acumula (idéntico resultado para un ajuste uniforme, pero preparado para el Escenario 4).</li>
+  </ol>`)}
+
+  <h3>Por qué funciona "para todos" automáticamente</h3>
+  <p>No hay nada que diga "cliente A" o "cliente B": el factor multiplica la base <b>sea cual sea</b> el conjunto de clientes en el contexto. En la fila de cada cliente de una matriz, la base es la de ese cliente; en el total, es el total. El mismo factor aplica a todos. <b>Ese es el sentido de "ajuste global".</b></p>
+
+  ${err('Olvidar el valor por defecto en SELECTEDVALUE', `<p>Sin el segundo argumento (1), cuando no hay selección o hay varias, <code class="inl">SELECTEDVALUE</code> devuelve BLANK y <code class="inl">base * BLANK = BLANK</code>: el informe se vacía. Pon siempre el default <b>1</b> (neutro multiplicativo).</p>`)}
+  ${best('', `<p>Guarda el factor en una medida (<code class="inl">[Factor Ajuste]</code>) y reúsala en todas las medidas dependientes (ventas, margen, EBITDA). Cambias la lógica del slicer en un solo lugar.</p>`)}
+  ${exer('', `<p>Base total = 1.000. Eliges "−20%". ¿Qué muestra <code class="inl">[Venta Ajustada]</code> en el total y en un cliente cuya base es 250?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Solución</summary><p>Factor = 0,80. Total: 1.000×0,80 = <b>800</b>. Cliente: 250×0,80 = <b>200</b>. El mismo factor, distinta base por contexto.</p></details>`)}
+  `
+});
+
+/* ---- Escenario 2 ---- */
+N({ id:'sim-2', parent:'simuladores', title:'Escenario 2 · Ajuste de un Único Cliente', icon:'🟡⚠️',
+  importancia:'★★★★☆', dificultad:'🟡 Salto conceptual', uso:'Ajustes puntuales',
+  deps:['sim-1','transicion'], related:['sim-3','ctx-fila'], fns:['fn-tablas','calculate'],
+  subtitle:'Cliente A → +20%; el resto sin cambios. El reto: detectar en qué fila/cliente estás y aplicar el ajuste solo ahí.',
+  html: ()=> `
+  <h3>El problema y por qué es más difícil</h3>
+  <p>Ahora el ajuste NO es uniforme: solo Cliente A sube 20%, B y C quedan igual. La medida debe, <b>fila a fila</b>, preguntarse "¿soy el cliente objetivo? si sí, ajusto; si no, dejo la base".</p>
+
+  <h3>Paso 1 · Slicers desconectados: cliente objetivo + factor</h3>
+  ${dax(`
+-- Slicer 1: qué cliente ajustar (tabla desconectada con la lista de clientes)
+ClienteObjetivo = DISTINCT ( Proyeccion[Cliente] )   -- copia desconectada (sin relación)
+-- Slicer 2: el factor → reutilizamos la tabla Ajustes del Escenario 1`)}
+  ${warn('Copia desconectada, no la dimensión real', `<p>Necesitas una <b>segunda</b> tabla de clientes <b>desconectada</b> para el slicer objetivo. Si usaras la dimensión real conectada, al elegir "A" filtrarías el modelo a A y perderías B y C de la vista. La copia desconectada solo te dice "a quién apuntar", sin filtrar.</p>`)}
+
+  <h3>Paso 2 · La medida: detectar el contexto de columna</h3>
+  ${dax(`
+Venta Ajuste Individual =
+VAR Objetivo   = SELECTEDVALUE ( ClienteObjetivo[Cliente] )   -- a quién ajustar
+VAR Factor     = SELECTEDVALUE ( Ajustes[Factor], 1 )         -- cuánto
+VAR ClienteFila = SELECTEDVALUE ( Proyeccion[Cliente] )       -- en qué fila estoy
+VAR Base       = SUM ( Proyeccion[VentaProyectada] )
+RETURN
+    IF (
+        ClienteFila = Objetivo,   -- ¿esta fila es el cliente objetivo?
+        Base * Factor,            -- sí → ajusta
+        Base                      -- no → base intacta
+    )`)}
+
+  ${engine('Cómo identifica Power BI el cliente de cada celda', `<ol>
+    <li>En la fila "Cliente A" de la matriz, el contexto de filtro incluye <code class="inl">Proyeccion[Cliente]="A"</code>.</li>
+    <li><code class="inl">SELECTEDVALUE(Proyeccion[Cliente])</code> lee ese contexto → <code class="inl">ClienteFila = "A"</code>.</li>
+    <li><code class="inl">Objetivo</code> viene del slicer desconectado → digamos "A".</li>
+    <li>Como <code class="inl">"A" = "A"</code> → aplica <code class="inl">Base * Factor</code>. En la fila B, <code class="inl">ClienteFila="B" ≠ "A"</code> → devuelve Base. ✔</li>
+  </ol>
+  <p>La clave es que <code class="inl">SELECTEDVALUE(Proyeccion[Cliente])</code> "lee la fila" porque cada celda de la matriz <b>impone su propio cliente</b> en el contexto de filtro.</p>`)}
+
+  <h3>El problema del Total ⚠️</h3>
+  ${warn('En el total, ClienteFila no es único', `<p>En la fila <b>Total</b> hay varios clientes visibles → <code class="inl">SELECTEDVALUE(Proyeccion[Cliente])</code> devuelve BLANK → nunca coincide con Objetivo → el total NO incluye el ajuste. <b>El total quedaría mal.</b> Solución: calcular el total como suma de las filas ajustadas con SUMX:</p>
+  ${dax(`
+Venta Ajuste Individual (total correcto) =
+VAR Objetivo = SELECTEDVALUE ( ClienteObjetivo[Cliente] )
+VAR Factor   = SELECTEDVALUE ( Ajustes[Factor], 1 )
+RETURN
+    SUMX (
+        VALUES ( Proyeccion[Cliente] ),
+        VAR ClienteFila = SELECTEDVALUE ( Proyeccion[Cliente] )
+        VAR Base = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
+        RETURN IF ( ClienteFila = Objetivo, Base * Factor, Base )
+    )`)}
+  <p>Ahora SUMX recorre cliente a cliente (incluso en el total), aplica el IF por cliente y suma. El total cuadra con las filas.</p>`)}
+
+  ${err('Usar la dimensión conectada para el slicer objetivo', `<p>Al seleccionar el cliente en un slicer <i>conectado</i>, filtras el modelo y desaparecen los demás clientes. Por eso el slicer objetivo <b>debe</b> salir de una tabla desconectada.</p>`)}
+  ${best('Patrón senior', `<p>Captura con <code class="inl">VAR</code> las tres señales (objetivo, factor, fila), compáralas con <code class="inl">IF</code>, y envuelve en <code class="inl">SUMX(VALUES(dim))</code> para que el total funcione. Esta estructura se reutiliza en los escenarios 3, 4 y 5.</p>`)}
+  `
+});
+
+/* ---- Escenario 3 ---- */
+N({ id:'sim-3', parent:'simuladores', title:'Escenario 3 · Ajuste de Varios Clientes', icon:'🔴',
+  importancia:'★★★★☆', dificultad:'🔴 Avanzado', uso:'Planes comerciales por cuenta',
+  deps:['sim-2'], related:['sim-4','modelado'], fns:['fn-tablas','calculate'],
+  subtitle:'Cliente A → +10%, B → +25%, C → −15%. Cada cliente responde solo a su propio ajuste. Aquí cambia la arquitectura: parámetro por cliente.',
+  html: ()=> `
+  <h3>Por qué el enfoque anterior no escala</h3>
+  <p>Un slicer "un cliente + un factor" no sirve si quieres ajustes <b>distintos y simultáneos</b> por cliente. Necesitas guardar un factor <b>por cliente</b>. Dos arquitecturas posibles:</p>
+
+  <h3>Arquitectura A · Tabla de parámetros por cliente (recomendada)</h3>
+  <p>Una tabla <b>relacionada</b> con la dimensión Cliente que contiene el factor de cada uno. El usuario la edita (o se alimenta de un formulario / What-If por cliente):</p>
+  ${dax(`
+-- AjustesCliente:  Cliente | Factor   (relacionada 1:1 o 1:* con la dim Cliente)
+Venta Ajustada Multi =
+SUMX (
+    VALUES ( Proyeccion[Cliente] ),
+    VAR Base   = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
+    VAR Factor = CALCULATE ( SELECTEDVALUE ( AjustesCliente[Factor], 1 ) )
+    RETURN Base * Factor
+)`)}
+  ${engine('', `<ol>
+    <li>SUMX itera cliente a cliente sobre <code class="inl">VALUES(Proyeccion[Cliente])</code>.</li>
+    <li>En la iteración de "A", la transición filtra <code class="inl">AjustesCliente</code> a la fila de A → <code class="inl">Factor=1,10</code>.</li>
+    <li>Base de A × 1,10. En "B" → 1,25. En "C" → 0,85. Cada uno con el suyo.</li>
+    <li>SUMX acumula. El total refleja todos los ajustes individuales correctamente.</li>
+  </ol>`)}
+
+  <h3>Arquitectura B · Tablas auxiliares + What-If por cliente</h3>
+  <p>Cuando los ajustes deben ser interactivos con slicers (no una tabla fija), se usa un patrón de <b>parámetros desconectados con campo por cliente</b> o varios What-If. Es más frágil y se reserva para pocos clientes; con muchos, la tabla de parámetros (A) es lo correcto.</p>
+
+  ${tbl(['Criterio','A · Tabla de parámetros','B · What-If múltiples'],[
+    ['Escalabilidad','Alta (miles de clientes)','Baja (pocos)'],
+    ['Interactividad','Editas la tabla / formulario','Slicers en vivo'],
+    ['Mantenimiento','Centralizado','Se multiplica por cliente'],
+    ['Recomendado','✅ Por defecto','Solo casos puntuales'],
+  ])}
+
+  ${warn('La transición es la que "conecta" cada factor', `<p>El motor de este escenario es la <span class="pill" data-go="transicion">transición de contexto</span>: al iterar por cliente y llamar a una medida/columna de la tabla de factores, cada iteración se filtra a su cliente. Sin transición, todos tomarían el mismo factor.</p>`)}
+  ${best('Escalabilidad y buenas prácticas', `<ul>
+    <li>Modela los factores como una <b>tabla de hechos de escenario</b> (Cliente, Escenario, Factor) relacionada con tus dimensiones: así soportas Base/Optimista/Pesimista sin reescribir medidas.</li>
+    <li>Default 1 en cada <code class="inl">SELECTEDVALUE</code>: un cliente sin factor definido no debe desaparecer ni anularse.</li>
+    <li>Itera siempre sobre la <b>clave</b> del cliente, no sobre la tabla de hechos completa.</li>
+  </ul>`)}
+  ${exer('', `<p>A base 100 (f=1,10), B base 200 (f=1,25), C base 300 (f=0,85). ¿Total ajustado?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Solución</summary><p>110 + 250 + 255 = <b>615</b>. Cada cliente con su factor, SUMX acumula.</p></details>`)}
+  `
+});
+
+/* ---- Escenario 4 ---- */
+N({ id:'sim-4', parent:'simuladores', title:'Escenario 4 · Ajuste Global + Ajuste Individual', icon:'🔴⚠️⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Forecast realista',
+  deps:['sim-3'], related:['sim-7','calc-leer'], fns:['calculate','fn-iteradores'],
+  subtitle:'Global +10% combinado con ajustes por cliente. A → 100×1,10×1,20. La clave: multiplicar factores sin doble conteo.',
+  html: ()=> `
+  <h3>El problema: dos palancas a la vez</h3>
+  <p>Un escenario realista de forecast tiene un <b>supuesto macro</b> (todo el mercado +10%) y <b>ajustes finos por cuenta</b> (A crece más, B decrece). Resultado esperado:</p>
+  ${tbl(['Cliente','Base','× Global','× Individual','Resultado'],[
+    ['A','100','1,10','1,20','100 × 1,10 × 1,20 = <b>132</b>'],
+    ['B','200','1,10','0,90','200 × 1,10 × 0,90 = <b>198</b>'],
+    ['C','300','1,10','1,00','300 × 1,10 × 1,00 = <b>330</b>'],
+  ])}
+
+  <h3>La medida combinada</h3>
+  ${dax(`
+Forecast Combinado =
+VAR FactorGlobal = SELECTEDVALUE ( Ajustes[Factor], 1 )     -- palanca macro
+RETURN
+    SUMX (
+        VALUES ( Proyeccion[Cliente] ),
+        VAR Base       = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
+        VAR FactorIndiv = CALCULATE ( SELECTEDVALUE ( AjustesCliente[Factor], 1 ) )
+        RETURN Base * FactorGlobal * FactorIndiv      -- multiplicación, no suma
+    )`)}
+
+  ${engine('Por qué multiplicar y no sumar los ajustes', `<p>"+10% global y +20% individual" significa aplicar un crecimiento <b>sobre</b> el otro: 1,10 × 1,20 = 1,32 (+32%), no 1,10 + 0,20 = 1,30. Multiplicar modela crecimientos compuestos correctamente. Si el negocio define los ajustes como aditivos, entonces sería <code class="inl">Base * (1 + gGlobal + gIndiv)</code> — pero acláralo con el área de negocio: es una decisión de modelo, no de DAX.</p>`)}
+
+  <h3>Cómo evitar el doble conteo ⚠️</h3>
+  ${err('El error clásico: aplicar el global dos veces', `<p>Si calculas <code class="inl">[Venta Ajustada Global] + [Venta Ajustada Individual]</code> por separado y los sumas, el componente base entra <b>dos veces</b>. La forma correcta es <b>una sola medida</b> que multiplica ambos factores sobre <b>una sola base</b>, dentro del mismo SUMX. Nunca sumes dos simuladores que comparten la misma base.</p>`)}
+  ${warn('FactorGlobal va FUERA del SUMX', `<p><code class="inl">FactorGlobal</code> se calcula una vez (es único para todos). <code class="inl">FactorIndiv</code> va <b>dentro</b> del SUMX porque cambia por cliente (necesita transición). Mezclar esto —meter el global dentro y recalcularlo por fila— no rompe el número, pero confunde y resta performance.</p>`)}
+
+  <h3>Depuración: descomponer en VAR para validar</h3>
+  ${dax(`
+Forecast Debug =
+SUMX (
+    VALUES ( Proyeccion[Cliente] ),
+    VAR Base = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
+    VAR fG   = SELECTEDVALUE ( Ajustes[Factor], 1 )
+    VAR fI   = CALCULATE ( SELECTEDVALUE ( AjustesCliente[Factor], 1 ) )
+    -- RETURN Base   -- ¿la base por cliente es correcta?
+    -- RETURN fI     -- ¿cada cliente toma su factor?
+    RETURN Base * fG * fI
+)`)}
+  <p>Cambia el RETURN para inspeccionar cada pieza en una matriz por cliente. Ver técnicas en <span class="pill" data-go="calc-leer">Leer y depurar</span>.</p>
+
+  ${best('', `<ul>
+    <li>Una sola medida, una sola base, factores multiplicados.</li>
+    <li>Factor global fuera del iterador; factores por cliente dentro (con transición).</li>
+    <li>Documenta si los ajustes son compuestos (×) o aditivos (+): es la fuente nº1 de discrepancias con Finanzas.</li>
+  </ul>`)}
+  ${exer('', `<p>Global = −10%. A base 100, fIndiv 1,20. ¿Resultado de A?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Solución</summary><p>100 × 0,90 × 1,20 = <b>108</b>. El cliente sube pese al recorte global porque su palanca individual lo compensa.</p></details>`)}
+  `
+});
+
+/* ---- Escenario 5 ---- */
+N({ id:'sim-5', parent:'simuladores', title:'Escenario 5 · Selección Dinámica de Cliente', icon:'🔴',
+  importancia:'★★★★☆', dificultad:'🔴 Avanzado', uso:'Análisis interactivo',
+  deps:['sim-2','relaciones'], related:['sim-6','ctx-filtro'], fns:['fn-tablas','calculate'],
+  subtitle:'Slicer 1 = Cliente, Slicer 2 = Porcentaje. El usuario elige "Cliente B" y "+15%", y solo B se ve afectado, manteniendo a todos visibles.',
+  html: ()=> `
+  <h3>Diseño completo</h3>
+  ${diagram(`
+   ┌──────────────────┐        ┌──────────────────┐
+   │ ClienteObjetivo  │        │     Ajustes      │
+   │  (DESCONECTADA)  │        │  (DESCONECTADA)  │
+   │   slicer 1       │        │    slicer 2      │
+   └────────┬─────────┘        └────────┬─────────┘
+            │ SELECTEDVALUE              │ SELECTEDVALUE
+            ▼                            ▼
+        Objetivo = "B"              Factor = 1,15
+            │                            │
+            └──────────┬─────────────────┘
+                       ▼
+        Medida: por cada cliente de la matriz,
+        si Cliente = Objetivo → Base × Factor, si no → Base
+                       │
+   ┌───────────────────▼────────────────────┐
+   │ Proyeccion (CONECTADA a la dim Cliente) │  ← se muestra COMPLETA
+   └─────────────────────────────────────────┘`)}
+
+  <h3>La medida</h3>
+  ${dax(`
+Simulación Dinámica =
+VAR Objetivo = SELECTEDVALUE ( ClienteObjetivo[Cliente] )   -- slicer 1 (desconectado)
+VAR Factor   = SELECTEDVALUE ( Ajustes[Factor], 1 )         -- slicer 2 (desconectado)
+RETURN
+    SUMX (
+        VALUES ( Proyeccion[Cliente] ),
+        VAR ClienteFila = SELECTEDVALUE ( Proyeccion[Cliente] )
+        VAR Base = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
+        RETURN IF ( ClienteFila = Objetivo, Base * Factor, Base )
+    )`)}
+
+  ${engine('Por qué los demás clientes siguen visibles', `<p>Ambos slicers son <b>desconectados</b>: no filtran <code class="inl">Proyeccion</code>. La tabla de hechos sigue mostrando A, B y C. El slicer solo aporta dos <i>parámetros</i> (a quién, cuánto) que la medida usa para decidir, fila a fila, si ajusta o no. Si el slicer de cliente estuviera <b>conectado</b>, al elegir B desaparecerían A y C — justo lo que NO queremos aquí.</p>`)}
+
+  <h3>Variante: permitir varios clientes objetivo</h3>
+  ${dax(`
+Simulación Multi-objetivo =
+VAR Factor = SELECTEDVALUE ( Ajustes[Factor], 1 )
+RETURN
+    SUMX (
+        VALUES ( Proyeccion[Cliente] ),
+        VAR ClienteFila = SELECTEDVALUE ( Proyeccion[Cliente] )
+        VAR Base = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
+        VAR EsObjetivo =
+            ClienteFila IN VALUES ( ClienteObjetivo[Cliente] )  -- selección múltiple
+        RETURN IF ( EsObjetivo, Base * Factor, Base )
+    )`)}
+  ${warn('SELECTEDVALUE falla con selección múltiple', `<p>Si permites elegir varios clientes en el slicer, <code class="inl">SELECTEDVALUE(ClienteObjetivo[Cliente])</code> devuelve BLANK. Usa <code class="inl">ClienteFila IN VALUES(ClienteObjetivo[Cliente])</code> para comprobar pertenencia a la selección.</p>`)}
+
+  ${err('Relacionar el slicer de cliente', `<p>Es el error que mata este escenario: si conectas <code class="inl">ClienteObjetivo</code>, filtras la tabla de hechos y pierdes la vista completa. <b>Desconectada siempre.</b></p>`)}
+  ${best('', `<p>Para el slicer de cliente objetivo, una <code class="inl">DISTINCT</code> de la dimensión, desconectada. Comprueba pertenencia con <code class="inl">IN VALUES(...)</code> para soportar uno o varios objetivos sin cambiar la medida.</p>`)}
+  `
+});
+
+/* ---- Escenario 6 ---- */
+N({ id:'sim-6', parent:'simuladores', title:'Escenario 6 · Matriz de Ventas Proyectadas (Meses × Clientes)', icon:'🔴⚠️⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Vista típica de planning',
+  deps:['sim-5','ctx-filtro'], related:['sim-9','evaluacion'], fns:['calculate','fn-tablas'],
+  subtitle:'Filas = Meses, Columnas = Clientes, Valores = Venta Proyectada. Cómo Power BI sabe exactamente qué celda modificar y cuáles dejar igual.',
+  html: ()=> `
+  <h3>La matriz objetivo</h3>
+  ${diagram(`
+            Cliente A   Cliente B   Cliente C
+  Ene-26        100         200         300
+  Feb-26        110         220         310
+  Mar-26        120         230         320`)}
+  <p>Quieres poder: ajustar todos los clientes, uno solo, varios, o combinar global+individual — <b>sobre esta matriz bidimensional</b>.</p>
+
+  <h3>La idea clave: cada celda es una intersección de filtros ⭐</h3>
+  ${engine('Qué contexto tiene la celda "Feb-26 / Cliente B"', `<p>Esa celda concreta tiene en su contexto de filtro <b>dos coordenadas</b>: <code class="inl">Calendario[Mes]="Feb-26"</code> (de la fila) <b>y</b> <code class="inl">Cliente[Cliente]="B"</code> (de la columna). La medida se evalúa en esa intersección. Por eso Power BI "sabe" qué celda es: <b>se lo dicen las coordenadas del visual</b>. No hay que decirle nada; el visual ya impone fila y columna.</p>`)}
+
+  <h3>La medida que respeta ambas dimensiones</h3>
+  ${dax(`
+Matriz Ajustada =
+VAR FactorGlobal = SELECTEDVALUE ( Ajustes[Factor], 1 )
+VAR Objetivo     = SELECTEDVALUE ( ClienteObjetivo[Cliente] )   -- desconectado
+VAR FactorIndiv  = SELECTEDVALUE ( AjustesIndiv[Factor], 1 )    -- desconectado
+RETURN
+    SUMX (
+        VALUES ( Cliente[Cliente] ),                 -- recorre columnas (clientes)
+        VAR ClienteFila = SELECTEDVALUE ( Cliente[Cliente] )
+        VAR Base = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )  -- respeta el MES de la fila
+        VAR Ajuste = IF ( ClienteFila = Objetivo, FactorIndiv, 1 )
+        RETURN Base * FactorGlobal * Ajuste
+    )`)}
+  ${engine('Por qué el mes "se respeta solo"', `<p><code class="inl">SUM(Proyeccion[VentaProyectada])</code> dentro de la celda "Feb-26/B" ya está filtrado a febrero <b>por la fila de la matriz</b>. No tienes que filtrar el mes manualmente: el contexto de filtro de la celda lo hace. Tú solo gestionas el ajuste por cliente. Esa es la elegancia del modelo: <b>la matriz aporta las coordenadas, tú aportas la lógica de ajuste</b>.</p>`)}
+
+  <h3>Las cuatro variantes sobre la misma matriz</h3>
+  ${tbl(['Quiero…','Cómo'],[
+    ['Modificar TODOS los clientes','Solo <code class="inl">FactorGlobal</code> (Escenario 1). El IF de objetivo en 1.'],
+    ['Modificar UN cliente','<code class="inl">Objetivo</code> = ese cliente; IF aplica solo a él (Escenario 2).'],
+    ['Modificar VARIOS clientes','<code class="inl">ClienteFila IN VALUES(ClienteObjetivo[Cliente])</code> (Escenario 5).'],
+    ['Global + individual','<code class="inl">FactorGlobal × Ajuste</code> combinados (Escenario 4).'],
+  ])}
+
+  ${warn('Subtotales y totales de la matriz', `<p>La fila/columna <b>Total</b> no tiene mes o cliente único. Por eso el patrón usa <code class="inl">SUMX(VALUES(Cliente))</code>: garantiza que el total de cada mes sea la suma de los clientes <i>ya ajustados</i>, no un cálculo sobre un contexto ambiguo. Sin SUMX, los totales no sumarían los ajustes individuales. Ver <span class="pill" data-go="sim-9">funcionamiento interno</span>.</p>`)}
+
+  ${err('Filtrar el mes manualmente', `<p>Añadir <code class="inl">Calendario[Mes]=...</code> en la medida es redundante y rompe la matriz: el mes ya lo impone la fila. Deja que el visual ponga las coordenadas; tu medida solo añade la lógica de simulación.</p>`)}
+  ${best('', `<p>Diseña una <b>única medida de simulación</b> que cubra las cuatro variantes según qué slicers estén activos (objetivo vacío → ajuste global puro). Menos medidas, menos mantenimiento, comportamiento coherente en toda la matriz.</p>`)}
+  `
+});
+
+/* ---- Escenario 7 ---- */
+N({ id:'sim-7', parent:'simuladores', title:'Escenario 7 · Forecast Corporativo (Base / Optimista / Pesimista)', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Planeamiento financiero',
+  deps:['sim-4','fn-tiempo'], related:['sim-8','casos'], fns:['calculate','fn-logica','fn-tiempo'],
+  subtitle:'Tres escenarios de forecast seleccionables con un slicer, partiendo de una base histórica y aplicando supuestos diferenciados.',
+  html: ()=> `
+  <h3>Arquitectura del forecast multiescenario</h3>
+  <p>La forma profesional: una tabla de <b>Escenarios</b> con los supuestos de cada uno, seleccionada por slicer, que parametriza una medida única.</p>
+  ${dax(`
+Escenarios =
+DATATABLE (
+    "Escenario", STRING, "Crecimiento", DOUBLE, "Inflación Costos", DOUBLE,
+    {
+        { "Base",      0.05, 0.04 },
+        { "Optimista", 0.15, 0.03 },
+        { "Pesimista", -0.05, 0.07 }
+    }
+)   -- tabla DESCONECTADA: el slicer elige el escenario`)}
+
+  <h3>Medida de forecast de ventas</h3>
+  ${dax(`
+Forecast Ventas =
+VAR Crecimiento = SELECTEDVALUE ( Escenarios[Crecimiento], 0 )
+VAR VentaBase   = [Ventas]                         -- histórico/base del contexto
+RETURN
+    VentaBase * ( 1 + Crecimiento )`)}
+  <h3>Forecast con estacionalidad (más realista)</h3>
+  ${dax(`
+Forecast Estacional =
+VAR Crecimiento = SELECTEDVALUE ( Escenarios[Crecimiento], 0 )
+RETURN
+    SUMX (
+        VALUES ( Calendario[MesNum] ),
+        VAR VentaAA  = CALCULATE ( [Ventas], SAMEPERIODLASTYEAR ( Calendario[Fecha] ) )
+        VAR PesoMes  = CALCULATE ( [Peso Estacional] )       -- % que pesa ese mes
+        RETURN VentaAA * ( 1 + Crecimiento ) * PesoMes
+    )`)}
+  ${engine('', `<p>El slicer pone <code class="inl">Escenarios[Escenario]="Optimista"</code>. <code class="inl">SELECTEDVALUE</code> lee crecimiento=0,15. La medida proyecta sobre la base (o sobre el año anterior con estacionalidad). Cambiar el slicer recalcula <b>todo el informe</b> al instante: P&L, gráficos, KPIs. Un único motor, tres narrativas.</p>`)}
+
+  <h3>Forecast de costos (inflación diferenciada)</h3>
+  ${dax(`
+Forecast Costos =
+VAR Inflacion = SELECTEDVALUE ( Escenarios[Inflación Costos], 0 )
+RETURN
+    [Costos] * ( 1 + Inflacion )
+
+Forecast Margen = [Forecast Ventas] - [Forecast Costos]`)}
+
+  ${best('Buenas prácticas de forecast', `<ul>
+    <li>Separa los <b>supuestos</b> (tabla de escenarios) de la <b>lógica</b> (medidas). Cambiar un supuesto no debe tocar DAX.</li>
+    <li>Modela ventas y costos con palancas <b>independientes</b> (crecimiento ≠ inflación): el margen reacciona de forma realista.</li>
+    <li>Para rolling forecast usa <span class="pill" data-go="fn-tiempo">DATESINPERIOD</span> sobre los últimos N meses como base.</li>
+    <li>Guarda los tres escenarios como <b>medidas distintas</b> si necesitas mostrarlos a la vez (gráfico de abanico), o como una sola parametrizada si solo muestras uno.</li>
+  </ul>`)}
+  ${warn('Base ≠ Real', `<p>Define claramente qué es la "base" del forecast: ¿el real YTD anualizado? ¿el año anterior? ¿el presupuesto? Es una decisión de negocio que cambia por completo los números. Documenta el supuesto en el propio informe.</p>`)}
+  `
+});
+
+/* ---- Escenario 8 ---- */
+N({ id:'sim-8', parent:'simuladores', title:'Escenario 8 · Impacto en KPIs (cascada hasta EBITDA)', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Dashboards ejecutivos',
+  deps:['sim-7'], related:['casos','sim-9'], fns:['calculate','fn-errores'],
+  subtitle:'Cómo un ajuste en ventas se propaga automáticamente a facturación, margen, EBITDA, rentabilidad, presupuesto y variaciones, sin recalcular nada a mano.',
+  html: ()=> `
+  ${why('El valor del simulador está en la cascada', `<p>Ajustar ventas es trivial; lo valioso es que ese ajuste <b>fluya</b> por todo el P&L hasta el EBITDA y los ratios. Si construyes tus KPIs <b>referenciando</b> la medida ajustada (no la base), todo el tablero reacciona solo. Eso es un simulador ejecutivo de verdad.</p>`)}
+
+  <h3>La cadena de dependencias de medidas</h3>
+  ${diagram(`
+   [Factor / Escenario]  (slicer)
+            │
+            ▼
+   [Ventas Ajustadas] ──────────────┐
+            │                        │
+            ▼                        ▼
+   [Facturación Aj.]          [Costo Variable Aj.]  (% sobre ventas)
+            │                        │
+            └──────────┬─────────────┘
+                       ▼
+                 [Margen Bruto Aj.]
+                       │  − [OPEX]  (fijo o con su palanca)
+                       ▼
+                  [EBITDA Aj.]
+                 ╱        ╲
+                ▼          ▼
+   [% Margen EBITDA]   [Var vs Presupuesto]`)}
+
+  <h3>Las medidas encadenadas</h3>
+  ${dax(`
+Ventas Ajustadas    = [Ventas] * [Factor Ajuste]
+Costo Variable Aj.  = [Ventas Ajustadas] * [% Costo Variable]   -- escala con ventas
+Margen Bruto Aj.    = [Ventas Ajustadas] - [Costo Variable Aj.]
+EBITDA Ajustado     = [Margen Bruto Aj.] - [OPEX]               -- OPEX fijo aquí
+% Margen EBITDA     = DIVIDE ( [EBITDA Ajustado], [Ventas Ajustadas] )
+Var EBITDA vs Ppto  = [EBITDA Ajustado] - [EBITDA Presupuesto]
+Var %               = DIVIDE ( [Var EBITDA vs Ppto], [EBITDA Presupuesto] )`)}
+
+  ${engine('Qué pasa al mover el slicer a "+20%"', `<ol>
+    <li><code class="inl">[Factor Ajuste]</code> → 1,20.</li>
+    <li><code class="inl">[Ventas Ajustadas]</code> sube 20%.</li>
+    <li><code class="inl">[Costo Variable Aj.]</code> sube proporcionalmente (es % de ventas).</li>
+    <li><code class="inl">[OPEX]</code> NO cambia (es fijo) → <b>apalancamiento operativo</b>: el EBITDA sube <i>más que</i> 20%.</li>
+    <li>El <code class="inl">% Margen EBITDA</code> mejora; la variación vs presupuesto se actualiza. Todo, en un clic.</li>
+  </ol>`)}
+
+  ${warn('Costos fijos vs variables: el detalle que da realismo ⚠️', `<p>El error frecuente es escalar <b>todo</b> el costo con las ventas. En la realidad, los <b>variables</b> (materia prima, comisiones) escalan; los <b>fijos</b> (alquileres, estructura, gran parte del OPEX) no. Modelar esa diferencia es lo que hace creíble el simulador ante un CFO y lo que revela el apalancamiento operativo.</p>`)}
+
+  ${tbl(['KPI','Cómo reacciona al +20% en ventas','Por qué'],[
+    ['Facturación','+20%','Directo'],
+    ['Costo variable','+20%','Proporcional a ventas'],
+    ['OPEX fijo','0%','No depende del volumen'],
+    ['EBITDA','> +20%','Apalancamiento: costos fijos diluidos'],
+    ['% Margen','Mejora','EBITDA crece más rápido que ventas'],
+    ['Var vs Ppto','Mejora','Mayor EBITDA sobre el mismo presupuesto'],
+  ])}
+
+  ${best('', `<ul>
+    <li><b>Nunca</b> repitas la lógica de ajuste en cada KPI. Defínela una vez en <code class="inl">[Ventas Ajustadas]</code> y referencia hacia arriba.</li>
+    <li>Separa costos fijos y variables en el modelo (o con una clasificación en PlanCuentas).</li>
+    <li>Muestra siempre el <b>delta vs presupuesto/base</b>: el ejecutivo piensa en variaciones, no en valores absolutos.</li>
+  </ul>`)}
+  `
+});
+
+/* ---- Escenario 9 ---- */
+N({ id:'sim-9', parent:'simuladores', title:'Escenario 9 · Funcionamiento Interno (flujo paso a paso)', icon:'🔴⚠️⭐',
+  importancia:'★★★★★ (la parte más importante)', dificultad:'🔴 Avanzado', uso:'Modelo mental maestro',
+  deps:['sim-6','evaluacion','transicion'], related:['ctx-filtro','calc-leer'], fns:['calculate','fn-tablas'],
+  subtitle:'El "rayos X" del simulador: qué hace el slicer internamente, qué hace SELECTEDVALUE, qué hace CALCULATE, cómo se construye y propaga el contexto, y cómo Power BI decide qué clientes modificar y cuáles no.',
+  html: ()=> `
+  ${why('Si entiendes este flujo, puedes construir cualquier simulador', `<p>Los ocho escenarios anteriores son variaciones de <b>un mismo mecanismo</b>. Esta página lo abre en canal. Cuando lo domines, no necesitarás recetas: deducirás la medida desde primeros principios.</p>`)}
+
+  <h3>1 · ¿Qué hace el slicer internamente?</h3>
+  ${engine('', `<p>Un slicer <b>no ejecuta código</b>. Lo único que hace es <b>añadir un filtro al contexto de filtro</b> de todos los visuales de la página. Slicer de <code class="inl">Ajustes[Etiqueta]</code> en "+10%" → añade <code class="inl">Ajustes[Etiqueta]="+10%"</code> al contexto. Como <code class="inl">Ajustes</code> está <b>desconectada</b>, ese filtro no se propaga a ninguna tabla de datos: queda "disponible" para que una medida lo lea. Si estuviera conectada, se propagaría por la relación y filtraría hechos.</p>`)}
+
+  <h3>2 · ¿Qué hace SELECTEDVALUE internamente?</h3>
+  ${engine('', `<p><code class="inl">SELECTEDVALUE(Ajustes[Factor], 1)</code> mira la columna <code class="inl">Ajustes[Factor]</code> <b>dentro del contexto de filtro actual</b>. Como el slicer dejó visible una sola fila ("+10%" → Factor 1,10), hay un único valor → lo devuelve. Internamente es <code class="inl">IF(HASONEVALUE(Ajustes[Factor]), VALUES(Ajustes[Factor]), 1)</code>. Si hubiera 0 o varias filas visibles, devuelve el default. <b>Convierte "qué botón pulsó el usuario" en un número usable.</b></p>`)}
+
+  <h3>3 · ¿Qué hace CALCULATE internamente aquí?</h3>
+  ${engine('', `<p>En <code class="inl">CALCULATE(SUM(Proyeccion[VentaProyectada]))</code> dentro del SUMX, CALCULATE ejecuta la <span class="pill" data-go="transicion">transición de contexto</span>: toma el cliente de la iteración actual y lo convierte en filtro sobre <code class="inl">Proyeccion</code>. Así "Base" pasa de ser el total a ser <b>la base de ese cliente concreto</b>. Sin ese CALCULATE, cada iteración sumaría el total completo.</p>`)}
+
+  <h3>4 · Cómo se construye el contexto de filtro de una celda</h3>
+  ${diagram(`
+  Celda "Mar-26 / Cliente B" en la matriz, slicers: Ajuste="+10%", Objetivo="B"
+
+  CONTEXTO DE FILTRO de la celda =
+     { Calendario[Mes] = "Mar-26" }     ← de la FILA del visual
+   ∪ { Cliente[Cliente] = "B" }         ← de la COLUMNA del visual
+   ∪ { Ajustes[Etiqueta] = "+10%" }     ← del SLICER (desconectado: no propaga)
+   ∪ { ClienteObjetivo[Cliente] = "B" } ← del SLICER (desconectado: no propaga)`)}
+
+  <h3>5 · Cómo se propagan los filtros</h3>
+  ${diagram(`
+   { Mes="Mar-26" }  ──1:*──►  Proyeccion  (queda solo marzo)
+   { Cliente="B" }   ──1:*──►  Proyeccion  (queda solo B)
+   ──────────────────────────────────────────────────────
+   Intersección: Proyeccion filtrada a (Mar-26 ∧ B) = la celda exacta
+   Ajustes / ClienteObjetivo: NO propagan (desconectadas) → solo se leen`)}
+
+  <h3>6 · Cómo Power BI sabe qué clientes modificar y cuáles no</h3>
+  ${engine('El corazón de la decisión', `<p>Dentro del <code class="inl">SUMX(VALUES(Cliente[Cliente]))</code>, en cada iteración:</p>
+  <ol>
+    <li><code class="inl">ClienteFila = SELECTEDVALUE(Cliente[Cliente])</code> → el cliente de esta iteración (ej. "B").</li>
+    <li>Se compara con <code class="inl">Objetivo</code> (del slicer desconectado, "B").</li>
+    <li><code class="inl">IF(ClienteFila = Objetivo, ...)</code> decide: <b>coincide → ajusta; no coincide → base intacta</b>.</li>
+  </ol>
+  <p>Power BI no "sabe" nada mágico: <b>tú</b> comparas la coordenada de la celda (que el visual impone) con el parámetro del slicer (que tú lees). La igualdad <code class="inl">ClienteFila = Objetivo</code> es toda la inteligencia. Los que no cumplen la condición conservan su base — por eso el resto no se modifica.</p>`)}
+
+  <h3>7 · El flujo completo de evaluación, de principio a fin</h3>
+  ${diagram(`
+  ┌─ Usuario pulsa "+10%" y "Cliente B" en los slicers ──────────────┐
+  │                                                                    │
+  ▼                                                                    │
+  1. Slicers añaden al contexto: Ajuste="+10%", Objetivo="B"          │
+  2. Para CADA celda de la matriz, el visual añade Mes + Cliente       │
+  3. La medida arranca:                                                │
+        FactorGlobal = SELECTEDVALUE(Ajustes[Factor]) = 1,10           │
+        Objetivo     = SELECTEDVALUE(ClienteObjetivo[Cliente]) = "B"   │
+  4. SUMX recorre VALUES(Cliente[Cliente]):                            │
+        · Cliente A → ClienteFila="A" ≠ "B" → Base_A × 1,10 × 1        │
+        · Cliente B → ClienteFila="B" = "B" → Base_B × 1,10 × FIndiv   │
+        · Cliente C → ClienteFila="C" ≠ "B" → Base_C × 1,10 × 1        │
+     (cada Base sale de CALCULATE = transición al cliente y al mes)    │
+  5. SUMX acumula → valor de la celda                                  │
+  6. Se pinta. Siguiente celda → vuelve al paso 2 con sus coordenadas  │
+  └────────────────────────────────────────────────────────────────────┘`)}
+
+  <h3>8 · Cómo interactúan slicers con matrices, gráficos y tablas</h3>
+  ${engine('', `<p>El mecanismo es <b>idéntico</b> en cualquier visual, porque todos generan contexto de filtro igual:</p>
+  <ul>
+    <li><b>Matriz:</b> fila × columna → contexto bidimensional (lo visto arriba).</li>
+    <li><b>Gráfico de barras:</b> cada barra es una categoría del eje → un contexto por barra.</li>
+    <li><b>Tabla:</b> cada fila → un contexto. <b>Tarjeta:</b> un único contexto (a veces sin desglose → cuidado con SELECTEDVALUE).</li>
+    <li><b>Slicer:</b> añade su filtro a <b>todos</b> los visuales de la página por igual.</li>
+  </ul>
+  <p>Por eso la misma medida de simulación funciona en todos a la vez: no depende del tipo de visual, sino del contexto de filtro que cada uno genera.</p>`)}
+
+  ${best('La regla mental definitiva del simulador', `<p><b>El visual aporta las coordenadas (qué celda). El slicer desconectado aporta los parámetros (qué hacer). La medida compara coordenadas con parámetros y decide. CALCULATE/transición trae la base correcta de cada coordenada.</b> Con esas cuatro frases puedes reconstruir cualquiera de los 9 escenarios desde cero.</p>`)}
+  `
+});
+
+/* ===================== PERFORMANCE ===================== */
+N({ id:'performance', parent:null, title:'Performance y Optimización', icon:'🚀⭐',
+  importancia:'★★★★☆', dificultad:'🔴 Avanzado', uso:'Modelos productivos',
+  subtitle:'Por qué una medida es lenta y cómo arreglarlo: motor de almacenamiento vs motor de fórmulas, antipatrones, uso correcto de variables y optimización de modelo y medidas.',
+  deps:['modelado','transicion'], related:['fn-variables','fn-iteradores'], fns:['fn-variables','calculate'],
+  html: ()=> `
+  ${why('La performance se diseña, no se parchea', `<p>Un informe lento mata la adopción: nadie usa un tablero que tarda 20 segundos por clic. La mayoría de los problemas de performance nacen en el <b>modelo</b> (cardinalidad, relaciones, columnas innecesarias), no en las medidas. Entender los dos motores internos te dice <i>dónde</i> está el cuello de botella.</p>`)}
+
+  <h3>Los dos motores de DAX</h3>
+  ${diagram(`
+   ┌────────────────────────────┐     ┌─────────────────────────────┐
+   │  STORAGE ENGINE (VertiPaq)  │     │  FORMULA ENGINE (FE)        │
+   │  ─────────────────────────  │     │  ─────────────────────────  │
+   │  • Comprime y guarda datos  │     │  • Ejecuta la lógica DAX    │
+   │  • Escanea columnas (rápido)│     │  • Itera, transición, CALC  │
+   │  • Multinúcleo, cacheable   │     │  • Un solo núcleo, sin caché│
+   │  • Operaciones simples      │     │  • Operaciones complejas    │
+   └────────────────────────────┘     └─────────────────────────────┘
+        ▲  rápido y paralelo                 ▲  lento si hace mucho
+   OBJETIVO: que el trabajo lo haga el SE; minimizar el FE.`)}
+  ${engine('La regla de oro de performance', `<p>El <b>Storage Engine</b> (SE) es rápido, paralelo y cacheable; el <b>Formula Engine</b> (FE) es secuencial y caro. Una medida lenta casi siempre es una que obliga al FE a iterar fila a fila (muchos "callbacks" al SE). <b>Optimizar = empujar el trabajo al SE y reducir lo que hace el FE.</b> Lo mides con DAX Studio (Server Timings: tiempo SE vs FE).</p>`)}
+
+  <h3>Antipatrones más comunes ❌</h3>
+  ${tbl(['Antipatrón','Por qué es lento','Solución'],[
+    ['Iterar la tabla de hechos con una medida dentro','Transición por millones de filas (FE)','Itera la dimensión: <code class="inl">SUMX(VALUES(Dim[Clave]),[M])</code>'],
+    ['Columnas calculadas que podrían ser medidas','Ocupan memoria, no se comprimen bien','Conviértelas en medidas si dependen del contexto'],
+    ['<code class="inl">FILTER</code> sobre tabla entera para un valor','Itera todo en el FE','Predicado simple: <code class="inl">CALCULATE([M], Dim[Col]="x")</code>'],
+    ['Relaciones bidireccionales globales','Propagación cara y ambigua','Simple + <code class="inl">CROSSFILTER</code> puntual en medida'],
+    ['Columnas de texto de alta cardinalidad en hechos','Mala compresión, modelo pesado','Llévalas a dimensiones; deja claves enteras en hechos'],
+    ['<code class="inl">DISTINCTCOUNT</code> innecesario','Costoso en alta cardinalidad','<code class="inl">COUNTROWS</code> si solo cuentas filas'],
+    ['Repetir la misma subexpresión','El FE la recalcula N veces','Guárdala en una <code class="inl">VAR</code>'],
+  ])}
+
+  <h3>Variables: la optimización más fácil</h3>
+  ${dax(`
+-- ❌ [Ventas AA] se calcula 3 veces
+Var Mala = DIVIDE([Ventas]-[Ventas AA],[Ventas AA]) + IF([Ventas AA]>0,1,0)
+
+-- ✅ se calcula 1 vez
+Var Buena =
+VAR AA = [Ventas AA]
+RETURN DIVIDE([Ventas]-AA, AA) + IF(AA>0,1,0)`)}
+  ${best('', `<p>Una <code class="inl">VAR</code> se evalúa una sola vez y se reutiliza. Además de legibilidad, es ganancia directa de performance cuando la expresión es cara (CALCULATE con time intelligence, DISTINCTCOUNT…).</p>`)}
+
+  <h3>Optimización del modelo (mayor impacto)</h3>
+  ${best('Checklist de modelo', `<ul>
+    <li><b>Star schema</b>: dimensiones pequeñas, hechos estrechos. <span class="pill" data-go="modelado">Ver modelado</span>.</li>
+    <li><b>Reduce cardinalidad</b>: claves enteras, no GUIDs/textos; separa fecha y hora en dos columnas.</li>
+    <li><b>Elimina columnas que no usas</b>: cada columna pesa en memoria, aunque no la muestres.</li>
+    <li><b>Evita columnas calculadas</b> que dependan del contexto; prefiere medidas.</li>
+    <li><b>Tipos correctos</b>: enteros para claves, decimales fijos para importes; evita flotantes innecesarios.</li>
+    <li><b>Una sola tabla de fechas</b> marcada; desactiva "Auto fecha/hora" (crea jerarquías ocultas que inflan el modelo).</li>
+  </ul>`)}
+
+  <h3>Optimización de medidas</h3>
+  ${best('', `<ul>
+    <li>Filtra con <b>predicados simples</b> antes que con <code class="inl">FILTER</code>; reserva FILTER para lógica multi-columna.</li>
+    <li>Evita la <b>transición masiva</b>: itera dimensiones, no hechos.</li>
+    <li>Mueve cálculos invariantes <b>fuera</b> de los iteradores (a una VAR previa).</li>
+    <li>Usa <code class="inl">DIVIDE</code> y guards (<code class="inl">HASONEVALUE</code>) para evitar trabajo y errores en totales.</li>
+    <li>Prefiere <code class="inl">SUMMARIZE</code>/<code class="inl">SUMMARIZECOLUMNS</code> bien hechos a iteraciones manuales para agrupar.</li>
+  </ul>`)}
+
+  ${warn('Mide antes de optimizar', `<p>No optimices a ciegas. Usa el <b>Performance Analyzer</b> de Power BI para ver qué visual tarda, y <b>DAX Studio</b> (Server Timings) para separar tiempo de SE y FE. Optimizar la medida equivocada es tiempo perdido: el cuello suele ser un visual con demasiados elementos o un modelo mal comprimido.</p>`)}
+
+  ${exer('Diagnóstico de performance', `<p>Una medida <code class="inl">SUMX(Ventas, [Margen Cliente])</code> sobre 8M de filas tarda 15s. ¿Qué harías?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Solución</summary>
+  <p>El problema es la <b>transición por fila</b> sobre 8M de registros (FE saturado). Reescribir para iterar la <b>dimensión cliente</b> (miles de filas), no los hechos: <code class="inl">SUMX(VALUES(Clientes[ClienteID]), [Margen Cliente])</code>. Si el margen es aditivo, mejor aún evitar el iterador y resolverlo con una agregación directa en el SE. Pasarías de 15s a milisegundos.</p></details>`)}
+  `
+});
+
+/* ===================== CASOS DE NEGOCIO ===================== */
+N({ id:'casos', parent:null, title:'Casos Reales de Negocio', icon:'🏢⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Aplicación profesional',
+  subtitle:'El DAX de los módulos anteriores aplicado a problemas financieros y comerciales reales: P&L (OPEX, CAPEX, EBITDA), tesorería (aging, cobranzas, provisiones), control de gestión (presupuesto, forecast, variaciones) e inteligencia comercial.',
+  deps:['calculate','fn-tiempo'], related:['simuladores','performance'],
+  html: ()=> `
+  ${why('Pensar como controller, no como técnico', `<p>El salto final a senior es traducir una pregunta de negocio ("¿por qué cayó el margen en LATAM?") en un modelo analítico. Estos casos te entrenan en ese músculo: cada uno parte de la <b>pregunta del negocio</b> y llega al DAX, no al revés. Todos usan el modelo financiero del módulo de <span class="pill" data-go="modelado">modelado</span>.</p>`)}
+  <p>Cuatro áreas, cada una con sus medidas canónicas:</p>
+  `
+});
+
+/* ---- Casos P&L ---- */
+N({ id:'casos-pyl', parent:'casos', title:'P&L: OPEX, CAPEX, EBITDA y Margen', icon:'🔴',
+  importancia:'★★★★★', dificultad:'🔴', uso:'Reporting financiero',
+  deps:['casos','fn-filtros'], related:['casos-control','sim-8'], fns:['calculate','fn-filtros'],
+  subtitle:'La cuenta de resultados en DAX: clasificar gastos, construir el EBITDA por bloques y calcular márgenes.',
+  html: ()=> `
+  <h3>El modelo de P&L</h3>
+  <p>Tabla de hechos <code class="inl">Movimientos</code>(Fecha, CuentaID, CECO, Escenario, Importe) + dimensión <code class="inl">PlanCuentas</code> con una columna <code class="inl">Grupo</code> (Ingresos, COGS, OPEX, D&A…) que define la estructura del P&L. <b>La clasificación vive en la dimensión, no en la medida.</b></p>
+
+  <h3>Bloques del EBITDA</h3>
+  ${dax(`
+Ingresos = CALCULATE ( SUM ( Movimientos[Importe] ), PlanCuentas[Grupo] = "Ingresos" )
+COGS     = CALCULATE ( SUM ( Movimientos[Importe] ), PlanCuentas[Grupo] = "COGS" )
+OPEX     = CALCULATE ( SUM ( Movimientos[Importe] ), PlanCuentas[Grupo] = "OPEX" )
+
+Margen Bruto   = [Ingresos] - [COGS]
+% Margen Bruto = DIVIDE ( [Margen Bruto], [Ingresos] )
+EBITDA         = [Margen Bruto] - [OPEX]
+% EBITDA       = DIVIDE ( [EBITDA], [Ingresos] )`)}
+  ${engine('', `<p>Cada bloque <b>reemplaza</b> el filtro de Grupo y <b>conserva</b> el resto del contexto (mes, CECO, escenario). Por eso el mismo <code class="inl">[EBITDA]</code> funciona en cualquier celda: por mes, por unidad de negocio, por región — el contexto lo aporta el visual.</p>`)}
+
+  <h3>OPEX vs CAPEX: la distinción contable</h3>
+  ${warn('CAPEX no va al P&L directamente', `<p>El <b>OPEX</b> (gasto operativo) impacta el resultado del periodo. El <b>CAPEX</b> (inversión en activos) <b>no</b> es gasto del periodo: se capitaliza y golpea el P&L <i>vía amortización</i> (D&A) a lo largo de la vida útil. Modelar esto bien evita el error de "restar el CAPEX del EBITDA".</p>`)}
+  ${dax(`
+CAPEX        = CALCULATE ( SUM ( Movimientos[Importe] ), PlanCuentas[Grupo] = "CAPEX" )
+Amortización = CALCULATE ( SUM ( Movimientos[Importe] ), PlanCuentas[Grupo] = "D&A" )
+EBIT         = [EBITDA] - [Amortización]    -- EBIT sí incluye D&A; EBITDA no`)}
+
+  <h3>OPEX por naturaleza y por centro de coste</h3>
+  ${dax(`
+% OPEX sobre Ingresos = DIVIDE ( [OPEX], [Ingresos] )
+OPEX por CECO         = [OPEX]   -- en una matriz con CECO en filas, se desglosa solo
+Peso CECO en OPEX     = DIVIDE ( [OPEX], CALCULATE ( [OPEX], ALL ( CentrosCoste ) ) )`)}
+
+  ${best('', `<ul>
+    <li>Clasifica en la <b>dimensión de cuentas</b> (Grupo, Subgrupo, signo). Las medidas solo seleccionan grupos.</li>
+    <li>Define el <b>signo</b> de forma coherente (gastos negativos o positivos) y sé consistente en todo el modelo.</li>
+    <li>EBITDA = resultado <b>antes</b> de intereses, impuestos, depreciación y amortización: no restes D&A ni financieros.</li>
+  </ul>`)}
+  ${exer('', `<p>Ingresos 1.000, COGS 600, OPEX 250, D&A 50. ¿EBITDA, % EBITDA y EBIT?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Solución</summary><p>Margen bruto = 400. EBITDA = 400 − 250 = <b>150</b>. % EBITDA = 150/1000 = <b>15%</b>. EBIT = 150 − 50 = <b>100</b>. El D&A separa EBITDA de EBIT.</p></details>`)}
+  `
+});
+
+/* ---- Casos Tesorería ---- */
+N({ id:'casos-tesoreria', parent:'casos', title:'Tesorería: Aging, Cobranzas, Deuda y Provisiones', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴', uso:'Crédito y cobranzas',
+  deps:['casos','fn-tiempo'], related:['relaciones','fn-logica'], fns:['calculate','fn-logica'],
+  subtitle:'Antigüedad de la deuda, días de cobro, provisiones por incobrabilidad: el DAX del circulante.',
+  html: ()=> `
+  <h3>Aging de cuentas por cobrar</h3>
+  <p>Pregunta de negocio: <b>"¿cuánto me deben y desde hace cuánto?"</b> El aging clasifica la deuda pendiente por tramos de antigüedad.</p>
+  ${dax(`
+Días Vencido =
+VAR Hoy = MAX ( Calendario[Fecha] )    -- fecha de corte del análisis
+RETURN
+    SUMX (
+        Facturas,
+        VAR dias = DATEDIFF ( RELATED ( Facturas[FechaVencimiento] ), Hoy, DAY )
+        RETURN dias
+    )`)}
+  ${dax(`
+Tramo Aging =
+SWITCH (
+    TRUE (),
+    [Días Vencido] <= 0,  "Por vencer",
+    [Días Vencido] <= 30, "1-30",
+    [Días Vencido] <= 60, "31-60",
+    [Días Vencido] <= 90, "61-90",
+    "+90 (riesgo)"
+)
+Deuda Vencida +90 =
+CALCULATE ( [Saldo Pendiente], FILTER ( Facturas, [Días Vencido] > 90 ) )`)}
+  ${warn('El aging depende de la fecha de corte', `<p>El tramo cambia según el "hoy". Usa <code class="inl">MAX(Calendario[Fecha])</code> como corte para que el aging respete el slicer de fecha y puedas ver fotos históricas. Mídelo por <b>fecha de vencimiento</b>, no de emisión → suele requerir <span class="pill" data-go="relaciones">USERELATIONSHIP</span>.</p>`)}
+
+  <h3>Días de cobro (DSO) y cobranzas</h3>
+  ${dax(`
+Saldo Pendiente = [Facturado] - [Cobrado]
+DSO =
+DIVIDE ( [Saldo Pendiente], [Facturado] ) * [Días del Periodo]   -- días de venta en la calle
+% Cobrado = DIVIDE ( [Cobrado], [Facturado] )`)}
+
+  <h3>Provisiones por incobrabilidad</h3>
+  ${dax(`
+Provisión Incobrables =
+SUMX (
+    VALUES ( Aging[Tramo] ),
+    VAR saldo = [Saldo Pendiente]
+    VAR pct   = RELATED ( Aging[% Provisión] )   -- % de riesgo por tramo (ej. +90 = 50%)
+    RETURN saldo * pct
+)`)}
+  ${engine('', `<p>Cada tramo de aging tiene un % de provisión (mayor cuanto más vencido). La provisión total es la suma ponderada del saldo por su riesgo. Es el patrón <span class="pill" data-go="sim-3">factor por categoría</span> aplicado a riesgo crediticio.</p>`)}
+
+  <h3>Evolución de la deuda</h3>
+  ${dax(`
+Deuda Inicio Periodo = CALCULATE ( [Saldo Pendiente], DATEADD ( Calendario[Fecha], -1, MONTH ) )
+Variación Deuda      = [Saldo Pendiente] - [Deuda Inicio Periodo]`)}
+
+  ${best('', `<ul>
+    <li>Aging y DSO siempre con <b>fecha de corte</b> explícita (<code class="inl">MAX(Calendario[Fecha])</code>).</li>
+    <li>Provisión por tramos en una <b>tabla de parámetros</b> (% por tramo), no hardcodeada.</li>
+    <li>Separa <b>facturado</b> y <b>cobrado</b> como medidas base; el saldo se deriva.</li>
+  </ul>`)}
+  `
+});
+
+/* ---- Casos Control de Gestión ---- */
+N({ id:'casos-control', parent:'casos', title:'Control de Gestión: Presupuesto, Forecast y Variaciones', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴', uso:'Planning & control',
+  deps:['casos','calculate'], related:['sim-7','sim-8'], fns:['calculate','fn-errores'],
+  subtitle:'Real vs Presupuesto vs Forecast en un mismo modelo: el análisis de variaciones que sostiene cualquier comité de gestión.',
+  html: ()=> `
+  <h3>El patrón de escenarios en una sola tabla</h3>
+  <p>Real, Presupuesto y Forecast conviven en la <b>misma tabla de hechos</b>, diferenciados por una dimensión <code class="inl">Escenario</code>. Una sola estructura, comparaciones triviales.</p>
+  ${dax(`
+Real     = CALCULATE ( SUM ( Movimientos[Importe] ), Escenario[Tipo] = "Real" )
+Ppto     = CALCULATE ( SUM ( Movimientos[Importe] ), Escenario[Tipo] = "Presupuesto" )
+Forecast = CALCULATE ( SUM ( Movimientos[Importe] ), Escenario[Tipo] = "Forecast" )`)}
+
+  <h3>Análisis de variaciones</h3>
+  ${dax(`
+Desvío Ppto        = [Real] - [Ppto]
+Desvío Ppto %      = DIVIDE ( [Desvío Ppto], [Ppto] )
+Cumplimiento Ppto  = DIVIDE ( [Real], [Ppto] )                 -- 1 = 100%
+Desvío Forecast    = [Real] - [Forecast]`)}
+  ${dax(`
+-- Semáforo de desempeño (cuidado con el signo en cuentas de gasto)
+Estado Presupuestario =
+VAR cumpl = [Cumplimiento Ppto]
+RETURN
+    SWITCH (
+        TRUE (),
+        cumpl >= 0.98 && cumpl <= 1.02, "🟢 En línea",
+        cumpl < 0.98,  "🔵 Por debajo",
+        "🔴 Sobre presupuesto"
+    )`)}
+  ${warn('El signo del desvío depende de si es ingreso o gasto ⚠️', `<p>En <b>ingresos</b>, Real &gt; Ppto es bueno. En <b>gastos</b>, Real &gt; Ppto es malo. Un semáforo que no distingue cuenta dará verde a un sobrecoste. Solución: una columna <code class="inl">Sentido</code> en PlanCuentas (+1 ingreso / −1 gasto) y multiplicar el desvío por ella antes de evaluar el color.</p>`)}
+
+  <h3>Bridge de variación (puente Ppto → Real)</h3>
+  ${dax(`
+-- Descomposición precio/volumen del desvío de ingresos
+Efecto Volumen = ( [Unidades Real] - [Unidades Ppto] ) * [Precio Ppto]
+Efecto Precio  = ( [Precio Real]  - [Precio Ppto] )  * [Unidades Real]
+Check Bridge   = [Efecto Volumen] + [Efecto Precio] - [Desvío Ppto]   -- debe dar ≈ 0`)}
+  ${engine('', `<p>El "puente" explica <i>por qué</i> el real difiere del presupuesto separando cuánto es por vender más/menos unidades (volumen) y cuánto por precio. <code class="inl">Check Bridge</code> ≈ 0 valida que la descomposición cuadra: una verificación que todo controller agradece.</p>`)}
+
+  <h3>Forecast = Real YTD + Presupuesto resto del año</h3>
+  ${dax(`
+Forecast Rolling =
+VAR Corte = MAX ( Calendario[Fecha] )
+VAR RealYTD =
+    CALCULATE ( [Real], Calendario[Fecha] <= Corte )
+VAR PptoResto =
+    CALCULATE ( [Ppto], Calendario[Fecha] > Corte )
+RETURN
+    RealYTD + PptoResto`)}
+  ${best('', `<ul>
+    <li>Un único modelo con dimensión <b>Escenario</b>: evita duplicar medidas por versión.</li>
+    <li>Maneja el <b>signo</b> de los desvíos por naturaleza de cuenta.</li>
+    <li>Acompaña el desvío con su <b>descomposición</b> (precio/volumen, mix) — es lo que pide la dirección.</li>
+    <li>Forecast rolling = real hasta el corte + plan después; el corte = <code class="inl">MAX(Calendario[Fecha])</code> o un parámetro.</li>
+  </ul>`)}
+  `
+});
+
+/* ---- Casos Inteligencia Comercial ---- */
+N({ id:'casos-comercial', parent:'casos', title:'Inteligencia Comercial: Clientes, Mix, Pareto y Retención', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴', uso:'Análisis comercial',
+  deps:['casos','fn-ranking'], related:['fn-ranking','sim-1'], fns:['fn-ranking','calculate','fn-filtros'],
+  subtitle:'Concentración de clientes, análisis ABC/Pareto, mix de producto, ticket medio y retención: el DAX que dirige la estrategia comercial.',
+  html: ()=> `
+  <h3>Concentración de clientes (Pareto 80/20)</h3>
+  ${dax(`
+Ventas Top 10 Clientes =
+CALCULATE ( [Ventas], TOPN ( 10, ALLSELECTED ( Clientes[ClienteID] ), [Ventas], DESC ) )
+
+% Concentración Top 10 =
+DIVIDE ( [Ventas Top 10 Clientes], CALCULATE ( [Ventas], ALLSELECTED ( Clientes ) ) )`)}
+  ${dax(`
+-- Pareto acumulado: ¿qué % de clientes hace el 80% de las ventas?
+Ventas Acumuladas % =
+VAR VentaCliente = [Ventas]
+VAR Acumulado =
+    CALCULATE (
+        [Ventas],
+        FILTER ( ALLSELECTED ( Clientes[ClienteID] ), [Ventas] >= VentaCliente )
+    )
+RETURN
+    DIVIDE ( Acumulado, CALCULATE ( [Ventas], ALLSELECTED ( Clientes ) ) )`)}
+  ${engine('', `<p>El Pareto acumulado suma las ventas de todos los clientes con ventas ≥ las del actual (los más grandes) y lo divide por el total. Ordenando clientes por ventas, ves la curva de concentración: si el 20% superior da el 80%, tienes riesgo de dependencia.</p>`)}
+
+  <h3>Clasificación ABC</h3>
+  ${dax(`
+Clase ABC =
+VAR p = [Ventas Acumuladas %]
+RETURN SWITCH ( TRUE (), p <= 0.80, "A", p <= 0.95, "B", "C" )`)}
+
+  <h3>Mix de producto y cross-sell</h3>
+  ${dax(`
+Mix Categoría %  = DIVIDE ( [Ventas], CALCULATE ( [Ventas], ALLSELECTED ( Productos[Categoría] ) ) )
+Categorías x Cliente = AVERAGEX ( VALUES ( Clientes[ClienteID] ), DISTINCTCOUNT ( Ventas[CategoríaID] ) )
+Ticket Medio     = DIVIDE ( [Ventas], DISTINCTCOUNT ( Ventas[FacturaID] ) )`)}
+
+  <h3>Retención y clientes nuevos vs recurrentes</h3>
+  ${dax(`
+Clientes Activos = DISTINCTCOUNT ( Ventas[ClienteID] )
+
+Clientes Nuevos =
+VAR PrimeraCompra =
+    CALCULATE ( MIN ( Ventas[Fecha] ), ALLEXCEPT ( Ventas, Ventas[ClienteID] ) )
+RETURN
+    COUNTROWS (
+        FILTER (
+            VALUES ( Ventas[ClienteID] ),
+            CALCULATE ( MIN ( Ventas[Fecha] ) ) >= STARTOFMONTH ( MAX ( Calendario[Fecha] ) )
+        )
+    )
+
+Clientes Recurrentes = [Clientes Activos] - [Clientes Nuevos]
+Tasa Retención = DIVIDE ( [Clientes Recurrentes], CALCULATE ( [Clientes Activos], PREVIOUSMONTH ( Calendario[Fecha] ) ) )`)}
+  ${warn('"Cliente nuevo" necesita una definición de negocio', `<p>¿Nuevo = primera compra en su vida, o primera en el periodo? Las medidas cambian por completo. Acuérdala con el área comercial antes de codificar; aquí "nuevo" = primera compra dentro del mes analizado.</p>`)}
+  ${best('', `<ul>
+    <li>Concentración y ABC con <code class="inl">ALLSELECTED</code> para respetar los slicers del usuario.</li>
+    <li>Combina con los <span class="pill" data-go="simuladores">simuladores</span>: "¿qué pasa con el mix si subo precios al segmento A?"</li>
+    <li>Define con negocio los conceptos ambiguos (nuevo, activo, churn) y documéntalos en el modelo.</li>
+  </ul>`)}
+
+  ${box('analogy','🎓 Cierre del Atlas', `<p>Has recorrido el camino completo: del <b>motor</b> (cómo piensa DAX) al <b>corazón</b> (CALCULATE), pasando por el <b>catálogo</b> de herramientas, los <b>simuladores</b> que convierten informes en herramientas de decisión, la <b>performance</b> que los hace usables y los <b>casos reales</b> que los conectan con el negocio. Pensar como un desarrollador senior de Power BI en Finanzas no es saber más funciones: es <b>entender el contexto, modelar bien y traducir preguntas de negocio en modelos analíticos</b>. Vuelve a cualquier nodo cuando lo necesites — este Atlas es tu base de conocimiento permanente.</p>`)}
+  `
+});
+
+/* __CONTENT_INJECTION_POINT__ */
+
+/* ---------- Helpers de contenido (azúcar para escribir nodos) ---------- */
+function node(o){ NODES.push(o); return o; }
+</script>
+<script>
+/* ============================================================
+   RENDER ENGINE
+   ============================================================ */
+(function(){
+  const byId = {};
+  NODES.forEach(n=>byId[n.id]=n);
+  const childrenOf = {};
+  NODES.forEach(n=>{ const p=n.parent||'__root__'; (childrenOf[p]=childrenOf[p]||[]).push(n); });
+
+  // ordered flat list (DFS) for prev/next
+  const flat=[];
+  (function dfs(pid){ (childrenOf[pid]||[]).forEach(n=>{ flat.push(n.id); dfs(n.id); }); })('__root__');
+
+  const treeEl=document.getElementById('tree');
+  const contentEl=document.getElementById('content');
+  const crumbsEl=document.getElementById('crumbs');
+  const searchEl=document.getElementById('searchInput');
+  const searchClear=document.getElementById('searchClear');
+
+  let current=null;
+  const collapsed={};
+
+  function iconFor(n){ return n.icon||''; }
+
+  function buildTree(){
+    treeEl.innerHTML='';
+    (childrenOf['__root__']||[]).forEach(n=>treeEl.appendChild(renderNode(n,0)));
+  }
+  function renderNode(n,depth){
+    const wrap=document.createElement('div'); wrap.className='node'; wrap.dataset.id=n.id;
+    const row=document.createElement('div'); row.className='node-row'; row.dataset.id=n.id;
+    const kids=childrenOf[n.id]||[];
+    const hasKids=kids.length>0;
+    if(collapsed[n.id]) row.classList.add('collapsed');
+    row.innerHTML =
+      '<span class="tw">'+(hasKids?'▾':'')+'</span>'+
+      '<span class="ic">'+(n.icon||'•')+'</span>'+
+      '<span class="lbl">'+n.title+'</span>'+
+      (hasKids?'<span class="badge">'+kids.length+'</span>':'');
+    row.addEventListener('click',e=>{
+      e.stopPropagation();
+      if(hasKids && (e.offsetX<22)){ toggle(n.id); return; }
+      go(n.id);
+      if(hasKids && collapsed[n.id]) toggle(n.id);
+    });
+    wrap.appendChild(row);
+    if(hasKids){
+      const c=document.createElement('div'); c.className='children'+(collapsed[n.id]?' hidden':'');
+      kids.forEach(k=>c.appendChild(renderNode(k,depth+1)));
+      wrap.appendChild(c);
+    }
+    return wrap;
+  }
+  function toggle(id){
+    collapsed[id]=!collapsed[id];
+    const wrap=treeEl.querySelector('.node[data-id="'+CSS.escape(id)+'"]');
+    if(!wrap)return;
+    const row=wrap.querySelector(':scope > .node-row');
+    const ch=wrap.querySelector(':scope > .children');
+    row.classList.toggle('collapsed',collapsed[id]);
+    if(ch) ch.classList.toggle('hidden',collapsed[id]);
+  }
+  function expandAncestors(id){
+    let n=byId[id];
+    while(n && n.parent){ if(collapsed[n.parent]) toggle(n.parent); n=byId[n.parent]; }
+  }
+
+  function pathTo(id){
+    const arr=[]; let n=byId[id];
+    while(n){ arr.unshift(n); n=n.parent?byId[n.parent]:null; }
+    return arr;
+  }
+
+  function go(id, push){
+    const n=byId[id]; if(!n) return;
+    current=id;
+    // active state
+    treeEl.querySelectorAll('.node-row').forEach(r=>r.classList.remove('active'));
+    const row=treeEl.querySelector('.node-row[data-id="'+CSS.escape(id)+'"]');
+    if(row) row.classList.add('active');
+    expandAncestors(id);
+    // breadcrumbs
+    const p=pathTo(id);
+    crumbsEl.innerHTML = p.map((x,i)=> (i===p.length-1?'<b>'+x.title+'</b>':'<a data-go="'+x.id+'">'+x.title+'</a>')).join(' <span style="color:var(--faint)">/</span> ');
+    // content
+    renderContent(n);
+    if(push!==false){ history.replaceState(null,'',  '#'+id); }
+    document.getElementById('main').scrollTop=0;
+    // close mobile sidebar
+    document.getElementById('sidebar').classList.remove('open');
+  }
+
+  function metaChips(n){
+    let h='<div class="meta-bar">';
+    if(n.importancia) h+='<span class="chip"><span>Importancia</span><b>'+n.importancia+'</b></span>';
+    if(n.dificultad) h+='<span class="chip '+(n.difClass||'')+'"><span>Dificultad</span><b>'+n.dificultad+'</b></span>';
+    if(n.uso) h+='<span class="chip"><span>Uso</span><b>'+n.uso+'</b></span>';
+    if(n.fnsig) h+='<span class="chip s"><span>Firma</span><b>'+n.fnsig+'</b></span>';
+    h+='</div>';
+    return h;
+  }
+  function relBlocks(n){
+    const mk=(arr,cls)=> (arr||[]).map(id=>{
+      const t=byId[id]?byId[id].title:id;
+      return '<span class="pill '+(cls||'')+'" data-go="'+id+'">'+t+'</span>';
+    }).join('');
+    let blocks='';
+    const hasDeps=(n.deps&&n.deps.length), hasRel=(n.related&&n.related.length), hasFns=(n.fns&&n.fns.length);
+    if(hasDeps||hasRel||hasFns){
+      blocks+='<div class="rel-grid">';
+      if(hasDeps) blocks+='<div class="rel-card"><div class="h">🔗 Requisitos previos</div>'+mk(n.deps)+'</div>';
+      if(hasRel) blocks+='<div class="rel-card"><div class="h">🧭 Conceptos relacionados</div>'+mk(n.related)+'</div>';
+      if(hasFns) blocks+='<div class="rel-card"><div class="h">ƒ Funciones relacionadas</div>'+mk(n.fns,'fn')+'</div>';
+      blocks+='</div>';
+    }
+    return blocks;
+  }
+
+  function renderContent(n){
+    let h='';
+    h+='<h2 class="title">'+(n.icon? n.icon+' ':'')+n.title+'</h2>';
+    if(n.subtitle) h+='<p class="lead">'+n.subtitle+'</p>';
+    h+=metaChips(n);
+    h+=relBlocks(n);
+    h+=(typeof n.html==='function'? n.html(): (n.html||'<p style="color:var(--muted)">Nodo en construcción.</p>'));
+    // children index
+    const kids=childrenOf[n.id]||[];
+    if(kids.length){
+      h+='<h3>Explorar dentro de este módulo</h3><div class="home-grid">';
+      kids.forEach(k=>{ h+='<div class="home-card" data-go="'+k.id+'"><div class="ic">'+(k.icon||'•')+'</div><div class="t">'+k.title+'</div><div class="d">'+(k.subtitle||k.uso||'')+'</div></div>'; });
+      h+='</div>';
+    }
+    // prev/next
+    const idx=flat.indexOf(n.id);
+    h+='<div class="next-prev">';
+    if(idx>0){ const p=byId[flat[idx-1]]; h+='<div class="np" data-go="'+p.id+'"><div class="d">Anterior</div><div class="t">'+(p.icon||'')+' '+p.title+'</div></div>'; } else h+='<div style="flex:1"></div>';
+    if(idx<flat.length-1){ const nx=byId[flat[idx+1]]; h+='<div class="np n" data-go="'+nx.id+'"><div class="d">Siguiente</div><div class="t">'+nx.title+' '+(nx.icon||'')+'</div></div>'; } else h+='<div style="flex:1"></div>';
+    h+='</div>';
+    contentEl.innerHTML=h;
+    contentEl.classList.toggle('wide', !!n.wide);
+    wireContent();
+  }
+
+  function wireContent(){
+    contentEl.querySelectorAll('[data-go]').forEach(el=>{
+      el.style.cursor='pointer';
+      el.addEventListener('click',()=>go(el.dataset.go));
+    });
+    crumbsEl.querySelectorAll('[data-go]').forEach(el=>{
+      el.style.cursor='pointer'; el.addEventListener('click',()=>go(el.dataset.go));
+    });
+    // collapsible levels
+    contentEl.querySelectorAll('.lvl-h').forEach(h=>{
+      h.addEventListener('click',()=>h.parentElement.classList.toggle('open'));
+    });
+    // DAX syntax highlight
+    contentEl.querySelectorAll('code.dax').forEach(highlightDax);
+  }
+
+  const DAX_KW=['VAR','RETURN','EVALUATE','DEFINE','MEASURE','ORDER BY','ASC','DESC','START AT','TRUE','FALSE','BLANK','IN','NOT'];
+  const DAX_FN=['CALCULATE','CALCULATETABLE','FILTER','ALL','ALLEXCEPT','ALLSELECTED','REMOVEFILTERS','KEEPFILTERS','VALUES','DISTINCT','DISTINCTCOUNT','SELECTEDVALUE','RELATED','RELATEDTABLE','LOOKUPVALUE','SUM','SUMX','AVERAGE','AVERAGEX','COUNT','COUNTX','COUNTROWS','MIN','MINX','MAX','MAXX','RANKX','TOPN','IF','SWITCH','DIVIDE','COALESCE','ISBLANK','ISINSCOPE','HASONEVALUE','HASONEFILTER','DATEADD','DATESINPERIOD','DATESYTD','DATESMTD','DATESQTD','TOTALYTD','TOTALMTD','SAMEPERIODLASTYEAR','PARALLELPERIOD','PREVIOUSMONTH','PREVIOUSYEAR','NEXTMONTH','ENDOFMONTH','STARTOFMONTH','EOMONTH','DATE','YEAR','MONTH','DAY','EDATE','CONCATENATEX','GENERATESERIES','SELECTCOLUMNS','ADDCOLUMNS','SUMMARIZE','SUMMARIZECOLUMNS','UNION','EXCEPT','INTERSECT','CROSSJOIN','TREATAS','USERELATIONSHIP','CROSSFILTER','VAR','MAXX','ABS','ROUND','FORMAT','CONCATENATE','CALENDAR','CALENDARAUTO','FIRSTDATE','LASTDATE'];
+  function highlightDax(codeEl){
+    if(codeEl.dataset.hl) return; codeEl.dataset.hl='1';
+    let txt=codeEl.textContent;
+    // tokenize protecting strings & comments
+    const parts=[]; let i=0;
+    const re=/("(?:[^"\\]|\\.)*")|(\/\/[^\n]*|--[^\n]*|\/\*[\s\S]*?\*\/)|([A-Za-z_][A-Za-z0-9_]*)|('[^']*'(?:\[[^\]]*\])?|\[[^\]]*\])|(\d+\.?\d*)|([+\-*/=<>&|]+)/g;
+    let m,last=0;
+    function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+    let out='';
+    while((m=re.exec(txt))){
+      out+=esc(txt.slice(last,m.index));
+      if(m[1]) out+='<span class="tok-str">'+esc(m[1])+'</span>';
+      else if(m[2]) out+='<span class="tok-com">'+esc(m[2])+'</span>';
+      else if(m[3]){
+        const up=m[3].toUpperCase();
+        if(DAX_KW.includes(up)) out+='<span class="tok-kw">'+esc(m[3])+'</span>';
+        else if(DAX_FN.includes(up)) out+='<span class="tok-fn">'+esc(m[3])+'</span>';
+        else out+=esc(m[3]);
+      }
+      else if(m[4]) out+='<span class="tok-tbl">'+esc(m[4])+'</span>';
+      else if(m[5]) out+='<span class="tok-num">'+esc(m[5])+'</span>';
+      else if(m[6]) out+='<span class="tok-op">'+esc(m[6])+'</span>';
+      last=re.lastIndex;
+    }
+    out+=esc(txt.slice(last));
+    codeEl.innerHTML=out;
+  }
+
+  // ---------- Search ----------
+  function strip(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+  function searchText(n){
+    let raw = (typeof n.html==='function')? '' : (n.html||'');
+    return strip(n.title+' '+(n.subtitle||'')+' '+(n.uso||'')+' '+raw.replace(/<[^>]+>/g,' '));
+  }
+  function doSearch(q){
+    q=strip(q.trim());
+    searchClear.style.display=q?'block':'none';
+    if(!q){ treeEl.querySelectorAll('.node').forEach(w=>{w.classList.remove('hidden');}); treeEl.querySelectorAll('.node-row').forEach(r=>r.classList.remove('hit','dim')); return; }
+    const matches={};
+    NODES.forEach(n=>{ if(searchText(n).includes(q)) matches[n.id]=true; });
+    // include ancestors of matches
+    const show={};
+    Object.keys(matches).forEach(id=>{ let n=byId[id]; while(n){ show[n.id]=true; n=n.parent?byId[n.parent]:null; } });
+    treeEl.querySelectorAll('.node').forEach(w=>{
+      const id=w.dataset.id;
+      w.classList.toggle('hidden', !show[id]);
+      const row=w.querySelector(':scope > .node-row');
+      if(row){ row.classList.toggle('hit', !!matches[id]); row.classList.toggle('dim', !matches[id]); }
+      // expand to reveal
+      const ch=w.querySelector(':scope > .children'); if(ch) ch.classList.remove('hidden');
+      if(row) row.classList.remove('collapsed');
+    });
+  }
+  searchEl.addEventListener('input',()=>doSearch(searchEl.value));
+  searchClear.addEventListener('click',()=>{ searchEl.value=''; doSearch(''); searchEl.focus(); });
+
+  // ---------- Nav buttons ----------
+  document.getElementById('btnPrev').addEventListener('click',()=>{ const i=flat.indexOf(current); if(i>0)go(flat[i-1]); });
+  document.getElementById('btnNext').addEventListener('click',()=>{ const i=flat.indexOf(current); if(i<flat.length-1)go(flat[i+1]); });
+  document.getElementById('mobToggle').addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('open'));
+  document.addEventListener('keydown',e=>{
+    if(e.target.tagName==='INPUT')return;
+    if(e.key==='ArrowRight'){ const i=flat.indexOf(current); if(i<flat.length-1)go(flat[i+1]); }
+    if(e.key==='ArrowLeft'){ const i=flat.indexOf(current); if(i>0)go(flat[i-1]); }
+    if(e.key==='/'){ e.preventDefault(); searchEl.focus(); }
+  });
+
+  // ---------- Boot ----------
+  buildTree();
+  const initial=(location.hash||'').replace('#','');
+  go(byId[initial]?initial:(flat[0]||NODES[0].id), false);
+})();
+</script>
+</body>
+</html>
