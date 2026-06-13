@@ -21,27 +21,35 @@ Abre `index.html` en cualquier navegador moderno. No requiere instalación.
 - **Indicadores visuales**: 🟢 Fundamental · 🟡 Importante · 🔴 Avanzado ·
   ⭐ Crítico senior · ⚠️ Suele confundir.
 
-## Contenido (38 nodos)
+## Contenido
 
-- **Inicio** — cómo usar el artefacto y ruta de aprendizaje recomendada.
-- **Mapa de Prioridades DAX** — ranking de las 30 funciones más usadas en proyectos
-  corporativos, clasificadas por frecuencia de uso real.
-- **Fundamentos del Motor DAX** — contexto de fila, contexto de filtro, transición de
-  contexto, relaciones/propagación/cardinalidad/dirección, modelado dimensional
-  (star vs snowflake) y el flujo completo de evaluación de una medida.
-- **CALCULATE (módulo estrella)** — el corazón de DAX en profundidad: qué agrega,
-  reemplaza y conserva; 9 niveles progresivos (de CALCULATE simple a casos
-  corporativos); y cómo leer, depurar y anticipar medidas complejas.
-- **Catálogo de Funciones DAX** — 9 familias: agregación, filtros, iteradores,
-  variables, lógica, manejo de errores, tablas, ranking e inteligencia del tiempo.
-- **Simuladores Corporativos** — 9 escenarios reales de slicers, What-If y tablas
-  desconectadas: ajuste global, individual, múltiple, global+individual, selección
-  dinámica, matriz, forecast multiescenario, impacto en KPIs y funcionamiento interno.
-- **Performance y Optimización** — motor de almacenamiento vs de fórmulas,
-  antipatrones, variables y optimización de modelo y medidas.
-- **Casos Reales de Negocio** — P&L (OPEX/CAPEX/EBITDA), tesorería (aging, cobranzas,
-  deuda, provisiones), control de gestión (presupuesto/forecast/variaciones) e
-  inteligencia comercial (Pareto, ABC, mix, retención).
+El artefacto está organizado en dos grandes categorías que cubren el flujo completo
+de un proyecto de BI: primero **preparar los datos** (Power Query) y luego
+**modelar y medir** (Power BI / DAX).
+
+### Categoría Power Query / M
+
+- **Qué es y cómo abrirlo** · **Pasos aplicados** (la receta reproducible).
+- **Promover encabezados y renombrar columnas** · **Quitar filas y eliminar columnas**.
+- **Cambiar tipo de datos** (con configuración regional) · **Reemplazar valores**.
+- **Anular dinamización (unpivot) y dinamización (pivot)** — clave en finanzas.
+- **Combinar consultas** (Merge y Append) · **Perfiles de datos** (calidad).
+- **Editor avanzado y lenguaje M** · **Buenas prácticas** · **Errores comunes**.
+- **Caso real completo**: de un Excel sucio a una tabla de hechos lista para el modelo.
+
+### Categoría Power BI / DAX
+
+- **Mapa de Prioridades DAX** — ranking de las 30 funciones más usadas, por frecuencia.
+- **Fundamentos del Motor DAX** — contexto de fila/filtro, transición, relaciones,
+  modelado dimensional (star vs snowflake) y flujo de evaluación.
+- **CALCULATE (módulo estrella)** — qué agrega/reemplaza/conserva; 9 niveles
+  progresivos; cómo leer, depurar y anticipar medidas.
+- **Catálogo de Funciones DAX** — 9 familias (agregación, filtros, iteradores,
+  variables, lógica, errores, tablas, ranking, inteligencia del tiempo).
+- **Simuladores Corporativos** — escenarios de slicers/What-If paso a paso, incluida
+  la edición en vivo con muchos clientes (writeback, segmentos, híbrido).
+- **Performance y Optimización** · **Casos Reales de Negocio** (P&L, tesorería,
+  control de gestión, inteligencia comercial).
 
 Cada nodo sigue un enfoque pedagógico: explicación simple → conceptual → técnica →
 funcionamiento interno → casos empresariales → errores frecuentes → mejores prácticas →
