@@ -268,6 +268,7 @@ const NODES = [];
 const N = o => NODES.push(o);
 function _esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 const dax = (s,cap) => '<pre><span class="cap">'+(cap||'DAX')+'</span><code class="dax">'+_esc(s.replace(/^\n/,'').replace(/\n\s*$/,''))+'</code></pre>';
+const mq = (s,cap) => '<pre><span class="cap">'+(cap||'M · Power Query')+'</span><code class="mcode">'+_esc(s.replace(/^\n/,'').replace(/\n\s*$/,''))+'</code></pre>';
 const box = (cls,title,body) => '<div class="box '+cls+'"><div class="bt">'+title+'</div>'+body+'</div>';
 const why    = (t,b)=>box('why','💡 Por qué importa'+(t?': '+t:''),b);
 const analogy= (t,b)=>box('analogy','🎭 Analogía'+(t?': '+t:''),b);
@@ -286,22 +287,18 @@ function tbl(headers, rows){
 /* ===================== INICIO ===================== */
 N({ id:'home', parent:null, title:'Inicio · Cómo usar este Atlas', icon:'🏠',
   importancia:'★★★★★', dificultad:'Lectura', uso:'Empieza aquí',
-  subtitle:'Un único artefacto navegable que funciona a la vez como mapa de conocimiento, roadmap, manual de consulta, wiki técnica y centro de referencia profesional de Power BI / DAX para Finanzas, Planeamiento, Control de Gestión e Inteligencia Comercial.',
+  subtitle:'Un único artefacto navegable que funciona a la vez como mapa de conocimiento, roadmap, manual de consulta, wiki técnica y centro de referencia profesional. Organizado en dos grandes categorías: Power BI / DAX y Power Query / M, para Finanzas, Planeamiento, Control de Gestión e Inteligencia Comercial.',
   html: ()=> `
   ${why('No es un curso lineal', `<p>Este artefacto está pensado para <b>navegación no lineal</b>. No tienes que leerlo en orden. La barra lateral es un <b>árbol de conocimiento</b>: expándelo, busca, salta entre conceptos relacionados y sigue las dependencias. Cada nodo es autocontenido y enseña algo real.</p>`)}
 
-  <h3>Cómo está organizado</h3>
-  <p>El conocimiento está dividido en módulos jerárquicos. Cada nodo declara su <b>importancia</b>, <b>dificultad</b>, <b>requisitos previos</b>, <b>conceptos relacionados</b> y <b>funciones asociadas</b> (todos clicables, para que puedas saltar entre ideas conectadas).</p>
-
+  <h3>Las dos categorías del Atlas</h3>
+  <p>El conocimiento está dividido en dos grandes bloques que cubren el flujo completo de un proyecto de BI: <b>primero preparas los datos</b> (Power Query) y <b>luego los modelas y mides</b> (Power BI / DAX).</p>
   <div class="home-grid">
-    <div class="home-card" data-go="prioridades"><div class="ic">🗺️</div><div class="t">Mapa de Prioridades DAX</div><div class="d">Las 30 funciones más usadas en proyectos corporativos, rankeadas por frecuencia real.</div></div>
-    <div class="home-card" data-go="motor"><div class="ic">⚙️</div><div class="t">Fundamentos del Motor</div><div class="d">Contexto de fila, de filtro, transición, relaciones y modelado dimensional.</div></div>
-    <div class="home-card" data-go="calculate"><div class="ic">⭐</div><div class="t">CALCULATE (módulo estrella)</div><div class="d">El corazón de DAX, en 9 niveles progresivos. El objetivo central de aprendizaje.</div></div>
-    <div class="home-card" data-go="funciones"><div class="ic">📚</div><div class="t">Catálogo de Funciones</div><div class="d">Agregación, filtros, iteradores, variables, lógica, tablas, ranking y tiempo.</div></div>
-    <div class="home-card" data-go="simuladores"><div class="ic">🎛️</div><div class="t">Simuladores Corporativos</div><div class="d">9 escenarios reales de slicers, What-If y ajustes de forecast paso a paso.</div></div>
-    <div class="home-card" data-go="performance"><div class="ic">🚀</div><div class="t">Performance y Optimización</div><div class="d">Antipatrones, variables, motor de fórmulas vs. almacenamiento.</div></div>
-    <div class="home-card" data-go="casos"><div class="ic">🏢</div><div class="t">Casos Reales de Negocio</div><div class="d">OPEX, CAPEX, EBITDA, aging, cobranzas, provisiones, forecast.</div></div>
+    <div class="home-card" data-go="powerquery"><div class="ic">🔌</div><div class="t">Power Query / M</div><div class="d">Limpieza y transformación de datos paso a paso: encabezados, tipos, unpivot/pivot, combinar consultas, lenguaje M. El "antes" de todo modelo.</div></div>
+    <div class="home-card" data-go="powerbi"><div class="ic">📊</div><div class="t">Power BI / DAX</div><div class="d">Modelado, motor DAX, CALCULATE, catálogo de funciones, simuladores corporativos, performance y casos de negocio. El "después": medir y analizar.</div></div>
   </div>
+  ${analogy('El orden natural: cocinar antes de servir', `<p><b>Power Query es la cocina de preparación</b> (lavas, cortas y ordenas los ingredientes = limpias y transformas los datos). <b>Power BI / DAX es el servicio</b> (con los ingredientes listos, cocinas los platos = construyes medidas y análisis). Un buen plato empieza por buenos ingredientes: por eso conviene dominar Power Query antes (o a la par) de DAX.</p>`)}
+  <p>Cada nodo declara su <b>importancia</b>, <b>dificultad</b>, <b>requisitos previos</b>, <b>conceptos relacionados</b> y <b>funciones asociadas</b> (todos clicables, para saltar entre ideas conectadas).</p>
 
   <h3>Indicadores visuales que verás en todo el árbol</h3>
   ${tbl(['Indicador','Significado','Cómo interpretarlo'],[
@@ -342,8 +339,37 @@ N({ id:'home', parent:null, title:'Inicio · Cómo usar este Atlas', icon:'🏠'
   `
 });
 
+/* ===================== CATEGORÍA: POWER BI ===================== */
+N({ id:'powerbi', parent:null, title:'Power BI / DAX', icon:'📊',
+  importancia:'★★★★★', dificultad:'🟢→🔴', uso:'Modelar y medir',
+  subtitle:'Categoría completa de Power BI y DAX: del motor de evaluación al módulo estrella CALCULATE, el catálogo de funciones, los simuladores corporativos, la performance y los casos reales de negocio.',
+  html: ()=> `
+  ${why('El "después" del flujo de datos: medir y analizar', `<p>Una vez que los datos están limpios y bien estructurados (eso lo hace <span class="pill" data-go="powerquery">Power Query</span>), aquí los conviertes en <b>información de decisión</b>: relaciones, medidas DAX, KPIs, simuladores y dashboards. Esta categoría te lleva de intermedio a nivel profesional/senior.</p>`)}
+
+  <h3>Ruta de aprendizaje recomendada (Power BI / DAX)</h3>
+  ${diagram(`
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  1. MODELO MENTAL        2. EL CORAZÓN         3. HERRAMIENTAS        │
+  │  Motor DAX           →   CALCULATE  ⭐      →   Catálogo de funciones │
+  │   • Contexto fila/filtro  • 9 niveles           (filtros, tiempo,    │
+  │   • Transición            • leer/depurar         iteradores…)         │
+  │   • Relaciones · Star     • anticipar                                 │
+  │        └──────────────────────┴───────►  4. APLICACIÓN REAL          │
+  │                                          • Simuladores (10 escenarios)│
+  │                                          • Performance · Casos negocio│
+  └─────────────────────────────────────────────────────────────────────┘`)}
+
+  ${best('Cómo recorrerla', `<ul>
+    <li>Empieza por <span class="pill" data-go="motor">Fundamentos del Motor</span> (contextos), sigue con <span class="pill" data-go="calculate">CALCULATE</span> y consulta el <span class="pill" data-go="funciones">Catálogo</span> cuando lo necesites.</li>
+    <li>Aplica todo en los <span class="pill" data-go="simuladores">Simuladores</span> y los <span class="pill" data-go="casos">Casos de negocio</span>.</li>
+    <li>El <span class="pill" data-go="prioridades">Mapa de Prioridades</span> te dice qué funciones dominar primero.</li>
+  </ul>`)}
+  <p>Explora los módulos de esta categoría:</p>
+  `
+});
+
 /* ===================== MAPA DE PRIORIDADES ===================== */
-N({ id:'prioridades', parent:null, title:'Mapa de Prioridades DAX', icon:'🗺️', wide:true,
+N({ id:'prioridades', parent:'powerbi', title:'Mapa de Prioridades DAX', icon:'🗺️', wide:true,
   importancia:'★★★★★', dificultad:'🟢 Orientación', uso:'Diario',
   subtitle:'Ranking de las 30 funciones DAX más utilizadas en proyectos corporativos reales, clasificadas por frecuencia: qué problema resuelven, cuándo se usan y cuándo NO.',
   related:['calculate','fn-filtros','fn-tiempo'],
@@ -427,7 +453,7 @@ N({ id:'prioridades', parent:null, title:'Mapa de Prioridades DAX', icon:'🗺�
 });
 
 /* ===================== MOTOR DAX ===================== */
-N({ id:'motor', parent:null, title:'Fundamentos del Motor DAX', icon:'⚙️',
+N({ id:'motor', parent:'powerbi', title:'Fundamentos del Motor DAX', icon:'⚙️',
   importancia:'★★★★★', dificultad:'🟢→🔴', uso:'Base de todo',
   subtitle:'El modelo mental imprescindible: qué ocurre internamente cuando el motor evalúa una medida. Sin esto, DAX parece magia aleatoria; con esto, se vuelve predecible.',
   related:['calculate','prioridades'],
@@ -892,7 +918,7 @@ RETURN
 });
 
 /* ===================== CALCULATE (MÓDULO ESTRELLA) ===================== */
-N({ id:'calculate', parent:null, title:'CALCULATE — El Corazón de DAX', icon:'⭐⚠️', fnsig:'CALCULATE( expr, [filtro1], [filtro2], … )',
+N({ id:'calculate', parent:'powerbi', title:'CALCULATE — El Corazón de DAX', icon:'⭐⚠️', fnsig:'CALCULATE( expr, [filtro1], [filtro2], … )',
   importancia:'★★★★★ (máxima)', dificultad:'🔴 Avanzado · el objetivo central', uso:'Diario',
   subtitle:'La función más importante de DAX y el principal objetivo de aprendizaje de todo este Atlas. Si dominas CALCULATE, dominas DAX. Aquí se explica con mucho más detalle que cualquier otra cosa.',
   deps:['ctx-filtro','transicion'], related:['calc-niveles','calc-leer','fn-filtros'], fns:['fn-filtros','fn-tiempo'],
@@ -1180,7 +1206,7 @@ RETURN DIVIDE ( [Ventas], B ) - DIVIDE ( A, B )`)}
 });
 
 /* ===================== CATÁLOGO DE FUNCIONES ===================== */
-N({ id:'funciones', parent:null, title:'Catálogo de Funciones DAX', icon:'📚',
+N({ id:'funciones', parent:'powerbi', title:'Catálogo de Funciones DAX', icon:'📚',
   importancia:'★★★★☆', dificultad:'🟢→🔴', uso:'Manual de consulta',
   subtitle:'Referencia organizada por familia funcional. Cada grupo explica qué problema resuelve cada función, su firma, un ejemplo de negocio, cuándo NO usarla y el error frecuente. Pensado para consultar mientras desarrollas.',
   related:['prioridades','calculate'],
@@ -1538,7 +1564,7 @@ Promedio Móvil 12M = DIVIDE ( [Ventas Móvil 12M], 12 )`)}
 });
 
 /* ===================== SIMULADORES ===================== */
-N({ id:'simuladores', parent:null, title:'Simuladores Corporativos y Slicers Avanzados', icon:'🎛️⭐',
+N({ id:'simuladores', parent:'powerbi', title:'Simuladores Corporativos y Slicers Avanzados', icon:'🎛️⭐',
   importancia:'★★★★★ (máxima)', dificultad:'🔴 Avanzado', uso:'Planeamiento / Forecast / Comercial',
   subtitle:'Cómo se construyen los simuladores reales de Planeamiento Financiero, Forecast, Presupuesto e Inteligencia Comercial: tablas desconectadas, What-If, SELECTEDVALUE y CALCULATE trabajando juntos. Desde cero.',
   deps:['calculate','fn-tablas'], related:['ctx-filtro','fn-tiempo'], fns:['calculate','fn-tablas'],
@@ -2510,7 +2536,7 @@ RETURN
 });
 
 /* ===================== PERFORMANCE ===================== */
-N({ id:'performance', parent:null, title:'Performance y Optimización', icon:'🚀⭐',
+N({ id:'performance', parent:'powerbi', title:'Performance y Optimización', icon:'🚀⭐',
   importancia:'★★★★☆', dificultad:'🔴 Avanzado', uso:'Modelos productivos',
   subtitle:'Por qué una medida es lenta y cómo arreglarlo: motor de almacenamiento vs motor de fórmulas, antipatrones, uso correcto de variables y optimización de modelo y medidas.',
   deps:['modelado','transicion'], related:['fn-variables','fn-iteradores'], fns:['fn-variables','calculate'],
@@ -2581,7 +2607,7 @@ RETURN DIVIDE([Ventas]-AA, AA) + IF(AA>0,1,0)`)}
 });
 
 /* ===================== CASOS DE NEGOCIO ===================== */
-N({ id:'casos', parent:null, title:'Casos Reales de Negocio', icon:'🏢⭐',
+N({ id:'casos', parent:'powerbi', title:'Casos Reales de Negocio', icon:'🏢⭐',
   importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Aplicación profesional',
   subtitle:'El DAX de los módulos anteriores aplicado a problemas financieros y comerciales reales: P&L (OPEX, CAPEX, EBITDA), tesorería (aging, cobranzas, provisiones), control de gestión (presupuesto, forecast, variaciones) e inteligencia comercial.',
   deps:['calculate','fn-tiempo'], related:['simuladores','performance'],
@@ -2819,6 +2845,474 @@ Tasa Retención = DIVIDE ( [Clientes Recurrentes], CALCULATE ( [Clientes Activos
   </ul>`)}
 
   ${box('analogy','🎓 Cierre del Atlas', `<p>Has recorrido el camino completo: del <b>motor</b> (cómo piensa DAX) al <b>corazón</b> (CALCULATE), pasando por el <b>catálogo</b> de herramientas, los <b>simuladores</b> que convierten informes en herramientas de decisión, la <b>performance</b> que los hace usables y los <b>casos reales</b> que los conectan con el negocio. Pensar como un desarrollador senior de Power BI en Finanzas no es saber más funciones: es <b>entender el contexto, modelar bien y traducir preguntas de negocio en modelos analíticos</b>. Vuelve a cualquier nodo cuando lo necesites — este Atlas es tu base de conocimiento permanente.</p>`)}
+  `
+});
+
+/* ===================== CATEGORÍA: POWER QUERY ===================== */
+N({ id:'powerquery', parent:null, title:'Power Query / M', icon:'🔌',
+  importancia:'★★★★★', dificultad:'🟢→🔴', uso:'Preparar los datos (el "antes")',
+  subtitle:'Limpieza y transformación de datos en Power BI, paso a paso y para no expertos: abrir el editor, encabezados, tipos, quitar/eliminar, reemplazar, unpivot/pivot, combinar consultas, perfiles de datos y lenguaje M. La base sobre la que se construye todo modelo.',
+  related:['powerbi','modelado'],
+  html: ()=> `
+  ${why('Sin datos limpios, el mejor DAX falla', `<p>El 70% del trabajo de un proyecto de BI es <b>preparar los datos</b>: vienen sucios, en formatos raros, con meses en columnas, errores y duplicados. <b>Power Query</b> es la herramienta de Power BI para limpiarlos y darles forma <i>antes</i> de modelar. Un modelo con buen Power Query detrás hace que el DAX sea corto y el informe, rápido. Esta categoría te lleva de cero a transformar datos como un profesional.</p>`)}
+
+  ${analogy('La cocina de preparación (mise en place)', `<p>Power Query es el <b>mise en place</b> de la cocina: antes de cocinar (DAX), lavas, pelas, cortas y ordenas los ingredientes (los datos). Y lo mejor: <b>grabas cada paso</b>. La próxima vez que lleguen ingredientes nuevos (datos actualizados), Power Query repite toda la preparación <b>solo</b>, en orden, con un clic en Actualizar.</p>`)}
+
+  ${box('engine','⚙️ La idea más importante de Power Query', `<p><b>Power Query NO modifica tus datos de origen.</b> Cada acción que haces (quitar una columna, cambiar un tipo…) se guarda como un <b>paso</b> en una lista ("Pasos aplicados"). Esos pasos forman una <b>receta</b> que se <b>ejecuta automáticamente</b> cada vez que actualizas. El Excel o la base de datos original quedan intactos; Power Query solo aplica su receta sobre una copia al cargar.</p>`)}
+
+  <h3>Lo que cubre esta categoría</h3>
+  <p>Sigue los nodos en orden la primera vez: van del primer clic al lenguaje M, replicando la guía paso a paso.</p>
+  `
+});
+
+/* ---- PQ: Qué es / Abrir ---- */
+N({ id:'pq-intro', parent:'powerquery', title:'Qué es Power Query y cómo abrirlo', icon:'🟢',
+  importancia:'★★★★★', dificultad:'🟢 Fundamental', uso:'Punto de partida',
+  deps:['powerquery'], related:['pq-pasos','pq-m'], fns:[],
+  subtitle:'Qué es, para qué sirve, y los clics exactos para abrir el Editor de Power Query desde Power BI.',
+  html: ()=> `
+  <h3>1 · Explicación simple</h3>
+  <p>Power Query es el <b>editor de transformación de datos</b> integrado en Power BI (y en Excel). Su trabajo: tomar datos de cualquier origen (Excel, CSV, SQL, web…) y dejarlos <b>limpios y con la forma correcta</b> para el modelo, sin escribir código (todo con menús) — aunque por debajo genera código en lenguaje <b>M</b>.</p>
+
+  <h3>2 · Qué problemas resuelve</h3>
+  ${tbl(['Problema típico','Lo que hace Power Query'],[
+    ['El Excel tiene títulos y notas en las primeras filas','Quitar filas y promover encabezados'],
+    ['Los meses están en columnas (Ene, Feb, Mar…)','Anular dinamización (unpivot) → una fila por mes'],
+    ['Importes vienen como texto "1.234,50"','Cambiar tipo de datos a número'],
+    ['Datos en 12 archivos mensuales','Combinar/anexar consultas en una sola tabla'],
+    ['Hay duplicados, errores y celdas vacías','Quitar filas duplicadas / con errores / en blanco'],
+  ])}
+
+  <h3>3 · Cómo abrirlo (paso a paso)</h3>
+  ${best('', `<ol>
+    <li>En Power BI Desktop, pestaña <b>Inicio</b> → botón <b>Transformar datos</b> (icono de tabla con lápiz). Se abre el <b>Editor de Power Query</b> en una ventana aparte.</li>
+    <li>Si ya tienes tablas cargadas: clic derecho sobre una en el panel <i>Datos</i> → <b>Editar consulta</b>.</li>
+    <li>Para traer un origen nuevo: <b>Inicio → Obtener datos</b>, eliges el origen y pulsas <b>Transformar datos</b> (en vez de "Cargar") para entrar directo al editor.</li>
+  </ol>`)}
+  ${diagram(`
+   Power BI Desktop
+     └─ Inicio → "Transformar datos"
+            ▼
+   ┌──────────────── EDITOR DE POWER QUERY ─────────────────┐
+   │  Consultas │      Vista previa de datos     │ Configuración │
+   │  (izq.)    │      (centro)                  │ de consulta   │
+   │            │                                │ · Propiedades │
+   │  Query1    │   A     B      C               │ · PASOS       │
+   │  Query2    │  ...   ...    ...              │   APLICADOS   │
+   └─────────────────────────────────────────────────────────┘`)}
+
+  <h3>4 · Las tres zonas del editor</h3>
+  ${tbl(['Zona','Dónde','Para qué'],[
+    ['Consultas','Panel izquierdo','La lista de tus tablas/consultas'],
+    ['Vista previa','Centro','Muestra los datos (primeras ~1000 filas) según los pasos aplicados'],
+    ['Pasos aplicados','Derecha (Configuración de consulta)','La receta: cada transformación es un paso, en orden'],
+  ])}
+
+  ${best('Al terminar', `<p>Cuando acabas de transformar: <b>Inicio → Cerrar y aplicar</b>. Power BI ejecuta la receta y carga los datos limpios al modelo. Para volver a editar, otra vez <b>Transformar datos</b>.</p>`)}
+  ${warn('Transformar datos ≠ escribir en el origen', `<p>Nada de lo que hagas aquí toca tu Excel o tu base de datos. Power Query trabaja sobre una <b>copia</b> al momento de cargar. Si borras una columna por error, no perdiste nada en el origen: solo quitas (o deshaces) un paso.</p>`)}
+  `
+});
+
+/* ---- PQ: Pasos aplicados ---- */
+N({ id:'pq-pasos', parent:'powerquery', title:'Pasos Aplicados: la receta que se ejecuta sola', icon:'🟢⭐',
+  importancia:'★★★★★', dificultad:'🟢 Fundamental', uso:'En cada consulta',
+  deps:['pq-intro'], related:['pq-m','pq-buenas'], fns:[],
+  subtitle:'El corazón de Power Query: cada acción se graba como un paso ordenado y reproducible. Entender esto cambia cómo trabajas.',
+  html: ()=> `
+  ${why('Es lo que hace a Power Query repetible y mantenible', `<p>La gran diferencia con limpiar a mano en Excel: en Power Query <b>cada acción queda registrada</b>. Construyes la limpieza <b>una vez</b> y se repite automáticamente con cada actualización. Si el origen cambia el mes que viene, no rehaces nada: pulsas Actualizar y la receta corre sola.</p>`)}
+
+  <h3>Cómo funciona, en concreto</h3>
+  ${diagram(`
+   PASOS APLICADOS (se leen de arriba a abajo)
+   ┌─────────────────────────────┐
+   │ ✓ Origen                    │  ← de dónde vienen los datos
+   │ ✓ Encabezados promovidos    │  ← primera fila = títulos
+   │ ✓ Tipo cambiado             │  ← columnas a número/fecha/texto
+   │ ✓ Columnas quitadas         │  ← eliminamos las que no sirven
+   │ ✓ Filas con errores quitadas│
+   │ ▸ ...                        │
+   └─────────────────────────────┘
+   Cada Actualizar vuelve a ejecutar TODA la lista, en orden.`)}
+  ${engine('Qué pasa al pulsar "Actualizar"', `<ol>
+    <li>Power Query va al <b>Origen</b> y trae los datos frescos.</li>
+    <li>Aplica el paso 2 sobre el resultado del paso 1, el 3 sobre el 2… <b>en cascada</b>.</li>
+    <li>El resultado final es lo que se carga al modelo. Si un paso falla (porque el origen cambió), te avisa en ese paso exacto.</li>
+  </ol>`)}
+
+  <h3>Qué puedes hacer con los pasos</h3>
+  ${tbl(['Acción','Cómo','Para qué'],[
+    ['Ver un paso anterior','Clic en el paso','Inspeccionar cómo estaban los datos en ese punto'],
+    ['Borrar un paso','La ✕ a su izquierda','Deshacer una transformación intermedia'],
+    ['Renombrar un paso','Clic derecho → Cambiar nombre','Documentar ("Quitar clientes inactivos")'],
+    ['Insertar uno en medio','Selecciona el paso anterior y actúa','Corregir sin rehacer todo'],
+    ['Ver el código','⚙️ junto al paso, o Editor avanzado','Ver/editar el M que generó'],
+  ])}
+  ${warn('Borrar un paso del medio puede romper los siguientes', `<p>Si un paso posterior depende de algo que creó el que borras (p. ej. una columna), saltará un error. Power Query te lo marca. Es normal: ajusta o reinserta el paso. Por eso conviene <b>renombrar los pasos</b> con nombres claros.</p>`)}
+  ${best('', `<ul>
+    <li><b>Renombra los pasos importantes</b>: la receta se vuelve autoexplicativa para quien la mantenga (incluido tú en 6 meses).</li>
+    <li>Cada paso es una línea de <span class="pill" data-go="pq-m">lenguaje M</span>: los pasos y el código son la misma cosa vista de dos formas.</li>
+  </ul>`)}
+  `
+});
+
+/* ---- PQ: Encabezados y nombres ---- */
+N({ id:'pq-encabezados', parent:'powerquery', title:'Promover Encabezados y Renombrar Columnas', icon:'🟢',
+  importancia:'★★★★☆', dificultad:'🟢 Fundamental', uso:'Casi toda consulta',
+  deps:['pq-pasos'], related:['pq-filas-columnas','pq-tipos'], fns:[],
+  subtitle:'Convertir la primera fila en títulos y dar a las columnas nombres claros y estables.',
+  html: ()=> `
+  <h3>Promover encabezados (la primera fila como títulos)</h3>
+  <p>Muchos Excel llegan con los nombres de columna en la primera fila de datos (o con basura arriba). "Promover encabezados" toma una fila y la convierte en los <b>títulos</b> de las columnas.</p>
+  ${best('Paso a paso', `<ol>
+    <li>(Si hay filas basura arriba) primero <b>Inicio → Quitar filas → Quitar filas superiores</b> e indica cuántas.</li>
+    <li><b>Inicio → Usar la primera fila como encabezado</b> (o pestaña Transformar). Listo: la fila pasa a ser título.</li>
+  </ol>`)}
+  ${mq(`= Table.PromoteHeaders(Origen, [PromoteAllScalars=true])`)}
+
+  <h3>Renombrar columnas</h3>
+  ${best('Paso a paso', `<ol>
+    <li><b>Doble clic</b> en el título de la columna y escribe el nuevo nombre (lo más rápido).</li>
+    <li>O clic derecho en la columna → <b>Cambiar nombre</b>.</li>
+  </ol>`)}
+  ${mq(`= Table.RenameColumns(Paso, {{"Column1", "Cliente"}, {"Column2", "Importe"}})`)}
+
+  ${warn('Los nombres de columna son "contratos" ⚠️', `<p>Tus medidas DAX y los pasos posteriores usan los <b>nombres</b> de columna. Si más adelante el origen cambia un nombre, o si renombras a la ligera, los pasos que lo mencionan se rompen. Dale a cada columna un nombre <b>claro y definitivo</b> pronto, y evita renombrarla una y otra vez.</p>`)}
+  ${err('Promover encabezados con basura arriba', `<p>Si pulsas "promover" sin quitar antes las filas de título/notas, tus encabezados serán "Informe mensual" y "" en vez de los reales. Orden correcto: <b>quitar filas superiores → promover encabezados</b>.</p>`)}
+  ${best('', `<ul><li>Nombres en singular y consistentes (Cliente, Importe, Fecha), sin saltos de línea ni espacios raros.</li><li>Renombra <b>antes</b> de construir muchos pasos encima: cambiarlos después obliga a tocar cada paso que los menciona.</li></ul>`)}
+  `
+});
+
+/* ---- PQ: Filas y columnas ---- */
+N({ id:'pq-filas-columnas', parent:'powerquery', title:'Quitar Filas y Eliminar Columnas', icon:'🟢',
+  importancia:'★★★★☆', dificultad:'🟢 Fundamental', uso:'Limpieza básica',
+  deps:['pq-encabezados'], related:['pq-reemplazar','pq-perfiles'], fns:[],
+  subtitle:'Deshacerte de lo que sobra: filas vacías, duplicadas o con errores, y columnas que no aportan.',
+  html: ()=> `
+  <h3>Quitar filas</h3>
+  <p>En <b>Inicio → Quitar filas</b> tienes varias opciones según el problema:</p>
+  ${tbl(['Opción','Cuándo','M'],[
+    ['Quitar filas superiores / inferiores','Títulos o totales pegados arriba/abajo','Table.Skip / Table.RemoveLastN'],
+    ['Quitar filas alternas','Patrones repetidos (cada 2ª fila)','Table.AlternateRows'],
+    ['Quitar duplicados','Filas repetidas exactas','Table.Distinct'],
+    ['Quitar filas en blanco','Filas totalmente vacías','Table.SelectRows (no nulas)'],
+    ['Quitar errores','Filas con error tras cambiar tipo','Table.RemoveRowsWithErrors'],
+  ])}
+  ${best('Paso a paso (ej. quitar duplicados por cliente)', `<ol>
+    <li>Selecciona la columna <code class="inl">Cliente</code> (clic en su título).</li>
+    <li><b>Inicio → Quitar filas → Quitar duplicados</b>.</li>
+    <li>Quedan clientes únicos. (Cuidado: conserva la <b>primera</b> aparición; ordena antes si importa cuál.)</li>
+  </ol>`)}
+
+  <h3>Eliminar columnas</h3>
+  ${best('Dos formas, y cuál preferir', `<ol>
+    <li>Selecciona las columnas a borrar → clic derecho → <b>Quitar columnas</b>.</li>
+    <li>Mejor aún: selecciona las que <b>sí</b> quieres conservar → clic derecho → <b>Quitar otras columnas</b>.</li>
+  </ol>`)}
+  ${mq(`= Table.SelectColumns(Paso, {"Cliente", "Fecha", "Importe"})   // conserva solo estas`)}
+  ${warn('"Quitar otras columnas" es más robusto ⚠️', `<p>Si usas "Quitar columnas" y el origen <b>añade</b> una columna nueva el mes que viene, esa columna entrará sin querer. Si usas <b>"Quitar otras columnas"</b> (es decir, <i>seleccionar</i> las que quieres), tu consulta se mantiene estable pase lo que pase con columnas nuevas. Selecciona lo que quieres, no descartes lo que no.</p>`)}
+  ${best('', `<ul><li>Quita columnas que no uses: aligeran el modelo y mejoran la compresión.</li><li>Para quitar vacíos reales, combínalo con <span class="pill" data-go="pq-perfiles">perfiles de datos</span> para ver cuántos nulos hay.</li></ul>`)}
+  `
+});
+
+/* ---- PQ: Tipos de datos ---- */
+N({ id:'pq-tipos', parent:'powerquery', title:'Cambiar el Tipo de Datos', icon:'🟡⚠️⭐',
+  importancia:'★★★★★', dificultad:'🟡 Importante (fuente de errores)', uso:'Imprescindible',
+  deps:['pq-encabezados'], related:['pq-errores','pq-m'], fns:[],
+  subtitle:'Decirle a Power BI si cada columna es número, fecha o texto. El paso que más errores silenciosos causa si se hace mal.',
+  html: ()=> `
+  ${why('El tipo manda en TODO lo que viene después', `<p>Si un importe está como <b>texto</b>, no podrás sumarlo en DAX; si una fecha está como texto, la inteligencia de tiempo no funciona. Definir bien el tipo de cada columna es lo que permite calcular, ordenar y relacionar. Es un paso pequeño con consecuencias enormes.</p>`)}
+
+  <h3>Paso a paso</h3>
+  ${best('', `<ol>
+    <li>Clic en el <b>icono de tipo</b> a la izquierda del título de columna (ABC = texto, 123 = número, calendario = fecha).</li>
+    <li>Elige el tipo correcto: <b>Número decimal</b>, <b>Número entero</b>, <b>Fecha</b>, <b>Texto</b>, etc.</li>
+    <li>O selecciona la columna → pestaña <b>Transformar → Tipo de datos</b>.</li>
+  </ol>`)}
+  ${mq(`= Table.TransformColumnTypes(Paso, {{"Importe", type number}, {"Fecha", type date}})`)}
+
+  ${warn('El problema de la configuración regional (locale) ⚠️', `<p>"1.234,50" significa mil doscientos en España/LatAm, pero "1,234.50" en EE. UU. Si Power Query interpreta el separador al revés, tus importes salen mal o dan error. Solución: <b>clic derecho en la columna → Cambiar tipo → Con configuración regional…</b> y elige el idioma correcto (p. ej. Español). Igual con fechas (DD/MM vs MM/DD).</p>`)}
+
+  ${err('El paso automático "Tipo cambiado"', `<p>Power Query suele añadir solo un paso <b>"Tipo cambiado"</b> al cargar, adivinando tipos a partir de las primeras filas. Si más adelante llegan valores distintos, ese paso puede fallar. Buenas prácticas: revísalo, ponlo <b>al final</b> de tu limpieza (cuando las columnas ya tienen su forma final), y no te fíes de la adivinación.</p>`)}
+  ${err('Tipo "Cualquiera" (ABC123) sin definir', `<p>Una columna sin tipo definido (icono ABC123) puede comportarse de forma impredecible en el modelo. <b>Siempre</b> asigna un tipo explícito a cada columna que vayas a usar.</p>`)}
+  ${best('', `<ul>
+    <li>Asigna tipos <b>al final</b>, una vez la tabla tiene su estructura definitiva.</li>
+    <li>Usa "con configuración regional" para fechas e importes que vengan como texto.</li>
+    <li>Claves (IDs) como <b>número entero</b> o texto, nunca decimal: relaciona y comprime mejor.</li>
+  </ul>`)}
+  `
+});
+
+/* ---- PQ: Reemplazar valores ---- */
+N({ id:'pq-reemplazar', parent:'powerquery', title:'Reemplazar Valores', icon:'🟢',
+  importancia:'★★★☆☆', dificultad:'🟢 Fundamental', uso:'Limpieza puntual',
+  deps:['pq-tipos'], related:['pq-errores'], fns:[],
+  subtitle:'Sustituir valores concretos: corregir textos, normalizar categorías, cambiar nulos por 0.',
+  html: ()=> `
+  <h3>Paso a paso</h3>
+  ${best('', `<ol>
+    <li>Clic derecho en la columna → <b>Reemplazar valores</b> (o Transformar → Reemplazar valores).</li>
+    <li><b>Valor a buscar</b>: lo que quieres cambiar. <b>Reemplazar con</b>: el nuevo valor.</li>
+    <li>Opciones avanzadas: "Solo celdas completas", para no reemplazar coincidencias parciales.</li>
+  </ol>`)}
+  ${mq(`= Table.ReplaceValue(Paso, "S.A.", "SA", Replacer.ReplaceText, {"Cliente"})`)}
+
+  <h3>Casos típicos de negocio</h3>
+  ${tbl(['Necesito','Buscar → Reemplazar'],[
+    ['Unificar "S.A." y "SA"','"S.A." → "SA"'],
+    ['Normalizar país','"Arg" → "Argentina"'],
+    ['Nulos a cero en un importe','(valor null) → 0'],
+    ['Quitar un símbolo','"USD " → "" (vacío)'],
+  ])}
+  ${warn('Reemplazar valores vs corregir el origen', `<p>Reemplazar valores está bien para correcciones puntuales y estables. Pero si tienes que reemplazar <b>muchas</b> variantes ("Arg", "ARG", "argentina"…), es señal de que el dato de origen está sucio: considera una <b>tabla de mapeo</b> y un <span class="pill" data-go="pq-combinar">merge</span>, más mantenible que 20 reemplazos encadenados.</p>`)}
+  ${err('Reemplazar antes de cambiar el tipo', `<p>Reemplazar "null" o "0" en una columna de texto y luego cambiar a número puede dar resultados raros. Define el <span class="pill" data-go="pq-tipos">tipo</span> con criterio respecto a cuándo reemplazas; para nulos numéricos, a veces es mejor el tipo correcto + reemplazar null por 0 después.</p>`)}
+  `
+});
+
+/* ---- PQ: Pivot / Unpivot ---- */
+N({ id:'pq-pivot', parent:'powerquery', title:'Anular Dinamización (Unpivot) y Dinamización (Pivot)', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado (clave en finanzas)', uso:'Datos de planning/contables',
+  deps:['pq-tipos'], related:['pq-combinar','modelado'], fns:[],
+  subtitle:'La transformación que más distingue a un profesional: pasar de "ancho" (meses en columnas) a "largo" (una fila por mes) y viceversa. Imprescindible para datos financieros.',
+  html: ()=> `
+  ${why('Tus datos vienen "anchos"; el modelo los necesita "largos"', `<p>Los reportes financieros suelen llegar con los <b>meses en columnas</b> (Ene, Feb, Mar…). Pero un buen modelo necesita <b>una fila por mes</b> (formato "largo"), para poder relacionar con el calendario y usar inteligencia de tiempo. <b>Anular dinamización (unpivot)</b> hace exactamente esa conversión. Es el paso que convierte una hoja de Excel inservible en una tabla de hechos perfecta.</p>`)}
+
+  <h3>Anular dinamización (UNPIVOT): de ancho a largo</h3>
+  ${diagram(`
+   ANTES (ancho)                          DESPUÉS (largo, unpivot)
+   Cliente  Ene  Feb  Mar                 Cliente  Mes   Importe
+   A        100  110  120        ──►       A        Ene   100
+   B        200  220  230                  A        Feb   110
+                                           A        Mar   120
+                                           B        Ene   200
+                                           B        Feb   220
+                                           B        Mar   230`)}
+  ${best('Paso a paso', `<ol>
+    <li>Selecciona las columnas que <b>NO</b> quieres rotar (aquí <code class="inl">Cliente</code>).</li>
+    <li>Clic derecho → <b>Anular dinamización de otras columnas</b> ("Unpivot other columns"). Es la opción más robusta.</li>
+    <li>Power Query crea dos columnas: <b>Atributo</b> (los meses) y <b>Valor</b> (los importes). Renómbralas a <code class="inl">Mes</code> e <code class="inl">Importe</code>.</li>
+  </ol>`)}
+  ${mq(`= Table.UnpivotOtherColumns(Paso, {"Cliente"}, "Mes", "Importe")`)}
+  ${warn('Usa "anular dinamización de OTRAS columnas" ⚠️', `<p>Hay tres variantes: "anular dinamización", "...de otras columnas" y "...solo de las columnas seleccionadas". Elige <b>"de otras columnas"</b> seleccionando las columnas fijas (Cliente, Producto…). Así, si el mes que viene llega una columna "Abr" nueva, se rota <b>automáticamente</b> sin tocar nada. Es la diferencia entre una consulta frágil y una a prueba de futuro.</p>`)}
+
+  <h3>Dinamización (PIVOT): de largo a ancho</h3>
+  <p>La operación inversa: convierte valores de una columna en <b>nuevas columnas</b>. Útil para crear una matriz o preparar una vista concreta.</p>
+  ${best('Paso a paso', `<ol>
+    <li>Selecciona la columna cuyos valores serán los nuevos títulos (p. ej. <code class="inl">Mes</code>).</li>
+    <li>Pestaña <b>Transformar → Columna dinámica</b>.</li>
+    <li>Elige la <b>columna de valores</b> (Importe) y la <b>función de agregación</b> (Suma).</li>
+  </ol>`)}
+  ${mq(`= Table.Pivot(Paso, List.Distinct(Paso[Mes]), "Mes", "Importe", List.Sum)`)}
+  ${err('Pivotar lo que deberías dejar largo', `<p>Para el <b>modelo</b>, casi siempre quieres formato <b>largo</b> (unpivot), no ancho. El pivot en Power Query se reserva para casos puntuales; para mostrar meses en columnas en el informe, usa una <b>matriz</b> en Power BI (ahí sí van en columnas), no pivotees el dato. Ver <span class="pill" data-go="sim-6">Escenario 6</span>.</p>`)}
+  ${best('', `<p><b>Regla de oro:</b> datos para el modelo → largos (unpivot). Presentación con meses en columnas → matriz de Power BI. Mantén la tabla de hechos normalizada y deja el "ancho" para el visual.</p>`)}
+  ${exer('', `<p>Tienes Cliente + 12 columnas de meses. ¿Qué haces para que sirva en el modelo con el calendario?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Ver solución</summary><p>Seleccionas la columna <b>Cliente</b> → "Anular dinamización de otras columnas" → quedan <code class="inl">Cliente · Mes · Importe</code> (una fila por cliente y mes). Conviertes <code class="inl">Mes</code> a una fecha real y lo relacionas con el <span class="pill" data-go="modelado">Calendario</span>. Ahora YTD, YoY, etc. funcionan.</p></details>`)}
+  `
+});
+
+/* ---- PQ: Combinar consultas ---- */
+N({ id:'pq-combinar', parent:'powerquery', title:'Combinar Consultas: Merge (unir) y Append (anexar)', icon:'🔴',
+  importancia:'★★★★☆', dificultad:'🔴 Avanzado', uso:'Integrar fuentes',
+  deps:['pq-tipos'], related:['pq-pivot','relaciones'], fns:[],
+  subtitle:'Juntar datos de varias consultas: añadir columnas desde otra tabla (Merge, estilo BUSCARV) o apilar filas de varias tablas (Append).',
+  html: ()=> `
+  ${why('Los datos casi nunca están en una sola tabla', `<p>Tienes ventas en una tabla y datos de cliente en otra; o 12 archivos mensuales que son la misma estructura. <b>Combinar consultas</b> los integra: <b>Merge</b> trae columnas de otra tabla por una clave; <b>Append</b> apila filas. Son las dos formas de unir, y se confunden a menudo.</p>`)}
+
+  <h3>Merge (combinar) — traer columnas por una clave (estilo BUSCARV)</h3>
+  ${diagram(`
+   Ventas                Clientes (lookup)        Resultado del Merge
+   Cli  Importe          Cli  País                Cli  Importe  País
+   A    100      +       A    Arg          =      A    100      Arg
+   B    200              B    Chile               B    200      Chile`)}
+  ${best('Paso a paso', `<ol>
+    <li><b>Inicio → Combinar consultas → Combinar consultas</b> (Merge).</li>
+    <li>Arriba eliges la tabla base (Ventas), abajo la de búsqueda (Clientes).</li>
+    <li>Haz clic en la <b>columna clave</b> en ambas (Cli) para emparejarlas.</li>
+    <li>Elige el <b>tipo de combinación</b> (ver tabla abajo). Acepta.</li>
+    <li>Aparece una columna nueva con tablas anidadas: pulsa el icono <b>⇄ (expandir)</b> y marca las columnas que quieres traer (País).</li>
+  </ol>`)}
+  ${tbl(['Tipo de combinación (join)','Qué devuelve','Cuándo'],[
+    ['Externa izquierda','Todas las de la base + lo que haga match','El más común (no pierdes ventas)'],
+    ['Interna','Solo las que hacen match en ambas','Quedarte con coincidencias'],
+    ['Externa completa','Todo de ambas','Auditar diferencias'],
+    ['Anti izquierda','Las de la base SIN match','Encontrar huérfanos (clientes sin ficha)'],
+  ])}
+  ${mq(`Combinada = Table.NestedJoin(Ventas, {"Cli"}, Clientes, {"Cli"}, "Clientes", JoinKind.LeftOuter),
+Expandida = Table.ExpandTableColumn(Combinada, "Clientes", {"País"}, {"País"})`)}
+  ${warn('Merge en Power Query vs relación en el modelo', `<p>No siempre debes hacer Merge: si Ventas y Clientes van a ser tablas separadas en un <span class="pill" data-go="modelado">star schema</span>, mejor <b>relaciónalas en el modelo</b> y usa <code class="inl">RELATED</code> en DAX. Usa Merge cuando necesitas el dato <b>físicamente en la tabla</b> (p. ej. para limpiar o para una clave compuesta), no para todo.</p>`)}
+
+  <h3>Append (anexar) — apilar filas de varias tablas</h3>
+  ${diagram(`
+   Ventas_Ene        Ventas_Feb            Append (apila)
+   A 100             A 110          ──►     A 100 (Ene)
+   B 200             B 220                  B 200 (Ene)
+                                            A 110 (Feb)
+                                            B 220 (Feb)`)}
+  ${best('Paso a paso', `<ol>
+    <li><b>Inicio → Anexar consultas</b>.</li>
+    <li>Elige "dos tablas" o "tres o más", y selecciona las consultas a apilar.</li>
+    <li>Deben tener los <b>mismos nombres de columna</b>; Power Query las alinea por nombre.</li>
+  </ol>`)}
+  ${mq(`= Table.Combine({Ventas_Ene, Ventas_Feb, Ventas_Mar})`)}
+  ${best('Caso real: carpeta de archivos mensuales', `<p>Para 12 archivos iguales, usa <b>Obtener datos → Carpeta</b>: Power Query los <b>anexa todos automáticamente</b> y, al añadir un archivo nuevo a la carpeta, basta Actualizar. Es el patrón estándar para consolidar reportes mensuales.</p>`)}
+  ${err('Confundir Merge con Append', `<p><b>Merge añade COLUMNAS</b> (a lo ancho, por clave). <b>Append añade FILAS</b> (a lo alto, misma estructura). Si querías más detalle de cada venta y apilaste, o querías consolidar meses y combinaste, el resultado no tiene sentido. Pregúntate: ¿me faltan columnas (Merge) o me faltan filas (Append)?</p>`)}
+  `
+});
+
+/* ---- PQ: Perfiles de datos ---- */
+N({ id:'pq-perfiles', parent:'powerquery', title:'Perfiles de Datos (calidad y diagnóstico)', icon:'🟡',
+  importancia:'★★★★☆', dificultad:'🟡 Importante', uso:'Antes de confiar en los datos',
+  deps:['pq-filas-columnas'], related:['pq-errores','pq-buenas'], fns:[],
+  subtitle:'Las herramientas visuales de Power Query para ver, de un vistazo, si tus datos tienen errores, vacíos o valores raros antes de cargarlos.',
+  html: ()=> `
+  ${why('Confiar sin mirar es la receta del desastre', `<p>Antes de construir medidas sobre unos datos, necesitas saber: ¿hay errores? ¿cuántos vacíos? ¿valores duplicados o imposibles? Los <b>perfiles de datos</b> te lo muestran visualmente, sin escribir nada. Detectar un problema aquí ahorra horas de "¿por qué el total no cuadra?" más adelante.</p>`)}
+
+  <h3>Cómo activarlos (pestaña Ver)</h3>
+  ${tbl(['Opción (pestaña Ver)','Qué muestra'],[
+    ['Calidad de columnas','% de Válido / Error / Vacío de cada columna (barritas bajo el título)'],
+    ['Distribución de columnas','Cuántos valores distintos y únicos hay (detecta duplicados)'],
+    ['Perfil de columnas','Panel detallado: estadísticas y distribución de la columna seleccionada'],
+  ])}
+  ${best('Paso a paso', `<ol>
+    <li>Pestaña <b>Ver</b> → marca <b>Calidad de columnas</b>, <b>Distribución de columnas</b> y <b>Perfil de columnas</b>.</li>
+    <li>Mira las barras bajo cada título: verde = válido, rojo = error, gris = vacío.</li>
+    <li>Clic en una columna para ver su perfil completo abajo.</li>
+  </ol>`)}
+  ${warn('Por defecto analiza solo 1.000 filas ⚠️', `<p>Abajo a la izquierda suele decir "según las 1.000 filas principales". Para datos grandes eso puede engañar. Haz clic ahí y cambia a <b>"según todo el conjunto de datos"</b> para un diagnóstico real (es más lento, pero fiable). Hazlo al menos una vez antes de dar por buenos los datos.</p>`)}
+  ${best('', `<ul>
+    <li>Revisa calidad <b>después</b> de cambiar tipos: ahí aparecen los errores de conversión (texto que no era número, fechas mal interpretadas).</li>
+    <li>Si ves errores, clic derecho en la columna → "Quitar errores" o investiga el valor con "Mantener errores".</li>
+    <li>Distribución con muchos "únicos" en lo que debería repetirse (un país) = dato sucio que limpiar.</li>
+  </ul>`)}
+  `
+});
+
+/* ---- PQ: Lenguaje M ---- */
+N({ id:'pq-m', parent:'powerquery', title:'Editor Avanzado y Lenguaje M', icon:'🔴⭐',
+  importancia:'★★★★☆', dificultad:'🔴 Avanzado', uso:'Cuando los menús no alcanzan',
+  deps:['pq-pasos'], related:['pq-buenas','pq-intro'], fns:[],
+  subtitle:'Lo que Power Query escribe por debajo: el lenguaje M. Cómo leerlo, la estructura let...in, y cuándo tocarlo a mano.',
+  html: ()=> `
+  ${why('Cada clic genera M; leerlo te da superpoderes', `<p>Todo lo que haces con menús, Power Query lo traduce a <b>lenguaje M</b>. No necesitas escribir M para el 90% del trabajo, pero <b>leerlo</b> te permite entender qué pasó, depurar errores y hacer cosas que los menús no ofrecen. Es el equivalente a DAX, pero para <i>transformar</i> datos en vez de <i>medirlos</i>.</p>`)}
+
+  <h3>La estructura: let … in</h3>
+  ${mq(`let
+    Origen      = Excel.Workbook(File.Contents("C:\\Ventas.xlsx")),
+    Hoja        = Origen{[Item="Datos",Kind="Sheet"]}[Data],
+    Encabezados = Table.PromoteHeaders(Hoja),
+    TipoCambiado= Table.TransformColumnTypes(Encabezados, {{"Importe", type number}}),
+    SinVacios   = Table.SelectRows(TipoCambiado, each [Importe] <> null)
+in
+    SinVacios`)}
+  ${engine('Cómo leerlo', `<ul>
+    <li><code class="inl">let</code> abre una lista de <b>pasos</b>; cada línea es uno de tus "Pasos aplicados", con su nombre.</li>
+    <li>Cada paso <b>usa el anterior</b> (Encabezados usa Hoja, TipoCambiado usa Encabezados…). Es la receta en cascada.</li>
+    <li><code class="inl">in</code> indica <b>qué paso es el resultado final</b> (normalmente el último).</li>
+    <li><code class="inl">each</code> significa "para cada fila"; <code class="inl">[Columna]</code> es el valor de esa columna en la fila.</li>
+  </ul>`)}
+
+  <h3>Cómo abrir el Editor Avanzado</h3>
+  ${best('', `<ol>
+    <li><b>Inicio → Editor avanzado</b>. Ves todo el M de la consulta.</li>
+    <li>También puedes ver el código de <b>un</b> paso con la barra de fórmulas (actívala en Ver → Barra de fórmulas).</li>
+  </ol>`)}
+
+  ${warn('M es sensible a mayúsculas y a los nombres ⚠️', `<p><code class="inl">Table.SelectRows</code> ≠ <code class="inl">table.selectrows</code>. Y los pasos se referencian por su nombre exacto: si renombras un paso a mano, debes actualizar dónde se usa. Edita M con cuidado; un paréntesis o una coma de más rompe la consulta.</p>`)}
+  ${best('Cuándo tocar M a mano', `<ul>
+    <li>Para hacer algo que el menú no ofrece (lógica condicional compleja, funciones personalizadas).</li>
+    <li>Para <b>parametrizar</b> (rutas de archivo, fechas) y reutilizar consultas.</li>
+    <li>Para limpiar y documentar la receta. Pero recuerda: la mayoría del trabajo diario se hace con menús, y está bien.</li>
+  </ul>`)}
+  `
+});
+
+/* ---- PQ: Buenas prácticas ---- */
+N({ id:'pq-buenas', parent:'powerquery', title:'Buenas Prácticas en Power Query', icon:'🟡⭐',
+  importancia:'★★★★☆', dificultad:'🟡 Importante', uso:'Proyectos mantenibles',
+  deps:['pq-pasos'], related:['pq-errores','performance'], fns:[],
+  subtitle:'Los hábitos que separan una consulta frágil de una profesional: orden de pasos, query folding, consultas de preparación y nombres claros.',
+  html: ()=> `
+  ${why('La diferencia entre "funciona hoy" y "funciona siempre"', `<p>Una consulta mal hecha se rompe al primer cambio del origen y nadie entiende qué hace. Estas prácticas hacen que tus transformaciones sean <b>rápidas, estables y legibles</b> aunque las retome otra persona dentro de un año.</p>`)}
+
+  ${best('Las 8 reglas de oro', `<ol>
+    <li><b>Filtra y quita columnas pronto.</b> Cuanto menos dato arrastres por la cadena, más rápido todo. Reduce primero, transforma después.</li>
+    <li><b>Selecciona columnas en vez de quitarlas</b> ("Quitar otras columnas"): a prueba de columnas nuevas en el origen.</li>
+    <li><b>Cambia los tipos al final</b>, cuando la estructura es definitiva, y con configuración regional si hace falta.</li>
+    <li><b>Renombra los pasos</b> importantes: la receta se documenta sola.</li>
+    <li><b>No incrustes valores fijos</b> (rutas, fechas, "2026"): usa <b>parámetros</b> (Inicio → Administrar parámetros) para que sea reutilizable.</li>
+    <li><b>Consultas de preparación (staging):</b> separa la consulta que limpia de la que se carga. Clic derecho → desmarca <b>"Habilitar carga"</b> en las intermedias para no llenar el modelo de tablas técnicas.</li>
+    <li><b>Reutiliza con "Referencia"</b> (no "Duplicar"): así una limpieza base alimenta varias consultas y se mantiene en un solo sitio.</li>
+    <li><b>Cuida el query folding</b> (ver abajo): mantén las operaciones "plegables" al principio.</li>
+  </ol>`)}
+
+  ${box('engine','⚙️ Query folding: la optimización invisible', `<p>Cuando el origen es una base de datos (SQL), Power Query intenta <b>traducir tus pasos a una consulta SQL</b> y que el <b>servidor</b> haga el trabajo (filtrar, agrupar) en vez de traerlo todo y procesarlo en tu PC. Eso es <b>query folding</b> y es muchísimo más rápido. Algunas operaciones "rompen" el folding (ciertos pasos personalizados, añadir columnas con lógica compleja). Regla: pon <b>primero</b> los pasos que se pliegan (filtrar, quitar columnas, renombrar) y deja para el final los que no. Clic derecho en un paso → "Ver consulta nativa": si está disponible, ese paso aún se pliega.</p>`)}
+
+  ${best('Power Query vs DAX: ¿dónde hago cada cosa?', `${tbl(['Hazlo en…','Cuándo'],[
+    ['Power Query (M)','Limpiar, dar forma, combinar, columnas que son atributos fijos del dato (categoría, año-mes)'],
+    ['DAX (modelo)','Cálculos que dependen del contexto/selección del usuario (medidas, KPIs, % dinámicos)'],
+  ])}<p>Regla simple: <b>lo que no cambia con la interacción del usuario → Power Query</b> (se calcula una vez al cargar). <b>Lo que reacciona a slicers → DAX</b>.</p>`)}
+  `
+});
+
+/* ---- PQ: Errores comunes ---- */
+N({ id:'pq-errores', parent:'powerquery', title:'Errores Comunes en Power Query', icon:'🟡⚠️',
+  importancia:'★★★★☆', dificultad:'🟡 Importante', uso:'Depuración',
+  deps:['pq-pasos'], related:['pq-tipos','pq-buenas'], fns:[],
+  subtitle:'Los tropiezos que casi todos cometemos al empezar, por qué ocurren y cómo evitarlos.',
+  html: ()=> `
+  ${tbl(['Error','Por qué pasa','Cómo evitarlo'],[
+    ['"La columna X no existe"','Renombraste/cambió un nombre y un paso posterior aún usa el viejo','Renombra pronto; nombres estables; revisa el paso que falla'],
+    ['Importes o fechas mal','Configuración regional (1.234,50 vs 1,234.50; DD/MM vs MM/DD)','Cambiar tipo <b>con configuración regional</b>'],
+    ['El paso "Tipo cambiado" falla al actualizar','Llegaron valores nuevos que no encajan en el tipo','Pon el tipo al final; limpia antes; gestiona errores'],
+    ['Columna nueva del origen entra sin querer','Usaste "Quitar columnas" en vez de seleccionar','Usa "Quitar otras columnas" (seleccionar las buenas)'],
+    ['Merge duplica filas','La clave no es única en la tabla de búsqueda','Asegura clave única (quita duplicados antes del merge)'],
+    ['Todo va lentísimo','Se rompió el query folding o no filtraste pronto','Filtra/quita columnas al inicio; cuida el folding'],
+    ['Quité duplicados y perdí datos','"Quitar duplicados" conserva la primera fila, no "la correcta"','Ordena antes; o agrupa con criterio explícito'],
+  ])}
+  ${err('El error más silencioso: tipos sin revisar', `<p>Muchos problemas "raros" en el informe (sumas que no cuadran, fechas que no filtran) nacen de un <span class="pill" data-go="pq-tipos">tipo de dato</span> mal asignado en Power Query. Ante cualquier número que no cuadra, lo primero que debes revisar es si la columna es realmente número (y no texto) y si la fecha es fecha real.</p>`)}
+  ${best('', `<p>Cuando algo falle, <b>haz clic en el paso que muestra el error</b>: Power Query te lleva exactamente a dónde se rompió. Lee el mensaje, mira la vista previa de ese paso y del anterior, y corrige ahí. Casi nunca hay que rehacer todo.</p>`)}
+  `
+});
+
+/* ---- PQ: Casos reales ---- */
+N({ id:'pq-casos', parent:'powerquery', title:'Caso Real Completo: de Excel sucio a tabla de hechos', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Resultado final',
+  deps:['pq-pivot','pq-combinar'], related:['casos','modelado'], fns:[],
+  subtitle:'Juntamos todo: un caso financiero típico, de un Excel desordenado a una tabla limpia lista para el modelo, paso a paso.',
+  html: ()=> `
+  ${why('El "resultado final": ver toda la receta junta', `<p>Cada nodo enseñó una técnica; aquí las encadenamos en un caso real, como lo harías en un proyecto. El objetivo: convertir un reporte de ventas en Excel (sucio, ancho) en una <b>tabla de hechos</b> limpia y en formato largo, lista para relacionar y medir.</p>`)}
+
+  <h3>El punto de partida (un Excel típico de negocio)</h3>
+  ${diagram(`
+   Fila 1:  "Reporte de Ventas Proyectadas 2026"   (título)
+   Fila 2:  (vacía)
+   Fila 3:  Cliente | Ene | Feb | Mar | ... | País
+   Fila 4:  A       | 100 | 110 | 120 | ... | Arg
+   Fila 5:  B       | 200 | 220 | 230 | ... | Chile
+   Fila 6:  TOTAL   | 300 | 330 | 350 | ...        (fila de total, sobra)`)}
+
+  <h3>La receta completa, paso a paso</h3>
+  ${best('', `<ol>
+    <li><b>Obtener datos</b> → Excel → seleccionar la hoja → <b>Transformar datos</b>. (<span class="pill" data-go="pq-intro">abrir</span>)</li>
+    <li><b>Quitar filas superiores</b>: 2 (el título y la vacía). (<span class="pill" data-go="pq-filas-columnas">filas</span>)</li>
+    <li><b>Usar la primera fila como encabezado</b>. (<span class="pill" data-go="pq-encabezados">encabezados</span>)</li>
+    <li><b>Quitar la fila TOTAL</b>: filtra la columna Cliente para excluir "TOTAL" (o quitar filas inferiores). </li>
+    <li>Selecciona <b>Cliente</b> y <b>País</b> → <b>Anular dinamización de otras columnas</b> → renombra a <code class="inl">Mes</code> e <code class="inl">Importe</code>. (<span class="pill" data-go="pq-pivot">unpivot</span>)</li>
+    <li>Convierte <code class="inl">Mes</code> (Ene, Feb…) en una <b>fecha real</b> (p. ej. añade una columna que mapee a fecha de inicio de mes).</li>
+    <li><b>Cambiar tipos</b>: Importe → número, Fecha → fecha (con configuración regional). (<span class="pill" data-go="pq-tipos">tipos</span>)</li>
+    <li>(Opcional) <b>Merge</b> con una tabla de clientes para traer segmento/región. (<span class="pill" data-go="pq-combinar">merge</span>)</li>
+    <li><b>Revisar perfiles de datos</b>: 0 errores, 0 vacíos en Importe. (<span class="pill" data-go="pq-perfiles">perfiles</span>)</li>
+    <li><b>Cerrar y aplicar</b>. Ya tienes una tabla de hechos lista para el modelo.</li>
+  </ol>`)}
+  ${diagram(`
+   RESULTADO (largo, limpio, tipado)
+   Cliente   País    Fecha       Importe
+   A         Arg     2026-01-01  100
+   A         Arg     2026-02-01  110
+   B         Chile   2026-01-01  200
+   ...`)}
+
+  ${best('Y el premio: se actualiza solo', `<p>El mes que viene llega el Excel con la columna "Abr" y nuevas filas. Pulsas <b>Actualizar</b> y <b>toda la receta se reaplica</b>: quita el título, promueve encabezados, hace unpivot (incluido "Abr" automáticamente, por usar "otras columnas"), tipa, combina y carga. Cero trabajo manual. <b>Esa es la promesa de Power Query.</b></p>`)}
+  <p>Esta tabla ya está lista para el mundo <span class="pill" data-go="powerbi">Power BI / DAX</span>: relaciónala con el <span class="pill" data-go="modelado">Calendario</span> y empieza a medir.</p>
   `
 });
 

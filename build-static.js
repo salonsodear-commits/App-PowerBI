@@ -41,13 +41,17 @@ function childrenIndex(n){
 }
 
 // --- 4. Build TOC (grouped by top-level) ---
+function tocBranch(id){
+  const kids=childrenOf[id]||[];
+  if(!kids.length) return '';
+  let h='<ol>';
+  kids.forEach(k=>{ h+='<li><a href="#'+k.id+'">'+(k.icon?k.icon+' ':'')+k.title+'</a>'+tocBranch(k.id)+'</li>'; });
+  return h+'</ol>';
+}
 function tocHtml(){
   let h='<details class="toc"><summary>📑 Índice de navegación — toca para abrir / cerrar</summary><ol>';
   (childrenOf['__root__']||[]).forEach(top=>{
-    h+='<li><a href="#'+top.id+'">'+(top.icon||'')+' '+top.title+'</a>';
-    const kids=childrenOf[top.id]||[];
-    if(kids.length){h+='<ol>';kids.forEach(k=>{h+='<li><a href="#'+k.id+'">'+k.title+'</a></li>';});h+='</ol>';}
-    h+='</li>';
+    h+='<li><a href="#'+top.id+'">'+(top.icon||'')+' '+top.title+'</a>'+tocBranch(top.id)+'</li>';
   });
   return h+'</ol></details>';
 }
