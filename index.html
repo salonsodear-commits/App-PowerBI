@@ -3225,6 +3225,87 @@ in
   `
 });
 
+/* ---- PQ: Mapa de prioridades M ---- */
+N({ id:'pq-prioridades', parent:'powerquery', title:'Mapa de Prioridades M (funciones más usadas)', icon:'🗺️', wide:true,
+  importancia:'★★★★★', dificultad:'🟢 Orientación', uso:'Referencia',
+  deps:['pq-m'], related:['pq-buenas','prioridades'], fns:[],
+  subtitle:'Las funciones M más usadas en proyectos corporativos, clasificadas por frecuencia. Casi nunca las escribes a mano (los menús las generan), pero reconocerlas te permite leer y depurar cualquier consulta.',
+  html: ()=> `
+  ${why('Leer M es más útil que escribirlo', `<p>Power Query genera M por ti con cada clic. No necesitas memorizar estas funciones, pero <b>reconocerlas</b> te deja entender qué hizo cada paso, encontrar el origen de un error y hacer ajustes finos. Este mapa es el equivalente al <span class="pill" data-go="prioridades">Mapa de Prioridades DAX</span>, pero para transformar datos.</p>`)}
+
+  ${diagram(`
+                          ▲  CASOS ESPECÍFICOS
+                         ╱ ╲  Table.Buffer, Table.FillDown,
+                        ╱   ╲ Table.AddIndexColumn, List.*
+                       ╱─────╲
+                      ╱  USO   ╲   Table.Group, Table.Pivot,
+                     ╱ OCASIONAL ╲  Table.Sort, try…otherwise
+                    ╱─────────────╲
+                   ╱  USO FRECUENTE ╲  Unpivot, NestedJoin+Expand,
+                  ╱                  ╲ Combine, Text.*, Date.*, AddColumn
+                 ╱────────────────────╲
+                ╱     USO DIARIO        ╲ SelectColumns, RenameColumns,
+               ╱  (lo genera cada clic)  ╲ TransformColumnTypes, SelectRows,
+              ╱───────────────────────────╲ PromoteHeaders, Distinct, ReplaceValue
+             └─────────────────────────────┘`)}
+
+  <h3>🥇 Uso diario — lo que aparece en casi toda consulta</h3>
+  ${tbl(['Función M','Qué hace','El clic que la genera'],[
+    ['<b>Table.PromoteHeaders</b>','Primera fila → encabezados','Usar la primera fila como encabezado'],
+    ['<b>Table.TransformColumnTypes</b>','Asigna tipos (número, fecha, texto)','Cambiar tipo de datos'],
+    ['<b>Table.SelectColumns</b>','Conserva solo ciertas columnas','Quitar otras columnas'],
+    ['<b>Table.RemoveColumns</b>','Elimina columnas','Quitar columnas'],
+    ['<b>Table.RenameColumns</b>','Renombra columnas','Doble clic en el título'],
+    ['<b>Table.SelectRows</b>','Filtra filas por condición','Filtros del menú desplegable'],
+    ['<b>Table.Distinct</b>','Quita duplicados','Quitar duplicados'],
+    ['<b>Table.ReplaceValue</b>','Reemplaza valores','Reemplazar valores'],
+  ])}
+
+  <h3>🥈 Uso frecuente — en cada proyecto</h3>
+  ${tbl(['Función M','Qué hace','El clic que la genera'],[
+    ['<b>Table.UnpivotOtherColumns</b>','Ancho → largo (meses a filas)','Anular dinamización de otras columnas'],
+    ['<b>Table.AddColumn</b>','Crea columna nueva (personalizada/condicional)','Columna personalizada / condicional'],
+    ['<b>Table.NestedJoin</b> + <b>Table.ExpandTableColumn</b>','Une por clave y expande (merge)','Combinar consultas'],
+    ['<b>Table.Combine</b>','Apila filas de varias tablas (append)','Anexar consultas'],
+    ['<b>Text.*</b> (Trim, Upper, Proper, Replace, Combine)','Limpieza de texto','Transformar → Formato / Extraer'],
+    ['<b>Date.*</b> (Year, Month, StartOfMonth, From)','Partes y conversión de fechas','Columna de fecha / Transformar fecha'],
+    ['<b>Number.From</b> / <b>Date.From</b>','Conversión explícita de tipo','Cambiar tipo'],
+  ])}
+
+  <h3>🥉 Uso ocasional</h3>
+  ${tbl(['Función M','Qué hace'],[
+    ['<b>Table.Group</b>','Agrupa y agrega (sumar por cliente)'],
+    ['<b>Table.Pivot</b>','Largo → ancho (columna dinámica)'],
+    ['<b>Table.Sort</b>','Ordena filas'],
+    ['<b>try … otherwise</b>','Maneja errores por fila (devuelve un valor si falla)'],
+    ['<b>Table.TransformColumns</b>','Aplica una función a los valores de una columna'],
+  ])}
+
+  <h3>🎯 Casos específicos</h3>
+  ${tbl(['Función M','Cuándo aparece'],[
+    ['<b>Table.FillDown</b> / <b>Table.FillUp</b>','Rellenar celdas vacías hacia abajo (mayor contable, jerarquías)'],
+    ['<b>Table.AddIndexColumn</b>','Añadir un índice / clave secuencial'],
+    ['<b>Table.Buffer</b>','Forzar carga en memoria (performance puntual)'],
+    ['<b>List.*</b> (Sum, Distinct, Contains)','Operaciones sobre listas dentro de pasos'],
+    ['<b>Folder.Files</b> / <b>Excel.Workbook</b> / <b>Csv.Document</b>','Conectores de origen (consolidar carpetas)'],
+  ])}
+
+  <h3>Sintaxis que verás por todos lados</h3>
+  ${tbl(['Elemento','Significa'],[
+    ['<code class="inl">each</code>','"para cada fila" (define una función corta)'],
+    ['<code class="inl">[Columna]</code>','El valor de esa columna en la fila actual'],
+    ['<code class="inl">_</code>','La fila/elemento actual completo'],
+    ['<code class="inl">#"Nombre con espacios"</code>','Referencia a un paso o columna con espacios'],
+    ['<code class="inl">let … in</code>','Lista de pasos … resultado final'],
+  ])}
+  ${best('Cómo usar este mapa', `<ul>
+    <li>No lo memorices: úsalo para <b>reconocer</b> qué hace cada paso cuando abras el <span class="pill" data-go="pq-m">Editor avanzado</span>.</li>
+    <li>Las de "uso diario" las genera cada clic; entiéndelas y leerás el 80% de cualquier consulta.</li>
+    <li>Las específicas, apréndelas cuando el problema aparezca (igual que en DAX).</li>
+  </ul>`)}
+  `
+});
+
 /* ---- PQ: Buenas prácticas ---- */
 N({ id:'pq-buenas', parent:'powerquery', title:'Buenas Prácticas en Power Query', icon:'🟡⭐',
   importancia:'★★★★☆', dificultad:'🟡 Importante', uso:'Proyectos mantenibles',
@@ -3313,6 +3394,67 @@ N({ id:'pq-casos', parent:'powerquery', title:'Caso Real Completo: de Excel suci
 
   ${best('Y el premio: se actualiza solo', `<p>El mes que viene llega el Excel con la columna "Abr" y nuevas filas. Pulsas <b>Actualizar</b> y <b>toda la receta se reaplica</b>: quita el título, promueve encabezados, hace unpivot (incluido "Abr" automáticamente, por usar "otras columnas"), tipa, combina y carga. Cero trabajo manual. <b>Esa es la promesa de Power Query.</b></p>`)}
   <p>Esta tabla ya está lista para el mundo <span class="pill" data-go="powerbi">Power BI / DAX</span>: relaciónala con el <span class="pill" data-go="modelado">Calendario</span> y empieza a medir.</p>
+  `
+});
+
+/* ---- PQ: Casos financieros adicionales ---- */
+N({ id:'pq-casos-fin', parent:'powerquery', title:'Casos Financieros: Consolidar Aging y Limpiar el Mayor Contable', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Cierre y reporting',
+  deps:['pq-casos','pq-combinar'], related:['casos-tesoreria','casos-pyl'], fns:[],
+  subtitle:'Dos recetas completas de Power Query que aparecen siempre en Finanzas: consolidar el aging de cobranzas desde varios archivos mensuales, y convertir un mayor contable exportado del ERP en una tabla limpia.',
+  html: ()=> `
+  ${why('Los datos financieros llegan en el peor formato posible', `<p>El ERP y los reportes de tesorería exportan en formatos pensados para imprimir, no para analizar: subtotales intercalados, cuentas que solo aparecen una vez arriba del bloque, archivos separados por mes. Power Query convierte ese caos en tablas limpias <b>una sola vez</b>, y luego se actualiza solo.</p>`)}
+
+  <h3>━━━ CASO A · Consolidar el aging de cobranzas desde varios archivos ━━━</h3>
+  <p>Tienes un archivo por mes (<code class="inl">Aging_Ene.xlsx</code>, <code class="inl">Aging_Feb.xlsx</code>…) en una carpeta, todos con la misma estructura: Cliente, Factura, FechaVencimiento, Saldo. Quieres una sola tabla con tramos de antigüedad.</p>
+  ${best('Paso a paso', `<ol>
+    <li><b>Obtener datos → Carpeta</b> → elige la carpeta. Power Query lista todos los archivos.</li>
+    <li><b>Combinar y transformar</b>: Power Query detecta la estructura y <b>anexa todos</b> automáticamente (usa <code class="inl">Folder.Files</code> + <code class="inl">Excel.Workbook</code> + <code class="inl">Table.Combine</code> por dentro). (<span class="pill" data-go="pq-combinar">append</span>)</li>
+    <li>Limpia: promover encabezados, <b>quitar filas de subtotal</b> (filtra Cliente que no sea "TOTAL"), tipar Saldo y FechaVencimiento <b>con configuración regional</b>. (<span class="pill" data-go="pq-tipos">tipos</span>)</li>
+    <li><b>Columna de días vencidos</b> — Agregar columna → Columna personalizada:
+      ${mq(`Duration.Days( Date.From(DateTime.LocalNow()) - [FechaVencimiento] )`)}
+    </li>
+    <li><b>Columna de tramo</b> — Agregar columna → Columna condicional (genera un <code class="inl">if … then … else</code>):
+      ${mq(`= Table.AddColumn(Paso, "Tramo", each
+    if [DiasVencido] <= 0 then "Por vencer"
+    else if [DiasVencido] <= 30 then "1-30"
+    else if [DiasVencido] <= 60 then "31-60"
+    else if [DiasVencido] <= 90 then "61-90"
+    else "+90 (riesgo)")`)}
+    </li>
+    <li><b>Cerrar y aplicar.</b> Cada mes nuevo: pones el archivo en la carpeta y pulsas <b>Actualizar</b>. Se consolida solo.</li>
+  </ol>`)}
+  ${warn('¿El tramo en Power Query o en DAX?', `<p>Si la fecha de corte es "hoy" fijo, calcularlo en Power Query está bien. Pero si quieres que el aging se recalcule según un <b>slicer de fecha de corte</b>, hazlo en <b>DAX</b> (depende de la interacción del usuario). Ver <span class="pill" data-go="casos-tesoreria">Aging en DAX</span> y la regla "lo dinámico → DAX, lo estable → Power Query".</p>`)}
+
+  <h3>━━━ CASO B · Limpiar un mayor contable exportado del ERP ━━━</h3>
+  <p>El típico "libro mayor" exportado: la cuenta aparece como <b>encabezado de bloque</b> (no en cada fila), hay <b>subtotales</b> intercalados y filas en blanco. Quieres una tabla plana: Cuenta · Fecha · Asiento · Debe · Haber.</p>
+  ${diagram(`
+   ORIGEN (formato "de impresión")
+   Cuenta 4100 - Ventas                 ← encabezado de bloque
+       01/03  As.101   Debe 0   Haber 100
+       05/03  As.115   Debe 0   Haber 250
+       Subtotal 4100            Haber 350   ← subtotal (sobra)
+   Cuenta 5100 - Compras
+       03/03  As.108   Debe 80  Haber 0
+   ...`)}
+  ${best('Paso a paso', `<ol>
+    <li>Identifica la columna donde aparece la cuenta solo en la fila de encabezado. Si la cuenta queda en celdas sueltas, créala/aíslala y usa <b>Rellenar → Hacia abajo</b> (<code class="inl">Table.FillDown</code>) para que cada fila herede su cuenta.</li>
+    <li><b>Quita las filas de subtotal</b>: filtra para excluir las que contienen "Subtotal" (o las que tienen Asiento en blanco). (<span class="pill" data-go="pq-filas-columnas">quitar filas</span>)</li>
+    <li><b>Quita filas en blanco</b> y columnas que no uses.</li>
+    <li><b>Tipa</b>: Fecha → fecha (regional), Debe/Haber → número. Reemplaza nulos por 0 si conviene. (<span class="pill" data-go="pq-tipos">tipos</span>)</li>
+    <li>(Opcional) <b>Importe neto</b> — columna personalizada <code class="inl">[Debe] - [Haber]</code>, o el signo según tu convención.</li>
+    <li>(Opcional) <b>Merge</b> con el plan de cuentas para traer Grupo (OPEX, Ingresos…). (<span class="pill" data-go="pq-combinar">merge</span>)</li>
+  </ol>`)}
+  ${diagram(`
+   RESULTADO (plano, listo para el modelo)
+   Cuenta  Descripción  Fecha       Asiento  Debe  Haber  Grupo
+   4100    Ventas       2026-03-01  101      0     100    Ingresos
+   4100    Ventas       2026-03-05  115      0     250    Ingresos
+   5100    Compras      2026-03-03  108      80    0      COGS`)}
+  ${best('La pieza clave de este caso: Rellenar hacia abajo', `<p><code class="inl">Table.FillDown</code> es lo que convierte el "formato de impresión" (cuenta solo arriba del bloque) en una tabla analizable (cuenta en cada fila). Es el truco que más se repite al limpiar exports contables. Sin él, no podrías agrupar ni relacionar por cuenta.</p>`)}
+
+  ${err('No quitar los subtotales', `<p>Si dejas las filas de "Subtotal" y luego sumas en DAX, <b>duplicas</b> los importes (sumas el detalle y el subtotal). Quitarlas en Power Query es obligatorio para que los totales cuadren.</p>`)}
+  <p>Ambas tablas quedan listas para el mundo <span class="pill" data-go="powerbi">Power BI / DAX</span>: relación con el <span class="pill" data-go="modelado">Calendario</span> y a medir aging, DSO, OPEX o lo que necesites.</p>
   `
 });
 
