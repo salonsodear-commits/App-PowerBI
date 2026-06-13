@@ -1690,7 +1690,7 @@ RETURN
   ${warn('"Un cliente con %A y OTRO cliente con %B distinto, a la vez"', `<p>Con slicers, el patrón natural es <b>"objetivo vs resto"</b> (los elegidos comparten un %, los demás otro). Si necesitas que <i>cada</i> cliente tenga un % <b>diferente y simultáneo</b> (B +25%, C −15%, D +40%… todos a la vez), un slicer se queda corto porque solo guarda un valor a la vez. Dos caminos honestos:</p>
   <ul>
     <li><b>Por segmentos, con estos mismos slicers:</b> ajustas un grupo (objetivo) frente al resto; suele cubrir el 90% de las necesidades reales de planeamiento.</li>
-    <li><b>Muchos % independientes a la vez:</b> ahí se usa una <b>tabla de factores por cliente</b> (ver <span class="pill" data-go="sim-3">Escenario 3</span>). No es "editar a mano" en el informe: es una tabla del modelo que puede venir de Excel/origen, y cada cliente lleva su %. Es la herramienta correcta cuando los % son muchos y distintos.</li>
+    <li><b>Cada cliente con su % distinto a la vez:</b> tienes dos caminos, explicados paso a paso en el <span class="pill" data-go="sim-3">Escenario 3</span> → (1) una <b>tabla de factores</b> (un % por cliente; ideal para muchos clientes) y (2) <b>un slicer por cliente</b> (barras en vivo; ideal para pocos), más un <b>híbrido</b> que combina ambos. Ahí tienes los clics y las medidas listas para copiar.</li>
   </ul>`)}
 
   <h3>Parte 5 · Cómo encaja todo (resumen visual)</h3>
@@ -1839,48 +1839,117 @@ RETURN
 /* ---- Escenario 3 ---- */
 N({ id:'sim-3', parent:'simuladores', title:'Escenario 3 · Ajuste de Varios Clientes', icon:'🔴',
   importancia:'★★★★☆', dificultad:'🔴 Avanzado', uso:'Planes comerciales por cuenta',
-  deps:['sim-2'], related:['sim-4','modelado'], fns:['fn-tablas','calculate'],
-  subtitle:'Cliente A → +10%, B → +25%, C → −15%. Cada cliente responde solo a su propio ajuste. Aquí cambia la arquitectura: parámetro por cliente.',
+  deps:['sim-2'], related:['sim-4','sim-guia','modelado'], fns:['fn-tablas','calculate'],
+  subtitle:'Cada cliente con su propio % a la vez (A +10%, B +25%, C −15%). Dos formas explicadas paso a paso y fácil: (1) una TABLA DE FACTORES y (2) SLICERS (un control por cliente). Y un híbrido que combina ambas.',
   html: ()=> `
-  <h3>Por qué el enfoque anterior no escala</h3>
-  <p>Un slicer "un cliente + un factor" no sirve si quieres ajustes <b>distintos y simultáneos</b> por cliente. Necesitas guardar un factor <b>por cliente</b>. Dos arquitecturas posibles:</p>
+  <h3>El problema</h3>
+  <p>Quieres que <b>cada</b> cliente tenga un porcentaje <b>distinto y al mismo tiempo</b>: A sube +10%, B sube +25%, C baja −15%… El resultado, en una tabla/matriz:</p>
+  ${tbl(['Cliente','Venta Base','Su %','Total Ajustado'],[
+    ['A','100','+10%','100 × 1,10 = <b>110</b>'],
+    ['B','200','+25%','200 × 1,25 = <b>250</b>'],
+    ['C','300','−15%','300 × 0,85 = <b>255</b>'],
+    ['<b>Total</b>','<b>600</b>','','<b>615</b>'],
+  ])}
+  <p>Hay dos maneras de lograrlo. Te explico las dos desde cero; elige según cuántos clientes tengas.</p>
 
-  <h3>Arquitectura A · Tabla de parámetros por cliente (recomendada)</h3>
-  <p>Una tabla <b>relacionada</b> con la dimensión Cliente que contiene el factor de cada uno. El usuario la edita (o se alimenta de un formulario / What-If por cliente):</p>
-  ${dax(`
--- AjustesCliente:  Cliente | Factor   (relacionada 1:1 o 1:* con la dim Cliente)
-Venta Ajustada Multi =
+  <h3>━━━ MÉTODO 1 · Tabla de factores (la más escalable) ━━━</h3>
+  ${analogy('Qué es una "tabla de factores"', `<p>Es simplemente una <b>tablita</b> con dos columnas: el <b>cliente</b> y <b>su porcentaje</b>. Una fila por cliente. Power BI la lee y le da a cada cliente el % que le corresponde. Piensa en ella como una <b>lista de instrucciones</b>: "a A súbele 10%, a B 25%, a C bájale 15%".</p>`)}
+
+  ${best('Paso 1 · Crear la tabla (la forma más fácil: "Escribir datos")', `<ol>
+    <li>Cinta <b>Inicio → Escribir datos</b> (en inglés "Enter data").</li>
+    <li>Se abre una mini-hoja. Crea dos columnas: <code class="inl">Cliente</code> y <code class="inl">Ajuste %</code>.</li>
+    <li>Escribe una fila por cliente:
+      ${tbl(['Cliente','Ajuste %'],[['A','0,10'],['B','0,25'],['C','-0,15']])}
+      (0,10 = +10%. Usa decimales: 25% se escribe 0,25.)
+    </li>
+    <li>Ponle de nombre <code class="inl">Factores Cliente</code> y pulsa <b>Cargar</b>. ¡Ya tienes la tabla en el modelo!</li>
+  </ol>
+  <p><b>Alternativa profesional:</b> en vez de "Escribir datos", conecta un <b>Excel</b> donde Planeamiento escribe los % y, al pulsar <b>Actualizar</b>, se recargan. Mismo resultado, pero el equipo mantiene el Excel.</p>`)}
+
+  ${best('Paso 2 · La medida que reparte cada % a su cliente', `${dax(`
+Venta Ajustada =
 SUMX (
-    VALUES ( Proyeccion[Cliente] ),
-    VAR Base   = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
-    VAR Factor = CALCULATE ( SELECTEDVALUE ( AjustesCliente[Factor], 1 ) )
-    RETURN Base * Factor
-)`)}
-  ${engine('', `<ol>
-    <li>SUMX itera cliente a cliente sobre <code class="inl">VALUES(Proyeccion[Cliente])</code>.</li>
-    <li>En la iteración de "A", la transición filtra <code class="inl">AjustesCliente</code> a la fila de A → <code class="inl">Factor=1,10</code>.</li>
-    <li>Base de A × 1,10. En "B" → 1,25. En "C" → 0,85. Cada uno con el suyo.</li>
-    <li>SUMX acumula. El total refleja todos los ajustes individuales correctamente.</li>
+    VALUES ( Clientes[Cliente] ),                       -- ve cliente por cliente
+    VAR Cli  = SELECTEDVALUE ( Clientes[Cliente] )       -- quién es este cliente
+    VAR Base = [Ventas Base]                             -- sus ventas
+    VAR Pct  =                                           -- busca SU % en la tabla
+        LOOKUPVALUE (
+            'Factores Cliente'[Ajuste %],
+            'Factores Cliente'[Cliente], Cli,
+            0                                            -- si no está en la tabla: 0%
+        )
+    RETURN Base * ( 1 + Pct )
+)`)}`)}
+  ${engine('Léelo en palabras', `<ol>
+    <li><code class="inl">SUMX(VALUES(Clientes[Cliente]), …)</code> = recorre los clientes uno a uno y al final suma.</li>
+    <li><code class="inl">Cli</code> = el cliente de la fila actual (A, luego B, luego C…).</li>
+    <li><code class="inl">LOOKUPVALUE(…)</code> = "ve a la tabla Factores Cliente y tráeme el % de ESTE cliente". Es como un BUSCARV. Si el cliente no está, devuelve 0 (no se ajusta).</li>
+    <li><code class="inl">Base × (1 + Pct)</code> = aplica su porcentaje. A → ×1,10, B → ×1,25, C → ×0,85.</li>
+  </ol>
+  <p>Con <code class="inl">LOOKUPVALUE</code> <b>ni siquiera hace falta unir</b> la tabla con flechas: la búsqueda es por nombre. Más simple para empezar.</p>`)}
+
+  ${best('Paso 3 · Usarla', `<ol>
+    <li>Pon una <b>matriz/tabla</b>: <code class="inl">Clientes[Cliente]</code> en filas, <code class="inl">[Ventas Base]</code> y <code class="inl">[Venta Ajustada]</code> en valores. Verás 110, 250, 255.</li>
+    <li>¿Cambió el plan? Edita los % (Inicio → Transformar datos → tabla <code class="inl">Factores Cliente</code>, o el Excel) y pulsa <b>Actualizar</b>. Todos los clientes se recalculan con sus nuevos %.</li>
   </ol>`)}
-
-  <h3>Arquitectura B · Tablas auxiliares + What-If por cliente</h3>
-  <p>Cuando los ajustes deben ser interactivos con slicers (no una tabla fija), se usa un patrón de <b>parámetros desconectados con campo por cliente</b> o varios What-If. Es más frágil y se reserva para pocos clientes; con muchos, la tabla de parámetros (A) es lo correcto.</p>
-
-  ${tbl(['Criterio','A · Tabla de parámetros','B · What-If múltiples'],[
-    ['Escalabilidad','Alta (miles de clientes)','Baja (pocos)'],
-    ['Interactividad','Editas la tabla / formulario','Slicers en vivo'],
-    ['Mantenimiento','Centralizado','Se multiplica por cliente'],
-    ['Recomendado','✅ Por defecto','Solo casos puntuales'],
+  ${tbl(['👍 Ventajas','👎 Límites'],[
+    ['Soporta MUCHOS clientes (miles), cada uno su %','No se cambia "en vivo" desde el informe: hay que editar y Actualizar'],
+    ['Centralizado, fácil de auditar y versionar','Necesita que alguien mantenga el Excel/tabla'],
+    ['Soporta escenarios (añade columna Escenario)','—'],
   ])}
 
-  ${warn('La transición es la que "conecta" cada factor', `<p>El motor de este escenario es la <span class="pill" data-go="transicion">transición de contexto</span>: al iterar por cliente y llamar a una medida/columna de la tabla de factores, cada iteración se filtra a su cliente. Sin transición, todos tomarían el mismo factor.</p>`)}
-  ${best('Escalabilidad y buenas prácticas', `<ul>
-    <li>Modela los factores como una <b>tabla de hechos de escenario</b> (Cliente, Escenario, Factor) relacionada con tus dimensiones: así soportas Base/Optimista/Pesimista sin reescribir medidas.</li>
-    <li>Default 1 en cada <code class="inl">SELECTEDVALUE</code>: un cliente sin factor definido no debe desaparecer ni anularse.</li>
-    <li>Itera siempre sobre la <b>clave</b> del cliente, no sobre la tabla de hechos completa.</li>
-  </ul>`)}
-  ${exer('', `<p>A base 100 (f=1,10), B base 200 (f=1,25), C base 300 (f=0,85). ¿Total ajustado?</p>
-  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Solución</summary><p>110 + 250 + 255 = <b>615</b>. Cada cliente con su factor, SUMX acumula.</p></details>`)}
+  <h3>━━━ MÉTODO 2 · Slicers (un control por cliente) ━━━</h3>
+  <p>Si quieres tocarlo <b>en vivo con barras</b> y tienes <b>pocos clientes</b>, dale a cada cliente su propio slicer de %. Cada uno se mueve independientemente y todos a la vez.</p>
+  ${best('Paso a paso', `<ol>
+    <li>Crea un parámetro What-If por cliente: <b>Modelado → Nuevo parámetro → Rango numérico</b>, nómbralos <code class="inl">Ajuste A %</code>, <code class="inl">Ajuste B %</code>, <code class="inl">Ajuste C %</code> (mín −0,30, máx 0,30, paso 0,05). Marca "agregar segmentación" en cada uno.</li>
+    <li>Tendrás <b>una barra por cliente</b> en la página.</li>
+    <li>Usa esta medida (la misma idea del <span class="pill" data-go="sim-4">Escenario 4</span>):
+      ${dax(`
+Venta Ajustada =
+SUMX (
+    VALUES ( Clientes[Cliente] ),
+    VAR Base = [Ventas Base]
+    VAR Pct  =
+        SWITCH (
+            SELECTEDVALUE ( Clientes[Cliente] ),
+            "A", [Ajuste A % Valor],     -- la barra de A
+            "B", [Ajuste B % Valor],     -- la barra de B
+            "C", [Ajuste C % Valor],     -- la barra de C
+            0
+        )
+    RETURN Base * ( 1 + Pct )
+)`)}
+    </li>
+    <li>Mueve cada barra: el total de su cliente cambia al instante, cada uno con su propio %. ✔</li>
+  </ol>`)}
+  ${warn('Esto es lo que un slicer SÍ puede hacer (y su límite)', `<p>Con <b>una barra por cliente</b>, cada cliente tiene su % distinto y simultáneo, en vivo. Funciona muy bien hasta ~5-8 clientes. Con 50 clientes serían 50 barras: inviable. Ahí el <b>Método 1 (tabla)</b> es el correcto. Regla simple: <b>pocos y a mano → slicers; muchos → tabla de factores</b>.</p>`)}
+
+  <h3>━━━ MÉTODO 3 · Híbrido (lo mejor de los dos) ⭐ ━━━</h3>
+  <p>El patrón que más se usa en la práctica: la <b>tabla de factores</b> guarda el % "fino" de cada cliente, y un <b>slicer global</b> te deja jugar en vivo por encima de todos.</p>
+  ${dax(`
+Venta Ajustada =
+VAR SliderGlobal = [Ajuste Global % Valor]               -- una barra para jugar en vivo
+RETURN
+    SUMX (
+        VALUES ( Clientes[Cliente] ),
+        VAR Cli  = SELECTEDVALUE ( Clientes[Cliente] )
+        VAR Base = [Ventas Base]
+        VAR PctCliente =
+            LOOKUPVALUE ( 'Factores Cliente'[Ajuste %], 'Factores Cliente'[Cliente], Cli, 0 )
+        RETURN Base * ( 1 + PctCliente ) * ( 1 + SliderGlobal )
+    )`)}
+  ${engine('', `<p>Cada cliente parte de su % de la tabla (granular, muchos clientes) y, encima, el slicer global escala a todos en vivo. Así combinas la <b>escala</b> de la tabla con la <b>interactividad</b> del slicer. Por ejemplo: la tabla pone los % por cuenta que negoció Comercial, y el director mueve el slicer global para ver "¿y si todo el mercado cae un 5% más?".</p>`)}
+
+  ${tbl(['Tu situación','Método recomendado'],[
+    ['Muchos clientes, cada uno su %, se actualiza por Excel','1 · Tabla de factores'],
+    ['Pocos clientes, quiero moverlos en vivo con barras','2 · Slicers (uno por cliente)'],
+    ['% finos por cliente + jugar en vivo con un control','3 · Híbrido'],
+    ['Un grupo con un % y el resto con otro','"Objetivo vs resto" (ver <span class="pill" data-go="sim-guia">Guía, Parte 4</span>)'],
+  ])}
+
+  ${warn('La pieza invisible que hace que cada factor llegue a su cliente', `<p>En los tres métodos, lo que conecta cada % con su cliente es recorrer <code class="inl">VALUES(Clientes[Cliente])</code> con <code class="inl">SUMX</code>: en cada vuelta "estamos parados" en un cliente y leemos solo su %. Es la <span class="pill" data-go="transicion">transición de contexto</span>. Por eso el <b>total</b> también sale bien (suma cada cliente ya ajustado).</p>`)}
+  ${exer('', `<p>Tabla de factores: A +10%, B +25%, C −15%. Bases 100/200/300. Además mueves el slicer global a +10%. ¿Total con el método híbrido?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Ver solución</summary><p>A: 100×1,10×1,10 = 121 · B: 200×1,25×1,10 = 275 · C: 300×0,85×1,10 = 280,5. Total = <b>676,5</b>. Cada cliente con su % de tabla, y el slicer global multiplica encima a todos.</p></details>`)}
   `
 });
 
