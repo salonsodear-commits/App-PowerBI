@@ -2410,6 +2410,13 @@ function node(o){ NODES.push(o); return o; }
    RENDER ENGINE
    ============================================================ */
 (function(){
+  // Escapa un id para usarlo en un selector. No depende de CSS.escape,
+  // que algunos WebView/visores integrados no exponen (causaría pantalla en blanco).
+  function cssEsc(s){
+    s = String(s);
+    if (typeof CSS !== 'undefined' && CSS && typeof CSS.escape === 'function') return CSS.escape(s);
+    return s.replace(/[^a-zA-Z0-9_-]/g, function(ch){ return '\\' + ch; });
+  }
   const byId = {};
   NODES.forEach(n=>byId[n.id]=n);
   const childrenOf = {};
@@ -2461,7 +2468,7 @@ function node(o){ NODES.push(o); return o; }
   }
   function toggle(id){
     collapsed[id]=!collapsed[id];
-    const wrap=treeEl.querySelector('.node[data-id="'+CSS.escape(id)+'"]');
+    const wrap=treeEl.querySelector('.node[data-id="'+cssEsc(id)+'"]');
     if(!wrap)return;
     const row=wrap.querySelector(':scope > .node-row');
     const ch=wrap.querySelector(':scope > .children');
@@ -2484,7 +2491,7 @@ function node(o){ NODES.push(o); return o; }
     current=id;
     // active state
     treeEl.querySelectorAll('.node-row').forEach(r=>r.classList.remove('active'));
-    const row=treeEl.querySelector('.node-row[data-id="'+CSS.escape(id)+'"]');
+    const row=treeEl.querySelector('.node-row[data-id="'+cssEsc(id)+'"]');
     if(row) row.classList.add('active');
     expandAncestors(id);
     // breadcrumbs
@@ -2492,7 +2499,7 @@ function node(o){ NODES.push(o); return o; }
     crumbsEl.innerHTML = p.map((x,i)=> (i===p.length-1?'<b>'+x.title+'</b>':'<a data-go="'+x.id+'">'+x.title+'</a>')).join(' <span style="color:var(--faint)">/</span> ');
     // content
     renderContent(n);
-    if(push!==false){ history.replaceState(null,'',  '#'+id); }
+    if(push!==false){ try{ history.replaceState(null,'',  '#'+id); }catch(e){ try{ location.hash = id; }catch(_){} } }
     document.getElementById('main').scrollTop=0;
     // close mobile sidebar
     document.getElementById('sidebar').classList.remove('open');
