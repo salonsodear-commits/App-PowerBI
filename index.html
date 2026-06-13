@@ -296,6 +296,8 @@ N({ id:'home', parent:null, title:'Inicio · Cómo usar este Atlas', icon:'🏠'
   <div class="home-grid">
     <div class="home-card" data-go="powerquery"><div class="ic">🔌</div><div class="t">Power Query / M</div><div class="d">Limpieza y transformación de datos paso a paso: encabezados, tipos, unpivot/pivot, combinar consultas, lenguaje M. El "antes" de todo modelo.</div></div>
     <div class="home-card" data-go="powerbi"><div class="ic">📊</div><div class="t">Power BI / DAX</div><div class="d">Modelado, motor DAX, CALCULATE, catálogo de funciones, simuladores corporativos, performance y casos de negocio. El "después": medir y analizar.</div></div>
+    <div class="home-card" data-go="dashboards"><div class="ic">📈</div><div class="t">Visualización y Dashboards</div><div class="d">Diseño de tableros ejecutivos: principios, qué visual usar, anatomía de un dashboard financiero y buenas prácticas. El "para qué": comunicar y decidir.</div></div>
+    <div class="home-card" data-go="glosario"><div class="ic">📖</div><div class="t">Glosario Financiero</div><div class="d">Diccionario transversal: EBITDA, OPEX, CAPEX, DSO, CCC, ROE, churn… qué significan y cómo se miden.</div></div>
   </div>
   ${analogy('El orden natural: cocinar antes de servir', `<p><b>Power Query es la cocina de preparación</b> (lavas, cortas y ordenas los ingredientes = limpias y transformas los datos). <b>Power BI / DAX es el servicio</b> (con los ingredientes listos, cocinas los platos = construyes medidas y análisis). Un buen plato empieza por buenos ingredientes: por eso conviene dominar Power Query antes (o a la par) de DAX.</p>`)}
   <p>Cada nodo declara su <b>importancia</b>, <b>dificultad</b>, <b>requisitos previos</b>, <b>conceptos relacionados</b> y <b>funciones asociadas</b> (todos clicables, para saltar entre ideas conectadas).</p>
@@ -2848,6 +2850,136 @@ Tasa Retención = DIVIDE ( [Clientes Recurrentes], CALCULATE ( [Clientes Activos
   `
 });
 
+/* ---- Casos: Flujo de caja y capital de trabajo ---- */
+N({ id:'casos-cashflow', parent:'casos', title:'Flujo de Caja y Capital de Trabajo', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴', uso:'Tesorería / Dirección financiera',
+  deps:['casos','fn-tiempo'], related:['casos-tesoreria','casos-control'], fns:['calculate','fn-errores'],
+  subtitle:'El análisis que más mira un CFO: cuánto efectivo entra y sale, y cuánto capital queda "atrapado" en el circulante. Cash flow, working capital y el ciclo de conversión de efectivo.',
+  html: ()=> `
+  ${why('"El beneficio es opinión; la caja es un hecho"', `<p>Una empresa puede ser rentable en el P&L y quebrar por falta de caja. Por eso el flujo de caja y el <b>capital de trabajo</b> (el dinero atrapado en cuentas por cobrar + inventario − cuentas por pagar) son el panel nº1 de la dirección financiera.</p>`)}
+
+  <h3>Flujo de caja (método indirecto, el más común)</h3>
+  ${dax(`
+Flujo Operativo =
+[EBITDA]
+    - [Variación Capital Trabajo]      -- lo que se "comió" el circulante
+    - [Impuestos Pagados]
+Flujo Libre (FCF) = [Flujo Operativo] - [CAPEX]
+Caja Final = [Caja Inicial] + [Flujo Libre] + [Flujo Financiación]`)}
+
+  <h3>Capital de trabajo y el Ciclo de Conversión de Efectivo (CCC)</h3>
+  ${dax(`
+Capital de Trabajo = [Cuentas por Cobrar] + [Inventario] - [Cuentas por Pagar]
+
+DSO = DIVIDE ( [Cuentas por Cobrar], [Ventas] ) * [Días del Periodo]   -- días que tardo en cobrar
+DIO = DIVIDE ( [Inventario], [COGS] ) * [Días del Periodo]             -- días que tardo en vender stock
+DPO = DIVIDE ( [Cuentas por Pagar], [Compras] ) * [Días del Periodo]   -- días que tardo en pagar
+
+CCC = [DSO] + [DIO] - [DPO]   -- días que mi dinero está "atrapado"`)}
+  ${engine('Cómo leer el CCC', `<p>El <b>Ciclo de Conversión de Efectivo</b> mide cuántos días pasan desde que pagas a tus proveedores hasta que cobras de tus clientes. <b>Menor es mejor</b> (menos caja inmovilizada). Si cobras en 60 días (DSO), tienes stock 40 días (DIO) y pagas a 30 (DPO), tu CCC = 70 días: financias 70 días de operación. Reducirlo libera caja sin pedir préstamos.</p>`)}
+
+  ${warn('Variaciones, no saldos', `<p>El flujo de caja se construye con <b>variaciones</b> entre periodos (cuánto subió la cuenta por cobrar), no con saldos. Usa <code class="inl">CALCULATE(..., DATEADD(...,-1,MONTH))</code> para el saldo anterior y resta. Confundir saldo con variación es el error nº1 del cash flow en DAX.</p>`)}
+  ${best('', `<ul><li>Modela un único <b>Calendario</b> y saldos por fecha; deriva variaciones con inteligencia de tiempo.</li><li>Muestra el CCC y sus tres componentes juntos: revela <i>dónde</i> está atrapada la caja (¿cobranzas? ¿stock?).</li><li>Conecta con el <span class="pill" data-go="sim-8">simulador de KPIs</span>: "¿cuánta caja libero si bajo el DSO 10 días?".</li></ul>`)}
+  `
+});
+
+/* ---- Casos: Inventarios ---- */
+N({ id:'casos-inventario', parent:'casos', title:'Inventarios: Rotación, Cobertura y Obsolescencia', icon:'🔴',
+  importancia:'★★★★☆', dificultad:'🔴', uso:'Operaciones / Supply chain',
+  deps:['casos','fn-iteradores'], related:['casos-cashflow','casos-comercial'], fns:['calculate','fn-ranking'],
+  subtitle:'Cuánto stock tienes, cuánto rota y cuánto está "muerto". El análisis que libera caja y evita quiebres.',
+  html: ()=> `
+  ${why('El inventario es caja disfrazada de mercadería', `<p>Demasiado stock inmoviliza caja y arriesga obsolescencia; demasiado poco provoca quiebres y ventas perdidas. Medir rotación y cobertura es el equilibrio que persigue toda operación.</p>`)}
+  ${dax(`
+Inventario Promedio = DIVIDE ( [Inv Inicial] + [Inv Final], 2 )
+Rotación Inventario = DIVIDE ( [COGS], [Inventario Promedio] )        -- veces que rota al año
+Días de Cobertura   = DIVIDE ( [Inventario Final], [COGS] ) * [Días del Periodo]
+Stock Muerto (>180d)=
+    CALCULATE ( [Valor Inventario], FILTER ( Productos, [Días sin Movimiento] > 180 ) )
+% Obsolescencia     = DIVIDE ( [Stock Muerto (>180d)], [Valor Inventario] )`)}
+  ${tbl(['Indicador','Qué dice','Bueno'],[
+    ['Rotación','Cuántas veces se vende el stock','Alta (depende del sector)'],
+    ['Días de cobertura','Cuántos días dura el stock actual','Ni alto (caja parada) ni bajo (quiebre)'],
+    ['% obsolescencia','Qué parte es stock muerto','Bajo'],
+  ])}
+  ${best('', `<ul><li>Clasifica productos por <span class="pill" data-go="fn-ranking">ABC/Pareto</span>: el 20% de SKUs suele ser el 80% del valor; gestiónalos distinto.</li><li>Cruza rotación con margen: stock de baja rotación y bajo margen = candidato a liquidar.</li><li>"Días sin movimiento" se calcula en <span class="pill" data-go="pq-casos-fin">Power Query</span> o con <code class="inl">DATEDIFF(MAX(Ventas[Fecha]), TODAY())</code>.</li></ul>`)}
+  `
+});
+
+/* ---- Casos: Compras y CxP ---- */
+N({ id:'casos-compras', parent:'casos', title:'Compras y Cuentas por Pagar (Spend Analysis)', icon:'🔴',
+  importancia:'★★★★☆', dificultad:'🔴', uso:'Compras / Tesorería',
+  deps:['casos','fn-ranking'], related:['casos-cashflow','casos-tesoreria'], fns:['calculate','fn-ranking','fn-errores'],
+  subtitle:'El "espejo" de las cobranzas: cuánto compras, a quién, y cómo gestionas los pagos. Spend analysis, aging de proveedores y DPO.',
+  html: ()=> `
+  ${why('Cada día que tardas en pagar (sin penalización) es caja gratis', `<p>Optimizar compras y pagos impacta directo en la caja y el margen. El <b>spend analysis</b> revela concentración y oportunidades de ahorro; el <b>DPO</b> mide cuánto te financian tus proveedores.</p>`)}
+  ${dax(`
+Gasto Total       = SUM ( Compras[Importe] )
+% Concentración Top 10 Proveedores =
+    DIVIDE (
+        CALCULATE ( [Gasto Total], TOPN ( 10, ALLSELECTED ( Proveedores[ProvID] ), [Gasto Total], DESC ) ),
+        CALCULATE ( [Gasto Total], ALLSELECTED ( Proveedores ) )
+    )
+DPO = DIVIDE ( [Cuentas por Pagar], [Compras] ) * [Días del Periodo]
+Ahorro vs Precio Objetivo = SUMX ( Compras, ( RELATED ( Precios[Objetivo] ) - Compras[Precio] ) * Compras[Cantidad] )`)}
+  ${best('', `<ul><li>Aging de <b>cuentas por pagar</b>: mismo patrón que el <span class="pill" data-go="casos-tesoreria">aging de cobranzas</span>, pero por fecha de vencimiento de pago.</li><li>Concentración alta de proveedores = riesgo de suministro; cruza con criticidad.</li><li>Spend por categoría + proveedor revela compras fragmentadas que podrían negociarse en bloque.</li></ul>`)}
+  ${warn('DPO demasiado alto puede ser mala señal', `<p>Estirar pagos libera caja, pero un DPO excesivo puede indicar problemas de liquidez o dañar la relación con proveedores (perdiendo descuentos por pronto pago). Es un equilibrio, no "cuanto más alto mejor".</p>`)}
+  `
+});
+
+/* ---- Casos: RRHH ---- */
+N({ id:'casos-rrhh', parent:'casos', title:'RRHH / Capital Humano: Headcount, Rotación y Costo Laboral', icon:'🔴',
+  importancia:'★★★★☆', dificultad:'🔴', uso:'RRHH / Control de gestión',
+  deps:['casos','fn-tiempo'], related:['casos-pyl','casos-control'], fns:['calculate','fn-errores','fn-tiempo'],
+  subtitle:'El costo laboral suele ser el mayor OPEX. Headcount, FTE, rotación (turnover), costo por empleado y ausentismo.',
+  html: ()=> `
+  ${why('Las personas son el mayor gasto y el mayor activo', `<p>En servicios, el costo laboral es a menudo el 50-70% del OPEX. Medir dotación, rotación y costo permite planificar y controlar el gasto más grande de la empresa.</p>`)}
+  ${dax(`
+Headcount       = DISTINCTCOUNT ( Empleados[EmpID] )        -- a una fecha (snapshot)
+FTE             = SUM ( Empleados[Jornada] )                 -- equivalentes a tiempo completo
+Altas           = CALCULATE ( COUNTROWS ( Movimientos ), Movimientos[Tipo] = "Alta" )
+Bajas           = CALCULATE ( COUNTROWS ( Movimientos ), Movimientos[Tipo] = "Baja" )
+Headcount Promedio = DIVIDE ( [HC Inicio] + [HC Fin], 2 )
+Rotación (Turnover) = DIVIDE ( [Bajas], [Headcount Promedio] )
+Costo por Empleado  = DIVIDE ( [Costo Laboral], [Headcount Promedio] )
+% Ausentismo        = DIVIDE ( [Horas Ausencia], [Horas Teóricas] )`)}
+  ${warn('Headcount es semi-aditivo (snapshot) ⚠️', `<p>El número de empleados es una <b>foto a una fecha</b>: NO se suma entre meses (12 meses de 100 empleados no son 1.200). Usa el <b>último valor</b> del periodo o el promedio: <code class="inl">CALCULATE(DISTINCTCOUNT(...), LASTDATE(Calendario[Fecha]))</code>. Tratar un snapshot como aditivo es el error clásico de los KPIs de RRHH.</p>`)}
+  ${best('', `<ul><li>Modela una tabla de <b>movimientos</b> (altas/bajas) y una de <b>snapshots</b> mensuales de dotación.</li><li>Rotación, costo por empleado y span of control (empleados por jefe) son los KPIs más pedidos por dirección.</li><li>Conecta el costo laboral con el <span class="pill" data-go="casos-pyl">P&L (OPEX)</span>.</li></ul>`)}
+  `
+});
+
+/* ---- Casos: Ratios financieros ---- */
+N({ id:'casos-ratios', parent:'casos', title:'Ratios Financieros: Liquidez, Endeudamiento y Rentabilidad', icon:'🔴',
+  importancia:'★★★★☆', dificultad:'🔴', uso:'Análisis financiero / Directorio',
+  deps:['casos','fn-errores'], related:['casos-pyl','casos-cashflow'], fns:['calculate','fn-errores'],
+  subtitle:'Los indicadores que resumen la salud financiera en una página: liquidez, solvencia/endeudamiento y rentabilidad (ROE, ROA, ROIC, márgenes).',
+  html: ()=> `
+  ${why('Un puñado de ratios cuenta toda la historia', `<p>Bancos, directorios e inversores leen la empresa a través de ratios estándar. Tenerlos automatizados en un tablero es lo que se espera de un analista financiero senior.</p>`)}
+  <h3>Liquidez (¿puedo pagar lo de corto plazo?)</h3>
+  ${dax(`
+Liquidez Corriente = DIVIDE ( [Activo Corriente], [Pasivo Corriente] )      -- > 1 sano
+Prueba Ácida       = DIVIDE ( [Activo Corriente] - [Inventario], [Pasivo Corriente] )`)}
+  <h3>Endeudamiento / solvencia</h3>
+  ${dax(`
+Ratio Endeudamiento = DIVIDE ( [Pasivo Total], [Activo Total] )
+Deuda / EBITDA      = DIVIDE ( [Deuda Financiera Neta], [EBITDA] )           -- apalancamiento
+Cobertura Intereses = DIVIDE ( [EBIT], [Gastos Financieros] )`)}
+  <h3>Rentabilidad</h3>
+  ${dax(`
+Margen Neto = DIVIDE ( [Utilidad Neta], [Ventas] )
+ROE  = DIVIDE ( [Utilidad Neta], [Patrimonio Promedio] )       -- retorno al accionista
+ROA  = DIVIDE ( [Utilidad Neta], [Activo Promedio] )
+ROIC = DIVIDE ( [NOPAT], [Capital Invertido] )`)}
+  ${tbl(['Ratio','Pregunta que responde','Lectura general'],[
+    ['Liquidez corriente','¿Cubro mis deudas a corto?','> 1 (depende del sector)'],
+    ['Deuda / EBITDA','¿Cuántos años de EBITDA debo?','Cuanto menor, menos apalancado'],
+    ['ROE','¿Cuánto gano por cada $ del accionista?','Mayor es mejor'],
+    ['Margen neto','¿Qué queda de cada $ vendido?','Mayor es mejor'],
+  ])}
+  ${best('', `<ul><li>Usa <code class="inl">DIVIDE</code> siempre (evita /0 cuando falta un denominador).</li><li>Muestra cada ratio con su <b>tendencia</b> y vs <b>año anterior</b>; un ratio aislado dice poco.</li><li>Promedios de balance (patrimonio, activo): <code class="inl">(inicial+final)/2</code> con inteligencia de tiempo.</li></ul>`)}
+  `
+});
+
 /* ===================== CATEGORÍA: POWER QUERY ===================== */
 N({ id:'powerquery', parent:null, title:'Power Query / M', icon:'🔌',
   importancia:'★★★★★', dificultad:'🟢→🔴', uso:'Preparar los datos (el "antes")',
@@ -3455,6 +3587,202 @@ N({ id:'pq-casos-fin', parent:'powerquery', title:'Casos Financieros: Consolidar
 
   ${err('No quitar los subtotales', `<p>Si dejas las filas de "Subtotal" y luego sumas en DAX, <b>duplicas</b> los importes (sumas el detalle y el subtotal). Quitarlas en Power Query es obligatorio para que los totales cuadren.</p>`)}
   <p>Ambas tablas quedan listas para el mundo <span class="pill" data-go="powerbi">Power BI / DAX</span>: relación con el <span class="pill" data-go="modelado">Calendario</span> y a medir aging, DSO, OPEX o lo que necesites.</p>
+  `
+});
+
+/* ===================== CATEGORÍA: VISUALIZACIÓN ===================== */
+N({ id:'dashboards', parent:null, title:'Visualización y Dashboards Ejecutivos', icon:'📈',
+  importancia:'★★★★★', dificultad:'🟡→🔴', uso:'Comunicar y decidir',
+  subtitle:'El último paso del flujo: convertir el modelo y las medidas en un tablero que un ejecutivo entienda en segundos. Principios de diseño, qué visual usar para cada pregunta, anatomía de un dashboard financiero y buenas prácticas.',
+  related:['powerbi','casos'],
+  html: ()=> `
+  ${why('Un buen número mal mostrado no se usa', `<p>Has preparado los datos (Power Query) y construido las medidas (DAX). Pero si el informe es confuso, nadie tomará decisiones con él. La visualización es donde el análisis se convierte en <b>acción</b>. Diseñar para un ejecutivo es una habilidad propia: claridad &gt; vistosidad.</p>`)}
+  ${analogy('El dashboard como el tablero de un auto', `<p>El tablero de un coche no te muestra <i>todo</i> sobre el motor: te muestra lo justo para <b>conducir y decidir</b> (velocidad, combustible, alertas), de un vistazo. Un dashboard ejecutivo es igual: pocos KPIs claros, alertas visibles y la posibilidad de "abrir el capó" (drill) solo si hace falta.</p>`)}
+  <p>Explora los nodos de esta categoría:</p>
+  `
+});
+
+/* ---- Dash: principios ---- */
+N({ id:'dash-principios', parent:'dashboards', title:'Principios de Diseño de Dashboards', icon:'🟡⭐',
+  importancia:'★★★★★', dificultad:'🟡 Importante', uso:'Todo informe',
+  deps:['dashboards'], related:['dash-visuales','dash-ejecutivo'], fns:[],
+  subtitle:'Las reglas de oro para que un tablero se entienda en 5 segundos: jerarquía visual, foco, contexto y storytelling con datos.',
+  html: ()=> `
+  ${best('Los principios que más impacto tienen', `<ol>
+    <li><b>La regla de los 5 segundos:</b> el usuario debe captar el mensaje principal casi al instante. Si tarda más, hay ruido que quitar.</li>
+    <li><b>Jerarquía visual:</b> lo más importante, arriba a la izquierda y más grande (leemos en "Z"/"F"). KPIs principales arriba, detalle abajo.</li>
+    <li><b>Menos es más:</b> cada visual debe ganarse su lugar. 4-6 visuales enfocados &gt; 15 amontonados.</li>
+    <li><b>Contexto siempre:</b> un número solo no dice nada. Acompáñalo de <b>comparación</b> (vs presupuesto, vs año anterior) y <b>tendencia</b>.</li>
+    <li><b>Storytelling:</b> ordena los visuales como una narrativa: qué pasó → por qué → qué hacer. De lo general al detalle.</li>
+    <li><b>Consistencia:</b> mismos colores para los mismos conceptos en todo el informe (p. ej. Real azul, Presupuesto gris).</li>
+  </ol>`)}
+  ${analogy('El semáforo del ejecutivo', `<p>Un ejecutivo no quiere leer una tabla de 200 filas: quiere saber <b>qué está rojo</b>. Usa color con significado (verde/ámbar/rojo) y reserva el detalle para quien quiera profundizar. El color es información, no decoración.</p>`)}
+  ${err('Los pecados capitales', `<ul>
+    <li>Gráficos de torta con 10 porciones (ilegibles).</li>
+    <li>Ejes que no empiezan en cero y exageran diferencias.</li>
+    <li>Demasiados colores sin significado.</li>
+    <li>Decimales innecesarios (1.234.567,89 → 1,2 M).</li>
+  </ul>`)}
+  `
+});
+
+/* ---- Dash: qué visual usar ---- */
+N({ id:'dash-visuales', parent:'dashboards', title:'Qué Visual Usar para Cada Pregunta', icon:'🟡',
+  importancia:'★★★★☆', dificultad:'🟡 Importante', uso:'Al elegir gráficos',
+  deps:['dash-principios'], related:['dash-ejecutivo'], fns:[],
+  subtitle:'La elección del gráfico no es estética: cada pregunta de negocio tiene un visual óptimo. Tabla de decisión rápida.',
+  html: ()=> `
+  ${why('El visual correcto hace obvio el mensaje', `<p>Comparar, ver evolución, mostrar composición o relación: cada intención pide un tipo de gráfico distinto. Elegir mal entierra el mensaje; elegir bien lo hace evidente sin explicación.</p>`)}
+  ${tbl(['Tu pregunta','Visual recomendado','Evita'],[
+    ['¿Cuánto vs cuánto? (comparar categorías)','Barras / columnas','Torta con muchas porciones'],
+    ['¿Cómo evoluciona en el tiempo?','Líneas (o columnas si pocos periodos)','Barras 3D'],
+    ['Un KPI clave + su estado','Tarjeta + indicador / KPI visual','Medidor exagerado'],
+    ['¿De qué se compone el total?','Barras apiladas / treemap','Torta si son &gt;5 partes'],
+    ['Real vs Presupuesto vs Año Ant.','Columnas agrupadas o gráfico de cascada','Tablas enormes'],
+    ['Desglose por dos dimensiones','Matriz','Muchos gráficos separados'],
+    ['¿Qué aporta cada paso al resultado?','Cascada (waterfall)','Líneas'],
+    ['Relación entre dos variables','Dispersión (scatter)','Barras'],
+    ['Datos geográficos','Mapa','Tabla de ciudades'],
+  ])}
+  ${best('Para finanzas en concreto', `<ul>
+    <li><b>Cascada (waterfall):</b> el rey del análisis financiero — puente de EBITDA, bridge presupuesto→real, descomposición de variaciones.</li>
+    <li><b>Líneas con banda:</b> real vs rango optimista/pesimista del <span class="pill" data-go="sim-7">forecast</span>.</li>
+    <li><b>Matriz</b> para P&L y para vistas mes×cliente (ver <span class="pill" data-go="sim-6">Escenario 6</span>).</li>
+    <li><b>Tarjetas KPI</b> con variación vs presupuesto y mini-tendencia (sparkline).</li>
+  </ul>`)}
+  ${err('La torta (pie) casi nunca es la mejor opción', `<p>El ojo compara mal ángulos. Para "composición", unas <b>barras</b> ordenadas suelen ser más claras. Reserva la torta para 2-3 partes muy distintas, y nunca para series temporales.</p>`)}
+  `
+});
+
+/* ---- Dash: anatomía ejecutivo ---- */
+N({ id:'dash-ejecutivo', parent:'dashboards', title:'Anatomía de un Dashboard Ejecutivo Financiero', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Comité de dirección',
+  deps:['dash-principios','dash-visuales'], related:['casos-pyl','sim-8'], fns:[],
+  subtitle:'Cómo se estructura, de arriba a abajo, el tablero que ve un CFO: KPIs, tendencias, variaciones y drill.',
+  html: ()=> `
+  ${diagram(`
+  ┌──────────────────────────────────────────────────────────────────┐
+  │  TÍTULO + filtros globales (Periodo · Escenario · Unidad)          │
+  ├──────────────────────────────────────────────────────────────────┤
+  │  FILA 1 · KPIs CLAVE (tarjetas con valor, vs Ppto y vs AA)         │
+  │  [ Ventas ]  [ EBITDA ]  [ % Margen ]  [ Caja ]  [ Desvío Ppto ]   │
+  ├──────────────────────────────────────────────────────────────────┤
+  │  FILA 2 · TENDENCIA            │  PUENTE / VARIACIÓN               │
+  │  (línea: real vs ppto vs AA)   │  (cascada: de Ppto a Real)        │
+  ├──────────────────────────────────────────────────────────────────┤
+  │  FILA 3 · DETALLE (matriz P&L o por unidad/cliente, con semáforos) │
+  └──────────────────────────────────────────────────────────────────┘
+   Arriba: el "qué" (titulares). Abajo: el "por qué" (detalle/drill).`)}
+  ${best('Capas de información (de general a detalle)', `<ol>
+    <li><b>Titulares (arriba):</b> 4-6 KPIs con su valor, variación vs presupuesto y vs año anterior, y un color de estado.</li>
+    <li><b>Tendencia y causa (medio):</b> evolución temporal + una <b>cascada</b> que explica el desvío.</li>
+    <li><b>Detalle (abajo):</b> matriz con semáforos para identificar <i>dónde</i> está el problema.</li>
+    <li><b>Drill / tooltips:</b> el detalle fino se esconde en drill-through y tooltips, no satura la vista principal.</li>
+  </ol>`)}
+  ${best('Lo que un ejecutivo espera ver', `<ul>
+    <li><b>Variaciones, no solo valores absolutos:</b> "EBITDA 1,2 M, +70 vs Ppto" dice más que "EBITDA 1,2 M".</li>
+    <li>Un <span class="pill" data-go="sim-7">selector de escenario</span> y de periodo para explorar sin pedir un informe nuevo.</li>
+    <li>Conexión directa con los <span class="pill" data-go="sim-8">simuladores</span>: "¿y si...?".</li>
+  </ul>`)}
+  ${warn('Un dashboard no es un informe de 40 páginas', `<p>Si necesitas explicar el tablero, está mal diseñado. Una página, los KPIs que importan, y el detalle a un clic de distancia. La tentación de "ponerlo todo" es el enemigo nº1.</p>`)}
+  `
+});
+
+/* ---- Dash: buenas prácticas ---- */
+N({ id:'dash-buenas', parent:'dashboards', title:'Buenas Prácticas y Performance Visual', icon:'🟡',
+  importancia:'★★★★☆', dificultad:'🟡 Importante', uso:'Pulir el informe',
+  deps:['dash-principios'], related:['performance'], fns:[],
+  subtitle:'Detalles que separan un informe amateur de uno profesional: color, formato, accesibilidad y velocidad.',
+  html: ()=> `
+  ${best('Color y formato', `<ul>
+    <li><b>Paleta limitada y con significado:</b> 1-2 colores de marca + gris para lo neutro + verde/rojo solo para estados.</li>
+    <li><b>Formato de número:</b> usa miles/millones (1,2 M), pocos decimales, símbolo de moneda. Define formatos en las medidas.</li>
+    <li><b>Alineación:</b> números a la derecha, texto a la izquierda; alinea visuales en una grilla.</li>
+    <li><b>Títulos que comunican:</b> "Ventas cayendo en Norte" &gt; "Gráfico de ventas".</li>
+  </ul>`)}
+  ${best('Accesibilidad', `<ul>
+    <li>No uses solo color para informar (un daltónico no distingue rojo/verde): añade iconos o texto.</li>
+    <li>Contraste suficiente entre texto y fondo.</li>
+  </ul>`)}
+  ${best('Performance del informe', `<ul>
+    <li><b>Menos visuales por página</b> = carga más rápida (cada visual es una o más consultas DAX).</li>
+    <li>Evita visuales que traen miles de filas (tablas gigantes); agrega y deja el detalle en drill.</li>
+    <li>Reduce el modelo y las medidas costosas (ver <span class="pill" data-go="performance">Performance</span>).</li>
+    <li>Usa el <b>Analizador de rendimiento</b> de Power BI para ver qué visual tarda.</li>
+  </ul>`)}
+  ${err('Errores que delatan a un principiante', `<ul>
+    <li>Fondos de colores chillones y degradados.</li>
+    <li>Cada visual con una fuente y tamaño distintos.</li>
+    <li>Mostrar 1.234.567,8901 en vez de 1,2 M.</li>
+    <li>20 visuales en una página que tarda 15 segundos en cargar.</li>
+  </ul>`)}
+  `
+});
+
+/* ===================== GLOSARIO FINANCIERO ===================== */
+N({ id:'glosario', parent:null, title:'Glosario Financiero', icon:'📖', wide:true,
+  importancia:'★★★★☆', dificultad:'🟢 Referencia', uso:'Consulta rápida',
+  subtitle:'Diccionario transversal de los términos financieros y de negocio que aparecen en todo el Atlas: qué significan, cómo se miden y dónde verlos en el artefacto.',
+  related:['casos','casos-pyl'],
+  html: ()=> `
+  ${why('Hablar el idioma del negocio', `<p>Un analista de BI senior no solo sabe DAX: <b>entiende el negocio</b>. Este glosario define los términos que usa la dirección financiera, para que cada medida que construyas tenga sentido de negocio, no solo técnico.</p>`)}
+
+  <h3>Cuenta de resultados (P&L)</h3>
+  ${tbl(['Término','Qué es','Cómo se mide / nota'],[
+    ['<b>Ingresos / Facturación</b>','Ventas del periodo','SUM de ventas; base del P&L'],
+    ['<b>COGS</b>','Costo de lo vendido','Costo directo de los productos/servicios vendidos'],
+    ['<b>Margen Bruto</b>','Ingresos − COGS','Lo que queda para cubrir gastos'],
+    ['<b>OPEX</b>','Gastos operativos','Estructura, marketing, etc. (gasto del periodo)'],
+    ['<b>CAPEX</b>','Inversión en activos','No es gasto del periodo; impacta vía amortización'],
+    ['<b>EBITDA</b>','Resultado operativo antes de intereses, impuestos, D&A','Margen Bruto − OPEX; proxy de generación de caja operativa'],
+    ['<b>EBIT</b>','EBITDA − Depreciación y Amortización','Resultado operativo'],
+    ['<b>D&A</b>','Depreciación y amortización','Reparto contable del CAPEX en el tiempo'],
+    ['<b>Utilidad Neta</b>','Resultado final tras impuestos y financieros','La "última línea"'],
+  ])}
+
+  <h3>Tesorería y circulante</h3>
+  ${tbl(['Término','Qué es','Cómo se mide'],[
+    ['<b>Capital de Trabajo</b>','Caja atrapada en la operación','CxC + Inventario − CxP'],
+    ['<b>DSO</b>','Días promedio de cobro','CxC / Ventas × días'],
+    ['<b>DPO</b>','Días promedio de pago','CxP / Compras × días'],
+    ['<b>DIO</b>','Días promedio de inventario','Inventario / COGS × días'],
+    ['<b>CCC</b>','Ciclo de conversión de efectivo','DSO + DIO − DPO (menor = mejor)'],
+    ['<b>Aging</b>','Antigüedad de la deuda','Tramos de días vencidos'],
+    ['<b>Provisión</b>','Reserva por deuda incobrable o riesgo','% del saldo por tramo de riesgo'],
+    ['<b>FCF</b>','Flujo de caja libre','Flujo operativo − CAPEX'],
+  ])}
+
+  <h3>Planeamiento y control</h3>
+  ${tbl(['Término','Qué es','Nota'],[
+    ['<b>Presupuesto</b>','Plan financiero aprobado del año','La referencia "objetivo"'],
+    ['<b>Forecast</b>','Estimación actualizada de cómo cerrará','Se revisa durante el año'],
+    ['<b>Variación / Desvío</b>','Diferencia Real vs Ppto/Forecast','Cuidado con el signo (ingreso vs gasto)'],
+    ['<b>Run rate</b>','Anualización del ritmo actual','Real del periodo × factor'],
+    ['<b>YTD / YoY / MoM</b>','Acumulado año / vs año ant. / vs mes ant.','Inteligencia de tiempo en DAX'],
+    ['<b>Rolling forecast</b>','Pronóstico móvil de N meses','Real hasta hoy + plan después'],
+  ])}
+
+  <h3>Comercial y rentabilidad</h3>
+  ${tbl(['Término','Qué es','Nota'],[
+    ['<b>Ticket medio</b>','Venta media por transacción','Ventas / nº facturas'],
+    ['<b>Mix</b>','Composición de las ventas','Por producto, canal, cliente'],
+    ['<b>Pareto / ABC</b>','Concentración (80/20)','Clasificar clientes/productos por aporte'],
+    ['<b>Churn</b>','Tasa de pérdida de clientes','Bajas / base inicial'],
+    ['<b>Retención</b>','% de clientes que siguen','1 − churn'],
+    ['<b>LTV</b>','Valor de vida del cliente','Margen × duración esperada'],
+    ['<b>CAC</b>','Costo de adquirir un cliente','Gasto comercial / nuevos clientes'],
+    ['<b>ARPU</b>','Ingreso medio por cliente/usuario','Ingresos / nº clientes'],
+  ])}
+
+  <h3>Ratios y RRHH</h3>
+  ${tbl(['Término','Qué es','Cómo se mide'],[
+    ['<b>Liquidez corriente</b>','Capacidad de pago a corto','Activo corriente / Pasivo corriente'],
+    ['<b>ROE / ROA / ROIC</b>','Rentabilidad sobre patrimonio / activo / capital','Utilidad / base correspondiente'],
+    ['<b>Deuda / EBITDA</b>','Apalancamiento','Deuda neta / EBITDA'],
+    ['<b>Headcount / FTE</b>','Dotación / equivalentes a tiempo completo','Snapshot (no aditivo entre meses)'],
+    ['<b>Rotación (turnover)</b>','% de salidas de personal','Bajas / headcount promedio'],
+  ])}
+  <p>Cada término aparece aplicado en los <span class="pill" data-go="casos">Casos Reales de Negocio</span> con su medida en DAX.</p>
   `
 });
 
