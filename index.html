@@ -1538,6 +1538,556 @@ Promedio Móvil 12M = DIVIDE ( [Ventas Móvil 12M], 12 )`)}
   `
 });
 
+/* ===================== SIMULADORES ===================== */
+N({ id:'simuladores', parent:null, title:'Simuladores Corporativos y Slicers Avanzados', icon:'🎛️⭐',
+  importancia:'★★★★★ (máxima)', dificultad:'🔴 Avanzado', uso:'Planeamiento / Forecast / Comercial',
+  subtitle:'Cómo se construyen los simuladores reales de Planeamiento Financiero, Forecast, Presupuesto e Inteligencia Comercial: tablas desconectadas, What-If, SELECTEDVALUE y CALCULATE trabajando juntos. Desde cero.',
+  deps:['calculate','fn-tablas'], related:['ctx-filtro','fn-tiempo'], fns:['calculate','fn-tablas'],
+  html: ()=> `
+  ${why('Es lo que pide la dirección, y casi nadie sabe hacerlo bien', `<p>"¿Qué pasa con el EBITDA si subimos ventas un 10%?" Esa pregunta convierte un informe estático en una <b>herramienta de decisión</b>. Los simuladores son la habilidad más valorada (y peor entendida) en BI corporativo. El truco común a todos: una <b>tabla desconectada</b> cuyo valor seleccionado se lee con <code class="inl">SELECTEDVALUE</code> y se inyecta en el cálculo. Aquí lo construimos paso a paso, 9 escenarios.</p>`)}
+
+  <h3>El concepto central: la tabla desconectada ⭐</h3>
+  ${analogy('El mando a distancia', `<p>Una <b>tabla desconectada</b> (sin relación con el modelo) es como un <b>mando a distancia</b>: sus botones (los valores del slicer) no están "cableados" a los datos. No filtran nada por sí solos. Es tu medida la que <b>lee qué botón pulsaste</b> (<code class="inl">SELECTEDVALUE</code>) y decide qué hacer con esa señal. Si la tabla estuviera relacionada, filtraría datos en vez de darte un parámetro libre.</p>`)}
+  ${engine('Por qué desconectada y no relacionada', `<ul>
+    <li>Una tabla <b>relacionada</b> filtra los hechos: seleccionar "+10%" intentaría mostrar solo filas "+10%" (que no existen) → BLANK.</li>
+    <li>Una tabla <b>desconectada</b> no filtra nada: solo expone un valor que tú lees y usas como multiplicador/parámetro. El cálculo lo haces tú en DAX.</li>
+  </ul>`)}
+
+  <h3>What-If Parameters: el atajo de Power BI</h3>
+  <p>Modelado de datos → "Nuevo parámetro" genera automáticamente: (1) una tabla desconectada con <code class="inl">GENERATESERIES</code>, (2) una medida <code class="inl">[Valor] = SELECTEDVALUE(Tabla[Valor])</code>, y (3) un slicer. Es exactamente el patrón "tabla desconectada + SELECTEDVALUE", empaquetado.</p>
+  ${dax(`
+-- Lo que genera un What-If de -30% a +30% en pasos de 5%
+Ajuste = GENERATESERIES ( -0.30, 0.30, 0.05 )
+Ajuste Valor = SELECTEDVALUE ( Ajuste[Ajuste], 0 )   -- 0 = sin ajuste por defecto`)}
+
+  <p>Los 9 escenarios van de lo simple (ajuste global) a lo complejo (global + individual, matrices, forecast, KPIs y el funcionamiento interno completo). Hazlos en orden:</p>
+  `
+});
+
+/* ---- Escenario 1 ---- */
+N({ id:'sim-1', parent:'simuladores', title:'Escenario 1 · Ajuste Global de Ventas', icon:'🟢',
+  importancia:'★★★★☆', dificultad:'🟢 Punto de partida', uso:'Base de todo simulador',
+  deps:['simuladores'], related:['sim-2','fn-tablas'], fns:['fn-tablas','calculate'],
+  subtitle:'Un slicer de porcentaje (+5%…−30%) que modifica automáticamente la venta proyectada de TODOS los clientes a la vez.',
+  html: ()=> `
+  <h3>El problema</h3>
+  <p>Tabla <code class="inl">Proyeccion</code>: <code class="inl">Cliente | VentaProyectada</code>. Un slicer con +5%, +10%, +20%, +30%, −5%, −10%, −20%, −30%. Al elegir uno, <b>todas</b> las ventas proyectadas se recalculan.</p>
+
+  <h3>Paso 1 · Crear la tabla desconectada de ajustes</h3>
+  ${dax(`
+Ajustes =
+DATATABLE (
+    "Etiqueta", STRING,
+    "Factor",   DOUBLE,
+    {
+        { "-30%", 0.70 }, { "-20%", 0.80 }, { "-10%", 0.90 }, { "-5%", 0.95 },
+        { "+5%", 1.05 }, { "+10%", 1.10 }, { "+20%", 1.20 }, { "+30%", 1.30 }
+    }
+)`)}
+  ${warn('NO la relaciones con nada', `<p><code class="inl">Ajustes</code> queda <b>flotando</b>, sin relación. Si la conectas, romperás el simulador. El slicer usará <code class="inl">Ajustes[Etiqueta]</code>; el cálculo usará <code class="inl">Ajustes[Factor]</code>.</p>`)}
+
+  <h3>Paso 2 · Leer la selección</h3>
+  ${dax(`
+Factor Ajuste = SELECTEDVALUE ( Ajustes[Factor], 1 )   -- 1 = sin cambio si no se elige nada`)}
+
+  <h3>Paso 3 · La medida del simulador</h3>
+  ${dax(`
+Venta Ajustada =
+SUMX (
+    VALUES ( Proyeccion[Cliente] ),
+    CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) ) * [Factor Ajuste]
+)`)}
+  <p>O, si solo necesitas el total agregado, la versión simple:</p>
+  ${dax(`Venta Ajustada (simple) = SUM ( Proyeccion[VentaProyectada] ) * [Factor Ajuste]`)}
+
+  ${engine('Qué ocurre en cada paso al elegir "+10%"', `<ol>
+    <li>El slicer pone en el contexto <code class="inl">Ajustes[Etiqueta]="+10%"</code>. Como la tabla está desconectada, <b>esto NO filtra Proyeccion</b>.</li>
+    <li><code class="inl">SELECTEDVALUE(Ajustes[Factor],1)</code> ve que hay un único valor visible → devuelve <b>1,10</b>.</li>
+    <li><code class="inl">SUM(Proyeccion[VentaProyectada])</code> se evalúa con el contexto normal (todos los clientes, o el que filtren otros slicers) → la suma base.</li>
+    <li>Se multiplica por 1,10 → todas las ventas suben un 10%. En la versión SUMX, esto pasa cliente a cliente y luego se acumula (idéntico resultado para un ajuste uniforme, pero preparado para el Escenario 4).</li>
+  </ol>`)}
+
+  <h3>Por qué funciona "para todos" automáticamente</h3>
+  <p>No hay nada que diga "cliente A" o "cliente B": el factor multiplica la base <b>sea cual sea</b> el conjunto de clientes en el contexto. En la fila de cada cliente de una matriz, la base es la de ese cliente; en el total, es el total. El mismo factor aplica a todos. <b>Ese es el sentido de "ajuste global".</b></p>
+
+  ${err('Olvidar el valor por defecto en SELECTEDVALUE', `<p>Sin el segundo argumento (1), cuando no hay selección o hay varias, <code class="inl">SELECTEDVALUE</code> devuelve BLANK y <code class="inl">base * BLANK = BLANK</code>: el informe se vacía. Pon siempre el default <b>1</b> (neutro multiplicativo).</p>`)}
+  ${best('', `<p>Guarda el factor en una medida (<code class="inl">[Factor Ajuste]</code>) y reúsala en todas las medidas dependientes (ventas, margen, EBITDA). Cambias la lógica del slicer en un solo lugar.</p>`)}
+  ${exer('', `<p>Base total = 1.000. Eliges "−20%". ¿Qué muestra <code class="inl">[Venta Ajustada]</code> en el total y en un cliente cuya base es 250?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Solución</summary><p>Factor = 0,80. Total: 1.000×0,80 = <b>800</b>. Cliente: 250×0,80 = <b>200</b>. El mismo factor, distinta base por contexto.</p></details>`)}
+  `
+});
+
+/* ---- Escenario 2 ---- */
+N({ id:'sim-2', parent:'simuladores', title:'Escenario 2 · Ajuste de un Único Cliente', icon:'🟡⚠️',
+  importancia:'★★★★☆', dificultad:'🟡 Salto conceptual', uso:'Ajustes puntuales',
+  deps:['sim-1','transicion'], related:['sim-3','ctx-fila'], fns:['fn-tablas','calculate'],
+  subtitle:'Cliente A → +20%; el resto sin cambios. El reto: detectar en qué fila/cliente estás y aplicar el ajuste solo ahí.',
+  html: ()=> `
+  <h3>El problema y por qué es más difícil</h3>
+  <p>Ahora el ajuste NO es uniforme: solo Cliente A sube 20%, B y C quedan igual. La medida debe, <b>fila a fila</b>, preguntarse "¿soy el cliente objetivo? si sí, ajusto; si no, dejo la base".</p>
+
+  <h3>Paso 1 · Slicers desconectados: cliente objetivo + factor</h3>
+  ${dax(`
+-- Slicer 1: qué cliente ajustar (tabla desconectada con la lista de clientes)
+ClienteObjetivo = DISTINCT ( Proyeccion[Cliente] )   -- copia desconectada (sin relación)
+-- Slicer 2: el factor → reutilizamos la tabla Ajustes del Escenario 1`)}
+  ${warn('Copia desconectada, no la dimensión real', `<p>Necesitas una <b>segunda</b> tabla de clientes <b>desconectada</b> para el slicer objetivo. Si usaras la dimensión real conectada, al elegir "A" filtrarías el modelo a A y perderías B y C de la vista. La copia desconectada solo te dice "a quién apuntar", sin filtrar.</p>`)}
+
+  <h3>Paso 2 · La medida: detectar el contexto de columna</h3>
+  ${dax(`
+Venta Ajuste Individual =
+VAR Objetivo   = SELECTEDVALUE ( ClienteObjetivo[Cliente] )   -- a quién ajustar
+VAR Factor     = SELECTEDVALUE ( Ajustes[Factor], 1 )         -- cuánto
+VAR ClienteFila = SELECTEDVALUE ( Proyeccion[Cliente] )       -- en qué fila estoy
+VAR Base       = SUM ( Proyeccion[VentaProyectada] )
+RETURN
+    IF (
+        ClienteFila = Objetivo,   -- ¿esta fila es el cliente objetivo?
+        Base * Factor,            -- sí → ajusta
+        Base                      -- no → base intacta
+    )`)}
+
+  ${engine('Cómo identifica Power BI el cliente de cada celda', `<ol>
+    <li>En la fila "Cliente A" de la matriz, el contexto de filtro incluye <code class="inl">Proyeccion[Cliente]="A"</code>.</li>
+    <li><code class="inl">SELECTEDVALUE(Proyeccion[Cliente])</code> lee ese contexto → <code class="inl">ClienteFila = "A"</code>.</li>
+    <li><code class="inl">Objetivo</code> viene del slicer desconectado → digamos "A".</li>
+    <li>Como <code class="inl">"A" = "A"</code> → aplica <code class="inl">Base * Factor</code>. En la fila B, <code class="inl">ClienteFila="B" ≠ "A"</code> → devuelve Base. ✔</li>
+  </ol>
+  <p>La clave es que <code class="inl">SELECTEDVALUE(Proyeccion[Cliente])</code> "lee la fila" porque cada celda de la matriz <b>impone su propio cliente</b> en el contexto de filtro.</p>`)}
+
+  <h3>El problema del Total ⚠️</h3>
+  ${warn('En el total, ClienteFila no es único', `<p>En la fila <b>Total</b> hay varios clientes visibles → <code class="inl">SELECTEDVALUE(Proyeccion[Cliente])</code> devuelve BLANK → nunca coincide con Objetivo → el total NO incluye el ajuste. <b>El total quedaría mal.</b> Solución: calcular el total como suma de las filas ajustadas con SUMX:</p>
+  ${dax(`
+Venta Ajuste Individual (total correcto) =
+VAR Objetivo = SELECTEDVALUE ( ClienteObjetivo[Cliente] )
+VAR Factor   = SELECTEDVALUE ( Ajustes[Factor], 1 )
+RETURN
+    SUMX (
+        VALUES ( Proyeccion[Cliente] ),
+        VAR ClienteFila = SELECTEDVALUE ( Proyeccion[Cliente] )
+        VAR Base = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
+        RETURN IF ( ClienteFila = Objetivo, Base * Factor, Base )
+    )`)}
+  <p>Ahora SUMX recorre cliente a cliente (incluso en el total), aplica el IF por cliente y suma. El total cuadra con las filas.</p>`)}
+
+  ${err('Usar la dimensión conectada para el slicer objetivo', `<p>Al seleccionar el cliente en un slicer <i>conectado</i>, filtras el modelo y desaparecen los demás clientes. Por eso el slicer objetivo <b>debe</b> salir de una tabla desconectada.</p>`)}
+  ${best('Patrón senior', `<p>Captura con <code class="inl">VAR</code> las tres señales (objetivo, factor, fila), compáralas con <code class="inl">IF</code>, y envuelve en <code class="inl">SUMX(VALUES(dim))</code> para que el total funcione. Esta estructura se reutiliza en los escenarios 3, 4 y 5.</p>`)}
+  `
+});
+
+/* ---- Escenario 3 ---- */
+N({ id:'sim-3', parent:'simuladores', title:'Escenario 3 · Ajuste de Varios Clientes', icon:'🔴',
+  importancia:'★★★★☆', dificultad:'🔴 Avanzado', uso:'Planes comerciales por cuenta',
+  deps:['sim-2'], related:['sim-4','modelado'], fns:['fn-tablas','calculate'],
+  subtitle:'Cliente A → +10%, B → +25%, C → −15%. Cada cliente responde solo a su propio ajuste. Aquí cambia la arquitectura: parámetro por cliente.',
+  html: ()=> `
+  <h3>Por qué el enfoque anterior no escala</h3>
+  <p>Un slicer "un cliente + un factor" no sirve si quieres ajustes <b>distintos y simultáneos</b> por cliente. Necesitas guardar un factor <b>por cliente</b>. Dos arquitecturas posibles:</p>
+
+  <h3>Arquitectura A · Tabla de parámetros por cliente (recomendada)</h3>
+  <p>Una tabla <b>relacionada</b> con la dimensión Cliente que contiene el factor de cada uno. El usuario la edita (o se alimenta de un formulario / What-If por cliente):</p>
+  ${dax(`
+-- AjustesCliente:  Cliente | Factor   (relacionada 1:1 o 1:* con la dim Cliente)
+Venta Ajustada Multi =
+SUMX (
+    VALUES ( Proyeccion[Cliente] ),
+    VAR Base   = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
+    VAR Factor = CALCULATE ( SELECTEDVALUE ( AjustesCliente[Factor], 1 ) )
+    RETURN Base * Factor
+)`)}
+  ${engine('', `<ol>
+    <li>SUMX itera cliente a cliente sobre <code class="inl">VALUES(Proyeccion[Cliente])</code>.</li>
+    <li>En la iteración de "A", la transición filtra <code class="inl">AjustesCliente</code> a la fila de A → <code class="inl">Factor=1,10</code>.</li>
+    <li>Base de A × 1,10. En "B" → 1,25. En "C" → 0,85. Cada uno con el suyo.</li>
+    <li>SUMX acumula. El total refleja todos los ajustes individuales correctamente.</li>
+  </ol>`)}
+
+  <h3>Arquitectura B · Tablas auxiliares + What-If por cliente</h3>
+  <p>Cuando los ajustes deben ser interactivos con slicers (no una tabla fija), se usa un patrón de <b>parámetros desconectados con campo por cliente</b> o varios What-If. Es más frágil y se reserva para pocos clientes; con muchos, la tabla de parámetros (A) es lo correcto.</p>
+
+  ${tbl(['Criterio','A · Tabla de parámetros','B · What-If múltiples'],[
+    ['Escalabilidad','Alta (miles de clientes)','Baja (pocos)'],
+    ['Interactividad','Editas la tabla / formulario','Slicers en vivo'],
+    ['Mantenimiento','Centralizado','Se multiplica por cliente'],
+    ['Recomendado','✅ Por defecto','Solo casos puntuales'],
+  ])}
+
+  ${warn('La transición es la que "conecta" cada factor', `<p>El motor de este escenario es la <span class="pill" data-go="transicion">transición de contexto</span>: al iterar por cliente y llamar a una medida/columna de la tabla de factores, cada iteración se filtra a su cliente. Sin transición, todos tomarían el mismo factor.</p>`)}
+  ${best('Escalabilidad y buenas prácticas', `<ul>
+    <li>Modela los factores como una <b>tabla de hechos de escenario</b> (Cliente, Escenario, Factor) relacionada con tus dimensiones: así soportas Base/Optimista/Pesimista sin reescribir medidas.</li>
+    <li>Default 1 en cada <code class="inl">SELECTEDVALUE</code>: un cliente sin factor definido no debe desaparecer ni anularse.</li>
+    <li>Itera siempre sobre la <b>clave</b> del cliente, no sobre la tabla de hechos completa.</li>
+  </ul>`)}
+  ${exer('', `<p>A base 100 (f=1,10), B base 200 (f=1,25), C base 300 (f=0,85). ¿Total ajustado?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Solución</summary><p>110 + 250 + 255 = <b>615</b>. Cada cliente con su factor, SUMX acumula.</p></details>`)}
+  `
+});
+
+/* ---- Escenario 4 ---- */
+N({ id:'sim-4', parent:'simuladores', title:'Escenario 4 · Ajuste Global + Ajuste Individual', icon:'🔴⚠️⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Forecast realista',
+  deps:['sim-3'], related:['sim-7','calc-leer'], fns:['calculate','fn-iteradores'],
+  subtitle:'Global +10% combinado con ajustes por cliente. A → 100×1,10×1,20. La clave: multiplicar factores sin doble conteo.',
+  html: ()=> `
+  <h3>El problema: dos palancas a la vez</h3>
+  <p>Un escenario realista de forecast tiene un <b>supuesto macro</b> (todo el mercado +10%) y <b>ajustes finos por cuenta</b> (A crece más, B decrece). Resultado esperado:</p>
+  ${tbl(['Cliente','Base','× Global','× Individual','Resultado'],[
+    ['A','100','1,10','1,20','100 × 1,10 × 1,20 = <b>132</b>'],
+    ['B','200','1,10','0,90','200 × 1,10 × 0,90 = <b>198</b>'],
+    ['C','300','1,10','1,00','300 × 1,10 × 1,00 = <b>330</b>'],
+  ])}
+
+  <h3>La medida combinada</h3>
+  ${dax(`
+Forecast Combinado =
+VAR FactorGlobal = SELECTEDVALUE ( Ajustes[Factor], 1 )     -- palanca macro
+RETURN
+    SUMX (
+        VALUES ( Proyeccion[Cliente] ),
+        VAR Base       = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
+        VAR FactorIndiv = CALCULATE ( SELECTEDVALUE ( AjustesCliente[Factor], 1 ) )
+        RETURN Base * FactorGlobal * FactorIndiv      -- multiplicación, no suma
+    )`)}
+
+  ${engine('Por qué multiplicar y no sumar los ajustes', `<p>"+10% global y +20% individual" significa aplicar un crecimiento <b>sobre</b> el otro: 1,10 × 1,20 = 1,32 (+32%), no 1,10 + 0,20 = 1,30. Multiplicar modela crecimientos compuestos correctamente. Si el negocio define los ajustes como aditivos, entonces sería <code class="inl">Base * (1 + gGlobal + gIndiv)</code> — pero acláralo con el área de negocio: es una decisión de modelo, no de DAX.</p>`)}
+
+  <h3>Cómo evitar el doble conteo ⚠️</h3>
+  ${err('El error clásico: aplicar el global dos veces', `<p>Si calculas <code class="inl">[Venta Ajustada Global] + [Venta Ajustada Individual]</code> por separado y los sumas, el componente base entra <b>dos veces</b>. La forma correcta es <b>una sola medida</b> que multiplica ambos factores sobre <b>una sola base</b>, dentro del mismo SUMX. Nunca sumes dos simuladores que comparten la misma base.</p>`)}
+  ${warn('FactorGlobal va FUERA del SUMX', `<p><code class="inl">FactorGlobal</code> se calcula una vez (es único para todos). <code class="inl">FactorIndiv</code> va <b>dentro</b> del SUMX porque cambia por cliente (necesita transición). Mezclar esto —meter el global dentro y recalcularlo por fila— no rompe el número, pero confunde y resta performance.</p>`)}
+
+  <h3>Depuración: descomponer en VAR para validar</h3>
+  ${dax(`
+Forecast Debug =
+SUMX (
+    VALUES ( Proyeccion[Cliente] ),
+    VAR Base = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
+    VAR fG   = SELECTEDVALUE ( Ajustes[Factor], 1 )
+    VAR fI   = CALCULATE ( SELECTEDVALUE ( AjustesCliente[Factor], 1 ) )
+    -- RETURN Base   -- ¿la base por cliente es correcta?
+    -- RETURN fI     -- ¿cada cliente toma su factor?
+    RETURN Base * fG * fI
+)`)}
+  <p>Cambia el RETURN para inspeccionar cada pieza en una matriz por cliente. Ver técnicas en <span class="pill" data-go="calc-leer">Leer y depurar</span>.</p>
+
+  ${best('', `<ul>
+    <li>Una sola medida, una sola base, factores multiplicados.</li>
+    <li>Factor global fuera del iterador; factores por cliente dentro (con transición).</li>
+    <li>Documenta si los ajustes son compuestos (×) o aditivos (+): es la fuente nº1 de discrepancias con Finanzas.</li>
+  </ul>`)}
+  ${exer('', `<p>Global = −10%. A base 100, fIndiv 1,20. ¿Resultado de A?</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--accent)">Solución</summary><p>100 × 0,90 × 1,20 = <b>108</b>. El cliente sube pese al recorte global porque su palanca individual lo compensa.</p></details>`)}
+  `
+});
+
+/* ---- Escenario 5 ---- */
+N({ id:'sim-5', parent:'simuladores', title:'Escenario 5 · Selección Dinámica de Cliente', icon:'🔴',
+  importancia:'★★★★☆', dificultad:'🔴 Avanzado', uso:'Análisis interactivo',
+  deps:['sim-2','relaciones'], related:['sim-6','ctx-filtro'], fns:['fn-tablas','calculate'],
+  subtitle:'Slicer 1 = Cliente, Slicer 2 = Porcentaje. El usuario elige "Cliente B" y "+15%", y solo B se ve afectado, manteniendo a todos visibles.',
+  html: ()=> `
+  <h3>Diseño completo</h3>
+  ${diagram(`
+   ┌──────────────────┐        ┌──────────────────┐
+   │ ClienteObjetivo  │        │     Ajustes      │
+   │  (DESCONECTADA)  │        │  (DESCONECTADA)  │
+   │   slicer 1       │        │    slicer 2      │
+   └────────┬─────────┘        └────────┬─────────┘
+            │ SELECTEDVALUE              │ SELECTEDVALUE
+            ▼                            ▼
+        Objetivo = "B"              Factor = 1,15
+            │                            │
+            └──────────┬─────────────────┘
+                       ▼
+        Medida: por cada cliente de la matriz,
+        si Cliente = Objetivo → Base × Factor, si no → Base
+                       │
+   ┌───────────────────▼────────────────────┐
+   │ Proyeccion (CONECTADA a la dim Cliente) │  ← se muestra COMPLETA
+   └─────────────────────────────────────────┘`)}
+
+  <h3>La medida</h3>
+  ${dax(`
+Simulación Dinámica =
+VAR Objetivo = SELECTEDVALUE ( ClienteObjetivo[Cliente] )   -- slicer 1 (desconectado)
+VAR Factor   = SELECTEDVALUE ( Ajustes[Factor], 1 )         -- slicer 2 (desconectado)
+RETURN
+    SUMX (
+        VALUES ( Proyeccion[Cliente] ),
+        VAR ClienteFila = SELECTEDVALUE ( Proyeccion[Cliente] )
+        VAR Base = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
+        RETURN IF ( ClienteFila = Objetivo, Base * Factor, Base )
+    )`)}
+
+  ${engine('Por qué los demás clientes siguen visibles', `<p>Ambos slicers son <b>desconectados</b>: no filtran <code class="inl">Proyeccion</code>. La tabla de hechos sigue mostrando A, B y C. El slicer solo aporta dos <i>parámetros</i> (a quién, cuánto) que la medida usa para decidir, fila a fila, si ajusta o no. Si el slicer de cliente estuviera <b>conectado</b>, al elegir B desaparecerían A y C — justo lo que NO queremos aquí.</p>`)}
+
+  <h3>Variante: permitir varios clientes objetivo</h3>
+  ${dax(`
+Simulación Multi-objetivo =
+VAR Factor = SELECTEDVALUE ( Ajustes[Factor], 1 )
+RETURN
+    SUMX (
+        VALUES ( Proyeccion[Cliente] ),
+        VAR ClienteFila = SELECTEDVALUE ( Proyeccion[Cliente] )
+        VAR Base = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )
+        VAR EsObjetivo =
+            ClienteFila IN VALUES ( ClienteObjetivo[Cliente] )  -- selección múltiple
+        RETURN IF ( EsObjetivo, Base * Factor, Base )
+    )`)}
+  ${warn('SELECTEDVALUE falla con selección múltiple', `<p>Si permites elegir varios clientes en el slicer, <code class="inl">SELECTEDVALUE(ClienteObjetivo[Cliente])</code> devuelve BLANK. Usa <code class="inl">ClienteFila IN VALUES(ClienteObjetivo[Cliente])</code> para comprobar pertenencia a la selección.</p>`)}
+
+  ${err('Relacionar el slicer de cliente', `<p>Es el error que mata este escenario: si conectas <code class="inl">ClienteObjetivo</code>, filtras la tabla de hechos y pierdes la vista completa. <b>Desconectada siempre.</b></p>`)}
+  ${best('', `<p>Para el slicer de cliente objetivo, una <code class="inl">DISTINCT</code> de la dimensión, desconectada. Comprueba pertenencia con <code class="inl">IN VALUES(...)</code> para soportar uno o varios objetivos sin cambiar la medida.</p>`)}
+  `
+});
+
+/* ---- Escenario 6 ---- */
+N({ id:'sim-6', parent:'simuladores', title:'Escenario 6 · Matriz de Ventas Proyectadas (Meses × Clientes)', icon:'🔴⚠️⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Vista típica de planning',
+  deps:['sim-5','ctx-filtro'], related:['sim-9','evaluacion'], fns:['calculate','fn-tablas'],
+  subtitle:'Filas = Meses, Columnas = Clientes, Valores = Venta Proyectada. Cómo Power BI sabe exactamente qué celda modificar y cuáles dejar igual.',
+  html: ()=> `
+  <h3>La matriz objetivo</h3>
+  ${diagram(`
+            Cliente A   Cliente B   Cliente C
+  Ene-26        100         200         300
+  Feb-26        110         220         310
+  Mar-26        120         230         320`)}
+  <p>Quieres poder: ajustar todos los clientes, uno solo, varios, o combinar global+individual — <b>sobre esta matriz bidimensional</b>.</p>
+
+  <h3>La idea clave: cada celda es una intersección de filtros ⭐</h3>
+  ${engine('Qué contexto tiene la celda "Feb-26 / Cliente B"', `<p>Esa celda concreta tiene en su contexto de filtro <b>dos coordenadas</b>: <code class="inl">Calendario[Mes]="Feb-26"</code> (de la fila) <b>y</b> <code class="inl">Cliente[Cliente]="B"</code> (de la columna). La medida se evalúa en esa intersección. Por eso Power BI "sabe" qué celda es: <b>se lo dicen las coordenadas del visual</b>. No hay que decirle nada; el visual ya impone fila y columna.</p>`)}
+
+  <h3>La medida que respeta ambas dimensiones</h3>
+  ${dax(`
+Matriz Ajustada =
+VAR FactorGlobal = SELECTEDVALUE ( Ajustes[Factor], 1 )
+VAR Objetivo     = SELECTEDVALUE ( ClienteObjetivo[Cliente] )   -- desconectado
+VAR FactorIndiv  = SELECTEDVALUE ( AjustesIndiv[Factor], 1 )    -- desconectado
+RETURN
+    SUMX (
+        VALUES ( Cliente[Cliente] ),                 -- recorre columnas (clientes)
+        VAR ClienteFila = SELECTEDVALUE ( Cliente[Cliente] )
+        VAR Base = CALCULATE ( SUM ( Proyeccion[VentaProyectada] ) )  -- respeta el MES de la fila
+        VAR Ajuste = IF ( ClienteFila = Objetivo, FactorIndiv, 1 )
+        RETURN Base * FactorGlobal * Ajuste
+    )`)}
+  ${engine('Por qué el mes "se respeta solo"', `<p><code class="inl">SUM(Proyeccion[VentaProyectada])</code> dentro de la celda "Feb-26/B" ya está filtrado a febrero <b>por la fila de la matriz</b>. No tienes que filtrar el mes manualmente: el contexto de filtro de la celda lo hace. Tú solo gestionas el ajuste por cliente. Esa es la elegancia del modelo: <b>la matriz aporta las coordenadas, tú aportas la lógica de ajuste</b>.</p>`)}
+
+  <h3>Las cuatro variantes sobre la misma matriz</h3>
+  ${tbl(['Quiero…','Cómo'],[
+    ['Modificar TODOS los clientes','Solo <code class="inl">FactorGlobal</code> (Escenario 1). El IF de objetivo en 1.'],
+    ['Modificar UN cliente','<code class="inl">Objetivo</code> = ese cliente; IF aplica solo a él (Escenario 2).'],
+    ['Modificar VARIOS clientes','<code class="inl">ClienteFila IN VALUES(ClienteObjetivo[Cliente])</code> (Escenario 5).'],
+    ['Global + individual','<code class="inl">FactorGlobal × Ajuste</code> combinados (Escenario 4).'],
+  ])}
+
+  ${warn('Subtotales y totales de la matriz', `<p>La fila/columna <b>Total</b> no tiene mes o cliente único. Por eso el patrón usa <code class="inl">SUMX(VALUES(Cliente))</code>: garantiza que el total de cada mes sea la suma de los clientes <i>ya ajustados</i>, no un cálculo sobre un contexto ambiguo. Sin SUMX, los totales no sumarían los ajustes individuales. Ver <span class="pill" data-go="sim-9">funcionamiento interno</span>.</p>`)}
+
+  ${err('Filtrar el mes manualmente', `<p>Añadir <code class="inl">Calendario[Mes]=...</code> en la medida es redundante y rompe la matriz: el mes ya lo impone la fila. Deja que el visual ponga las coordenadas; tu medida solo añade la lógica de simulación.</p>`)}
+  ${best('', `<p>Diseña una <b>única medida de simulación</b> que cubra las cuatro variantes según qué slicers estén activos (objetivo vacío → ajuste global puro). Menos medidas, menos mantenimiento, comportamiento coherente en toda la matriz.</p>`)}
+  `
+});
+
+/* ---- Escenario 7 ---- */
+N({ id:'sim-7', parent:'simuladores', title:'Escenario 7 · Forecast Corporativo (Base / Optimista / Pesimista)', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Planeamiento financiero',
+  deps:['sim-4','fn-tiempo'], related:['sim-8','casos'], fns:['calculate','fn-logica','fn-tiempo'],
+  subtitle:'Tres escenarios de forecast seleccionables con un slicer, partiendo de una base histórica y aplicando supuestos diferenciados.',
+  html: ()=> `
+  <h3>Arquitectura del forecast multiescenario</h3>
+  <p>La forma profesional: una tabla de <b>Escenarios</b> con los supuestos de cada uno, seleccionada por slicer, que parametriza una medida única.</p>
+  ${dax(`
+Escenarios =
+DATATABLE (
+    "Escenario", STRING, "Crecimiento", DOUBLE, "Inflación Costos", DOUBLE,
+    {
+        { "Base",      0.05, 0.04 },
+        { "Optimista", 0.15, 0.03 },
+        { "Pesimista", -0.05, 0.07 }
+    }
+)   -- tabla DESCONECTADA: el slicer elige el escenario`)}
+
+  <h3>Medida de forecast de ventas</h3>
+  ${dax(`
+Forecast Ventas =
+VAR Crecimiento = SELECTEDVALUE ( Escenarios[Crecimiento], 0 )
+VAR VentaBase   = [Ventas]                         -- histórico/base del contexto
+RETURN
+    VentaBase * ( 1 + Crecimiento )`)}
+  <h3>Forecast con estacionalidad (más realista)</h3>
+  ${dax(`
+Forecast Estacional =
+VAR Crecimiento = SELECTEDVALUE ( Escenarios[Crecimiento], 0 )
+RETURN
+    SUMX (
+        VALUES ( Calendario[MesNum] ),
+        VAR VentaAA  = CALCULATE ( [Ventas], SAMEPERIODLASTYEAR ( Calendario[Fecha] ) )
+        VAR PesoMes  = CALCULATE ( [Peso Estacional] )       -- % que pesa ese mes
+        RETURN VentaAA * ( 1 + Crecimiento ) * PesoMes
+    )`)}
+  ${engine('', `<p>El slicer pone <code class="inl">Escenarios[Escenario]="Optimista"</code>. <code class="inl">SELECTEDVALUE</code> lee crecimiento=0,15. La medida proyecta sobre la base (o sobre el año anterior con estacionalidad). Cambiar el slicer recalcula <b>todo el informe</b> al instante: P&L, gráficos, KPIs. Un único motor, tres narrativas.</p>`)}
+
+  <h3>Forecast de costos (inflación diferenciada)</h3>
+  ${dax(`
+Forecast Costos =
+VAR Inflacion = SELECTEDVALUE ( Escenarios[Inflación Costos], 0 )
+RETURN
+    [Costos] * ( 1 + Inflacion )
+
+Forecast Margen = [Forecast Ventas] - [Forecast Costos]`)}
+
+  ${best('Buenas prácticas de forecast', `<ul>
+    <li>Separa los <b>supuestos</b> (tabla de escenarios) de la <b>lógica</b> (medidas). Cambiar un supuesto no debe tocar DAX.</li>
+    <li>Modela ventas y costos con palancas <b>independientes</b> (crecimiento ≠ inflación): el margen reacciona de forma realista.</li>
+    <li>Para rolling forecast usa <span class="pill" data-go="fn-tiempo">DATESINPERIOD</span> sobre los últimos N meses como base.</li>
+    <li>Guarda los tres escenarios como <b>medidas distintas</b> si necesitas mostrarlos a la vez (gráfico de abanico), o como una sola parametrizada si solo muestras uno.</li>
+  </ul>`)}
+  ${warn('Base ≠ Real', `<p>Define claramente qué es la "base" del forecast: ¿el real YTD anualizado? ¿el año anterior? ¿el presupuesto? Es una decisión de negocio que cambia por completo los números. Documenta el supuesto en el propio informe.</p>`)}
+  `
+});
+
+/* ---- Escenario 8 ---- */
+N({ id:'sim-8', parent:'simuladores', title:'Escenario 8 · Impacto en KPIs (cascada hasta EBITDA)', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Dashboards ejecutivos',
+  deps:['sim-7'], related:['casos','sim-9'], fns:['calculate','fn-errores'],
+  subtitle:'Cómo un ajuste en ventas se propaga automáticamente a facturación, margen, EBITDA, rentabilidad, presupuesto y variaciones, sin recalcular nada a mano.',
+  html: ()=> `
+  ${why('El valor del simulador está en la cascada', `<p>Ajustar ventas es trivial; lo valioso es que ese ajuste <b>fluya</b> por todo el P&L hasta el EBITDA y los ratios. Si construyes tus KPIs <b>referenciando</b> la medida ajustada (no la base), todo el tablero reacciona solo. Eso es un simulador ejecutivo de verdad.</p>`)}
+
+  <h3>La cadena de dependencias de medidas</h3>
+  ${diagram(`
+   [Factor / Escenario]  (slicer)
+            │
+            ▼
+   [Ventas Ajustadas] ──────────────┐
+            │                        │
+            ▼                        ▼
+   [Facturación Aj.]          [Costo Variable Aj.]  (% sobre ventas)
+            │                        │
+            └──────────┬─────────────┘
+                       ▼
+                 [Margen Bruto Aj.]
+                       │  − [OPEX]  (fijo o con su palanca)
+                       ▼
+                  [EBITDA Aj.]
+                 ╱        ╲
+                ▼          ▼
+   [% Margen EBITDA]   [Var vs Presupuesto]`)}
+
+  <h3>Las medidas encadenadas</h3>
+  ${dax(`
+Ventas Ajustadas    = [Ventas] * [Factor Ajuste]
+Costo Variable Aj.  = [Ventas Ajustadas] * [% Costo Variable]   -- escala con ventas
+Margen Bruto Aj.    = [Ventas Ajustadas] - [Costo Variable Aj.]
+EBITDA Ajustado     = [Margen Bruto Aj.] - [OPEX]               -- OPEX fijo aquí
+% Margen EBITDA     = DIVIDE ( [EBITDA Ajustado], [Ventas Ajustadas] )
+Var EBITDA vs Ppto  = [EBITDA Ajustado] - [EBITDA Presupuesto]
+Var %               = DIVIDE ( [Var EBITDA vs Ppto], [EBITDA Presupuesto] )`)}
+
+  ${engine('Qué pasa al mover el slicer a "+20%"', `<ol>
+    <li><code class="inl">[Factor Ajuste]</code> → 1,20.</li>
+    <li><code class="inl">[Ventas Ajustadas]</code> sube 20%.</li>
+    <li><code class="inl">[Costo Variable Aj.]</code> sube proporcionalmente (es % de ventas).</li>
+    <li><code class="inl">[OPEX]</code> NO cambia (es fijo) → <b>apalancamiento operativo</b>: el EBITDA sube <i>más que</i> 20%.</li>
+    <li>El <code class="inl">% Margen EBITDA</code> mejora; la variación vs presupuesto se actualiza. Todo, en un clic.</li>
+  </ol>`)}
+
+  ${warn('Costos fijos vs variables: el detalle que da realismo ⚠️', `<p>El error frecuente es escalar <b>todo</b> el costo con las ventas. En la realidad, los <b>variables</b> (materia prima, comisiones) escalan; los <b>fijos</b> (alquileres, estructura, gran parte del OPEX) no. Modelar esa diferencia es lo que hace creíble el simulador ante un CFO y lo que revela el apalancamiento operativo.</p>`)}
+
+  ${tbl(['KPI','Cómo reacciona al +20% en ventas','Por qué'],[
+    ['Facturación','+20%','Directo'],
+    ['Costo variable','+20%','Proporcional a ventas'],
+    ['OPEX fijo','0%','No depende del volumen'],
+    ['EBITDA','> +20%','Apalancamiento: costos fijos diluidos'],
+    ['% Margen','Mejora','EBITDA crece más rápido que ventas'],
+    ['Var vs Ppto','Mejora','Mayor EBITDA sobre el mismo presupuesto'],
+  ])}
+
+  ${best('', `<ul>
+    <li><b>Nunca</b> repitas la lógica de ajuste en cada KPI. Defínela una vez en <code class="inl">[Ventas Ajustadas]</code> y referencia hacia arriba.</li>
+    <li>Separa costos fijos y variables en el modelo (o con una clasificación en PlanCuentas).</li>
+    <li>Muestra siempre el <b>delta vs presupuesto/base</b>: el ejecutivo piensa en variaciones, no en valores absolutos.</li>
+  </ul>`)}
+  `
+});
+
+/* ---- Escenario 9 ---- */
+N({ id:'sim-9', parent:'simuladores', title:'Escenario 9 · Funcionamiento Interno (flujo paso a paso)', icon:'🔴⚠️⭐',
+  importancia:'★★★★★ (la parte más importante)', dificultad:'🔴 Avanzado', uso:'Modelo mental maestro',
+  deps:['sim-6','evaluacion','transicion'], related:['ctx-filtro','calc-leer'], fns:['calculate','fn-tablas'],
+  subtitle:'El "rayos X" del simulador: qué hace el slicer internamente, qué hace SELECTEDVALUE, qué hace CALCULATE, cómo se construye y propaga el contexto, y cómo Power BI decide qué clientes modificar y cuáles no.',
+  html: ()=> `
+  ${why('Si entiendes este flujo, puedes construir cualquier simulador', `<p>Los ocho escenarios anteriores son variaciones de <b>un mismo mecanismo</b>. Esta página lo abre en canal. Cuando lo domines, no necesitarás recetas: deducirás la medida desde primeros principios.</p>`)}
+
+  <h3>1 · ¿Qué hace el slicer internamente?</h3>
+  ${engine('', `<p>Un slicer <b>no ejecuta código</b>. Lo único que hace es <b>añadir un filtro al contexto de filtro</b> de todos los visuales de la página. Slicer de <code class="inl">Ajustes[Etiqueta]</code> en "+10%" → añade <code class="inl">Ajustes[Etiqueta]="+10%"</code> al contexto. Como <code class="inl">Ajustes</code> está <b>desconectada</b>, ese filtro no se propaga a ninguna tabla de datos: queda "disponible" para que una medida lo lea. Si estuviera conectada, se propagaría por la relación y filtraría hechos.</p>`)}
+
+  <h3>2 · ¿Qué hace SELECTEDVALUE internamente?</h3>
+  ${engine('', `<p><code class="inl">SELECTEDVALUE(Ajustes[Factor], 1)</code> mira la columna <code class="inl">Ajustes[Factor]</code> <b>dentro del contexto de filtro actual</b>. Como el slicer dejó visible una sola fila ("+10%" → Factor 1,10), hay un único valor → lo devuelve. Internamente es <code class="inl">IF(HASONEVALUE(Ajustes[Factor]), VALUES(Ajustes[Factor]), 1)</code>. Si hubiera 0 o varias filas visibles, devuelve el default. <b>Convierte "qué botón pulsó el usuario" en un número usable.</b></p>`)}
+
+  <h3>3 · ¿Qué hace CALCULATE internamente aquí?</h3>
+  ${engine('', `<p>En <code class="inl">CALCULATE(SUM(Proyeccion[VentaProyectada]))</code> dentro del SUMX, CALCULATE ejecuta la <span class="pill" data-go="transicion">transición de contexto</span>: toma el cliente de la iteración actual y lo convierte en filtro sobre <code class="inl">Proyeccion</code>. Así "Base" pasa de ser el total a ser <b>la base de ese cliente concreto</b>. Sin ese CALCULATE, cada iteración sumaría el total completo.</p>`)}
+
+  <h3>4 · Cómo se construye el contexto de filtro de una celda</h3>
+  ${diagram(`
+  Celda "Mar-26 / Cliente B" en la matriz, slicers: Ajuste="+10%", Objetivo="B"
+
+  CONTEXTO DE FILTRO de la celda =
+     { Calendario[Mes] = "Mar-26" }     ← de la FILA del visual
+   ∪ { Cliente[Cliente] = "B" }         ← de la COLUMNA del visual
+   ∪ { Ajustes[Etiqueta] = "+10%" }     ← del SLICER (desconectado: no propaga)
+   ∪ { ClienteObjetivo[Cliente] = "B" } ← del SLICER (desconectado: no propaga)`)}
+
+  <h3>5 · Cómo se propagan los filtros</h3>
+  ${diagram(`
+   { Mes="Mar-26" }  ──1:*──►  Proyeccion  (queda solo marzo)
+   { Cliente="B" }   ──1:*──►  Proyeccion  (queda solo B)
+   ──────────────────────────────────────────────────────
+   Intersección: Proyeccion filtrada a (Mar-26 ∧ B) = la celda exacta
+   Ajustes / ClienteObjetivo: NO propagan (desconectadas) → solo se leen`)}
+
+  <h3>6 · Cómo Power BI sabe qué clientes modificar y cuáles no</h3>
+  ${engine('El corazón de la decisión', `<p>Dentro del <code class="inl">SUMX(VALUES(Cliente[Cliente]))</code>, en cada iteración:</p>
+  <ol>
+    <li><code class="inl">ClienteFila = SELECTEDVALUE(Cliente[Cliente])</code> → el cliente de esta iteración (ej. "B").</li>
+    <li>Se compara con <code class="inl">Objetivo</code> (del slicer desconectado, "B").</li>
+    <li><code class="inl">IF(ClienteFila = Objetivo, ...)</code> decide: <b>coincide → ajusta; no coincide → base intacta</b>.</li>
+  </ol>
+  <p>Power BI no "sabe" nada mágico: <b>tú</b> comparas la coordenada de la celda (que el visual impone) con el parámetro del slicer (que tú lees). La igualdad <code class="inl">ClienteFila = Objetivo</code> es toda la inteligencia. Los que no cumplen la condición conservan su base — por eso el resto no se modifica.</p>`)}
+
+  <h3>7 · El flujo completo de evaluación, de principio a fin</h3>
+  ${diagram(`
+  ┌─ Usuario pulsa "+10%" y "Cliente B" en los slicers ──────────────┐
+  │                                                                    │
+  ▼                                                                    │
+  1. Slicers añaden al contexto: Ajuste="+10%", Objetivo="B"          │
+  2. Para CADA celda de la matriz, el visual añade Mes + Cliente       │
+  3. La medida arranca:                                                │
+        FactorGlobal = SELECTEDVALUE(Ajustes[Factor]) = 1,10           │
+        Objetivo     = SELECTEDVALUE(ClienteObjetivo[Cliente]) = "B"   │
+  4. SUMX recorre VALUES(Cliente[Cliente]):                            │
+        · Cliente A → ClienteFila="A" ≠ "B" → Base_A × 1,10 × 1        │
+        · Cliente B → ClienteFila="B" = "B" → Base_B × 1,10 × FIndiv   │
+        · Cliente C → ClienteFila="C" ≠ "B" → Base_C × 1,10 × 1        │
+     (cada Base sale de CALCULATE = transición al cliente y al mes)    │
+  5. SUMX acumula → valor de la celda                                  │
+  6. Se pinta. Siguiente celda → vuelve al paso 2 con sus coordenadas  │
+  └────────────────────────────────────────────────────────────────────┘`)}
+
+  <h3>8 · Cómo interactúan slicers con matrices, gráficos y tablas</h3>
+  ${engine('', `<p>El mecanismo es <b>idéntico</b> en cualquier visual, porque todos generan contexto de filtro igual:</p>
+  <ul>
+    <li><b>Matriz:</b> fila × columna → contexto bidimensional (lo visto arriba).</li>
+    <li><b>Gráfico de barras:</b> cada barra es una categoría del eje → un contexto por barra.</li>
+    <li><b>Tabla:</b> cada fila → un contexto. <b>Tarjeta:</b> un único contexto (a veces sin desglose → cuidado con SELECTEDVALUE).</li>
+    <li><b>Slicer:</b> añade su filtro a <b>todos</b> los visuales de la página por igual.</li>
+  </ul>
+  <p>Por eso la misma medida de simulación funciona en todos a la vez: no depende del tipo de visual, sino del contexto de filtro que cada uno genera.</p>`)}
+
+  ${best('La regla mental definitiva del simulador', `<p><b>El visual aporta las coordenadas (qué celda). El slicer desconectado aporta los parámetros (qué hacer). La medida compara coordenadas con parámetros y decide. CALCULATE/transición trae la base correcta de cada coordenada.</b> Con esas cuatro frases puedes reconstruir cualquiera de los 9 escenarios desde cero.</p>`)}
+  `
+});
+
 /* __CONTENT_INJECTION_POINT__ */
 
 /* ---------- Helpers de contenido (azúcar para escribir nodos) ---------- */
