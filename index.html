@@ -269,6 +269,7 @@ const N = o => NODES.push(o);
 function _esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 const dax = (s,cap) => '<pre><span class="cap">'+(cap||'DAX')+'</span><code class="dax">'+_esc(s.replace(/^\n/,'').replace(/\n\s*$/,''))+'</code></pre>';
 const mq = (s,cap) => '<pre><span class="cap">'+(cap||'M · Power Query')+'</span><code class="mcode">'+_esc(s.replace(/^\n/,'').replace(/\n\s*$/,''))+'</code></pre>';
+const prompt = (s,cap) => '<div class="box" style="border-left:4px solid #7ee787;background:#0f2417"><div class="bt" style="color:#7ee787">📝 '+(cap||'PROMPT — copia y pega en la IA')+'</div><pre style="margin:6px 0 0;background:#0b1220"><code class="prompt">'+_esc(s.replace(/^\n/,'').replace(/\n\s*$/,''))+'</code></pre></div>';
 const box = (cls,title,body) => '<div class="box '+cls+'"><div class="bt">'+title+'</div>'+body+'</div>';
 const why    = (t,b)=>box('why','💡 Por qué importa'+(t?': '+t:''),b);
 const analogy= (t,b)=>box('analogy','🎭 Analogía'+(t?': '+t:''),b);
@@ -3984,31 +3985,314 @@ N({ id:'ag-usar', parent:'agentes', title:'Cómo Empezar a Usarlos (paso a paso)
   `
 });
 
-/* ---- AG: Casos ---- */
-N({ id:'ag-casos', parent:'agentes', title:'Casos de Uso Reales en BI Financiero', icon:'🔴',
-  importancia:'★★★★☆', dificultad:'🔴', uso:'Aplicación',
+/* ---- AG: Casos (índice) ---- */
+N({ id:'ag-casos', parent:'agentes', title:'Casos de Uso Reales (tutoriales paso a paso)', icon:'🔴⭐',
+  importancia:'★★★★★', dificultad:'🔴 Práctico', uso:'Manos a la obra',
   deps:['ag-usar'], related:['casos','ag-arquitectura'], fns:[],
-  subtitle:'Dónde aportan valor real los agentes en un equipo de Finanzas/Control de Gestión, mapeado a los subagentes del diagrama.',
+  subtitle:'Seis tutoriales detallados: qué significa cada paso, dónde hacer clic en Power BI, qué prompt escribir (listo para copiar), qué verás en pantalla y cómo verificar el resultado.',
   html: ()=> `
-  ${tbl(['Caso','Qué hace el agente/subagente','Tu rol'],[
-    ['<b>Generar medidas DAX</b>','El subagente de DAX traduce un requerimiento ("EBITDA por unidad vs presupuesto") a medidas correctas','Validar la lógica de negocio'],
-    ['<b>Limpiar un origen nuevo</b>','El de Power Query propone los pasos (unpivot, tipos, merge) para dejar un Excel listo','Confirmar reglas (qué filas quitar)'],
-    ['<b>Auditar un modelo heredado</b>','Modelado + Documentación recorren un .pbix y generan diccionario, relaciones y riesgos','Decidir qué refactorizar'],
-    ['<b>Cuadrar el cierre</b>','Validación ejecuta medidas y compara Real vs Ppto vs sistema origen, marcando descuadres','Investigar las diferencias señaladas'],
-    ['<b>Optimizar performance</b>','Rendimiento detecta medidas lentas y propone reescrituras','Aprobar el cambio y medir'],
-    ['<b>Documentar para auditoría</b>','Documentación genera el diccionario de datos y la explicación de cada KPI','Revisar exactitud y aprobar'],
-    ['<b>Refresco y publicación</b>','Datos + Publicación refrescan el dataset y publican, avisando si algo falla','Supervisar el despliegue'],
+  ${why('Aquí se pasa de la teoría a hacerlo', `<p>Los nodos anteriores explicaron <i>qué</i> son los agentes. Estos seis tutoriales te llevan de la mano por casos reales de un equipo de Finanzas, con <b>clics exactos</b> y <b>prompts copiables</b>. No necesitas saber programar: necesitas saber <b>pedir bien</b> y <b>verificar</b>.</p>`)}
+
+  <h3>Antes de empezar: las dos rutas</h3>
+  <p>Casi todos los casos se pueden hacer de dos formas. Elige según lo que tengas:</p>
+  ${tbl(['Ruta','Qué necesitas','Para quién'],[
+    ['<b>Ruta A · Chat IA externo</b>','Cualquier chat (Claude, ChatGPT, Copilot web). Copias el contexto, te da el resultado, lo pegas en Power BI','Todos — funciona siempre, sin licencias especiales'],
+    ['<b>Ruta B · Copilot dentro de Power BI</b>','Power BI con Copilot habilitado (capacidad Fabric / licencia con Copilot)','Quien tenga el Copilot nativo activado'],
   ])}
-  ${engine('Ejemplo de orquestación: "monta el tablero de cierre mensual"', `<ol>
-    <li><b>Datos</b> conecta y refresca el origen del mes.</li>
-    <li><b>Power Query</b> limpia y da forma (unpivot de meses, tipos, merge con plan de cuentas).</li>
-    <li><b>Modelado</b> relaciona con el calendario y las dimensiones.</li>
-    <li><b>DAX</b> crea/actualiza las medidas (EBITDA, desvíos, YTD).</li>
-    <li><b>Visuales</b> arma las páginas (KPIs, cascada, matriz).</li>
-    <li><b>Validación</b> comprueba que los totales cuadran con el sistema origen.</li>
-    <li><b>Documentación</b> y <b>Revisión</b> dejan el diccionario y el control de calidad. <b>Tú apruebas y publicas.</b></li>
+  ${best('La regla que se repite en los 6 casos', `<p><b>Dar contexto → recibir → VERIFICAR.</b> La IA no conoce tu modelo: tienes que decirle qué tablas y columnas hay. Y nunca des por bueno un número sin comprobarlo. Cada tutorial termina en "cómo verificar".</p>`)}
+
+  <h3>Los seis tutoriales</h3>
+  <p>Hazlos en orden la primera vez. Cada uno está mapeado a un subagente del diagrama.</p>
+  `
+});
+
+/* ---- AG: Caso 1 · DAX ---- */
+N({ id:'ag-caso-dax', parent:'ag-casos', title:'Caso 1 · Generar una Medida DAX con IA', icon:'🟢⭐',
+  importancia:'★★★★★', dificultad:'🟢 Empieza por aquí', uso:'El más frecuente',
+  deps:['ag-casos'], related:['calculate','fn-tiempo'], fns:['calculate'],
+  subtitle:'Subagente DAX. Convertir un requerimiento de negocio en una medida correcta, con los clics exactos y el prompt listo para copiar.',
+  html: ()=> `
+  <h3>🎯 Objetivo</h3>
+  <p>Crear la medida <b>"Ventas YTD vs Año Anterior (%)"</b> sin escribirla a mano: se la pedimos a la IA, la pegamos en Power BI y la verificamos.</p>
+  <h3>📋 Requisitos (qué debes tener)</h3>
+  <ul><li>Una tabla de hechos, p. ej. <code class="inl">Ventas</code> con columnas <code class="inl">Fecha</code> e <code class="inl">Importe</code>.</li>
+  <li>Una tabla <code class="inl">Calendario</code> marcada como tabla de fechas (ver <span class="pill" data-go="modelado">modelado</span>).</li></ul>
+
+  <h3>🅰️ Ruta A · Con un chat IA (funciona para todos)</h3>
+  ${best('Paso a paso', `<ol>
+    <li><b>Abre un chat IA</b> (Claude, ChatGPT o Copilot web) en el navegador.</li>
+    <li><b>Copia y pega este prompt</b>, cambiando los nombres de tabla/columna por los tuyos:</li>
   </ol>`)}
-  ${warn('El agente acelera; tú respondes por el número', `<p>Ante la dirección o una auditoría, <b>el responsable eres tú</b>, no la IA. Por eso la validación humana y la trazabilidad (qué hizo cada subagente) no son opcionales en Finanzas.</p>`)}
+  ${prompt(`Actúa como experto en DAX para Power BI.
+Mi modelo tiene:
+- Tabla "Ventas" con columnas: Fecha (fecha), Importe (número), ClienteID.
+- Tabla "Calendario" con columna Fecha, marcada como tabla de fechas. Año fiscal cierra el 31 de diciembre.
+- Relación: Calendario[Fecha] 1 -> * Ventas[Fecha].
+
+Necesito una medida llamada "Var % YTD vs AA" que calcule:
+(Ventas acumuladas del año hasta la fecha) vs (mismo acumulado del año anterior), en %.
+
+Devuélveme:
+1) La medida (o medidas intermedias si hacen falta), en formato DAX, lista para pegar.
+2) Una explicación en UNA frase de qué hace cada medida.
+3) Cómo debo formatearla (porcentaje, decimales).`)}
+  ${best('', `<ol start="3">
+    <li><b>La IA te devuelve el DAX.</b> Suele dar 2-3 medidas (una base, una de año anterior, y la variación). Cópialas.</li>
+    <li>En <b>Power BI Desktop</b>, panel <b>Datos</b> (derecha) → <b>clic derecho</b> sobre la tabla <code class="inl">Ventas</code> → <b>Nueva medida</b>.</li>
+    <li>En la <b>barra de fórmulas</b>, borra lo que haya y <b>pega</b> la primera medida. Pulsa <span class="kbd">Enter</span>. Repite para cada medida.</li>
+    <li>Selecciona la medida final → pestaña <b>Herramientas de medición</b> → <b>Formato</b> = Porcentaje, decimales = 1.</li>
+  </ol>`)}
+  ${engine('Qué verás', `<p>Tras pegar y Enter, la medida aparece en el panel Datos con un icono de calculadora. Si hay un error de nombre, Power BI lo marca en rojo bajo la barra de fórmulas.</p>`)}
+
+  <h3>🅱️ Ruta B · Con Copilot dentro de Power BI</h3>
+  ${best('Paso a paso', `<ol>
+    <li>Pestaña <b>Inicio</b> → botón <b>Copilot</b> (si no aparece, tu organización no lo tiene habilitado: usa la Ruta A).</li>
+    <li>En el panel de Copilot, escribe en lenguaje natural: <i>"Crea una medida de variación porcentual del YTD de Ventas[Importe] frente al año anterior, usando Calendario[Fecha]."</i></li>
+    <li>Copilot propone la medida; revísala y pulsa para <b>agregarla al modelo</b>.</li>
+  </ol>`)}
+
+  <h3>✅ Cómo verificar (no te saltes esto)</h3>
+  ${best('', `<ol>
+    <li>Inserta una <b>tabla</b> (visual) con <code class="inl">Calendario[Año]</code> y tu nueva medida.</li>
+    <li>Comprueba a mano un año: ¿la variación tiene el <b>signo</b> correcto (creció = positivo)? ¿coincide con un cálculo rápido en Excel de dos años?</li>
+    <li>Mira el <b>Total</b>: en un % no tiene por qué ser la suma de las filas — eso es normal.</li>
+  </ol>`)}
+  ${err('Errores típicos y cómo pedírselos a la IA', `<ul>
+    <li><b>"La columna X no existe":</b> le diste a la IA un nombre que no coincide con tu modelo. Corrige el nombre en el DAX, o re-pide el prompt con los nombres exactos.</li>
+    <li><b>Da BLANK o número raro:</b> pega el resultado de vuelta en el chat: <i>"Esta medida da BLANK en 2025; mi calendario va de 2023 a 2026. ¿Qué falla?"</i></li>
+    <li><b>No respeta el año fiscal:</b> indícaselo: <i>"Mi año fiscal cierra el 30 de junio, ajústalo."</i></li>
+  </ul>`)}
+  ${best('Truco para aprender tú también', `<p>Añade al final del prompt: <i>"Explícame línea por línea qué hace la medida como si fuera principiante."</i> Así no solo obtienes el código: subes de nivel. Repasa el concepto en <span class="pill" data-go="calculate">CALCULATE</span> y <span class="pill" data-go="fn-tiempo">inteligencia del tiempo</span>.</p>`)}
+  `
+});
+
+/* ---- AG: Caso 2 · Power Query ---- */
+N({ id:'ag-caso-pq', parent:'ag-casos', title:'Caso 2 · Limpiar un Excel con IA + Power Query', icon:'🟡',
+  importancia:'★★★★☆', dificultad:'🟡', uso:'Datos sucios',
+  deps:['ag-casos'], related:['pq-pivot','pq-m','pq-casos-fin'], fns:[],
+  subtitle:'Subagente Power Query. Dejar que la IA te dé los pasos (o el código M) para limpiar un Excel desordenado, y aplicarlos con los clics exactos.',
+  html: ()=> `
+  <h3>🎯 Objetivo</h3>
+  <p>Convertir un Excel típico (título arriba, meses en columnas, una fila TOTAL que sobra) en una tabla limpia y "larga", lista para el modelo — con ayuda de la IA.</p>
+
+  <h3>Paso 1 · Muéstrale a la IA cómo son tus datos</h3>
+  <p>La IA necesita "ver" la forma del Excel. Copia las primeras filas (o descríbelas) y pégalas en el prompt:</p>
+  ${prompt(`Actúa como experto en Power Query (Power BI).
+Tengo un Excel así (primeras filas, tal cual vienen):
+
+Fila 1: Reporte de Ventas 2026
+Fila 2: (vacía)
+Fila 3: Cliente | Ene | Feb | Mar | ... | Dic | Pais
+Fila 4: A | 100 | 110 | 120 | ... | Arg
+Fila 6: TOTAL | 300 | 330 | ...
+
+Quiero dejarlo como tabla LARGA con columnas: Cliente, Pais, Mes (fecha), Importe (número),
+sin la fila TOTAL ni el título.
+
+Dame DOS cosas:
+1) Los pasos en el menú de Power Query, clic por clic, en español.
+2) El código M equivalente para pegar en el Editor avanzado.`)}
+
+  <h3>Paso 2 · Aplica los pasos (clic por clic)</h3>
+  ${best('', `<ol>
+    <li>En Power BI: <b>Inicio → Transformar datos</b> (abre el Editor de Power Query).</li>
+    <li>Sigue los pasos que te dio la IA (quitar filas superiores, usar primera fila como encabezado, anular dinamización de otras columnas, tipar…). Cada acción aparece en <b>Pasos aplicados</b> (derecha).</li>
+    <li><b>Inicio → Cerrar y aplicar.</b></li>
+  </ol>`)}
+  ${warn('Si prefieres pegar el código M directamente', `<ol>
+    <li>En el Editor de Power Query: panel <b>Consultas</b> (izquierda) → <b>clic derecho → Nueva consulta → Consulta en blanco</b>.</li>
+    <li>Pestaña <b>Inicio → Editor avanzado</b>. Borra el contenido y <b>pega el código M</b> que te dio la IA. Cambia la ruta del archivo por la tuya. <b>Listo / Hecho</b>.</li>
+  </ol>
+  <p>Repasa qué significa cada paso en <span class="pill" data-go="pq-pivot">unpivot</span> y <span class="pill" data-go="pq-m">lenguaje M</span>.</p>`)}
+
+  <h3>✅ Cómo verificar</h3>
+  ${best('', `<ul>
+    <li>¿La tabla quedó <b>larga</b> (una fila por Cliente y Mes)? ¿Importe es <b>número</b> y Mes es <b>fecha</b> (no texto)?</li>
+    <li>Activa <b>Ver → Calidad de columnas</b>: ¿0 errores, 0 vacíos en Importe?</li>
+    <li>Suma rápida: ¿el total de Importe coincide con el total del Excel original (sin la fila TOTAL)?</li>
+  </ul>`)}
+  ${err('', `<p>Si al actualizar el mes que viene aparece "Abr" y no se incluye: dile a la IA <i>"que el unpivot use 'anular dinamización de OTRAS columnas' para que tome meses nuevos automáticamente"</i>. Ver <span class="pill" data-go="pq-pivot">por qué</span>.</p>`)}
+  `
+});
+
+/* ---- AG: Caso 3 · Documentar / auditar ---- */
+N({ id:'ag-caso-doc', parent:'ag-casos', title:'Caso 3 · Documentar y Auditar un Modelo Heredado', icon:'🟡',
+  importancia:'★★★★☆', dificultad:'🟡', uso:'Recibes un .pbix ajeno',
+  deps:['ag-casos'], related:['casos','modelado'], fns:[],
+  subtitle:'Subagentes Documentación + Modelado. Que la IA genere el diccionario de datos y señale riesgos de un modelo que no hiciste tú.',
+  html: ()=> `
+  <h3>🎯 Objetivo</h3>
+  <p>Heredas un informe de otra persona. Quieres, en minutos: un <b>diccionario</b> (qué hace cada medida en lenguaje de negocio) y una <b>auditoría</b> (riesgos, medidas duplicadas, antipatrones).</p>
+
+  <h3>Paso 1 · Extrae las medidas para dárselas a la IA</h3>
+  ${best('Opción fácil (pocas medidas)', `<ol>
+    <li>Panel <b>Datos</b> → clic en cada medida → copia el texto de la barra de fórmulas.</li>
+    <li>Pégalas en un bloc, una debajo de otra, con su nombre.</li>
+  </ol>`)}
+  ${best('Opción potente (muchas medidas) — herramienta externa gratuita', `<ol>
+    <li>Instala <b>DAX Studio</b> o <b>Tabular Editor</b> (gratuitos). Aparecen en la pestaña <b>Herramientas externas</b> de Power BI.</li>
+    <li>Ábrela conectada a tu modelo y <b>exporta todas las medidas</b> (en Tabular Editor: selecciona las medidas y copia; en DAX Studio: pestaña Advanced o una consulta a las vistas del sistema).</li>
+  </ol>`)}
+
+  <h3>Paso 2 · Pide el diccionario</h3>
+  ${prompt(`Actúa como arquitecto de Power BI. Te paso las medidas DAX de un modelo que heredé.
+Genera un DICCIONARIO en tabla con columnas: Nombre | Qué calcula (1 frase de negocio) | De qué otras medidas/columnas depende | Formato sugerido.
+Si ves nombres poco claros, propón uno mejor.
+
+Medidas:
+<<pega aquí todas las medidas con su nombre y su DAX>>`)}
+
+  <h3>Paso 3 · Pide la auditoría</h3>
+  ${prompt(`Con esas mismas medidas, hazme una AUDITORÍA:
+1) Medidas duplicadas o casi iguales (candidatas a unificar).
+2) Antipatrones de performance (p. ej. iterar la tabla de hechos, FILTER innecesario, exceso de transición de contexto).
+3) Riesgos: divisiones sin DIVIDE, dependencias frágiles, medidas sin formato.
+4) Prioriza: ¿qué 3 cosas arreglaría primero y por qué?`)}
+
+  <h3>✅ Cómo verificar y usar el resultado</h3>
+  ${best('', `<ul>
+    <li>El diccionario lo pegas en una página de documentación o en un Word/OneNote del proyecto.</li>
+    <li><b>No apliques los cambios de la auditoría a ciegas:</b> revisa cada sugerencia contra el modelo real. La IA puede malinterpretar una medida sin ver los datos.</li>
+    <li>Cruza los hallazgos con el módulo <span class="pill" data-go="performance">Performance</span> para decidir qué refactorizar.</li>
+  </ul>`)}
+  ${warn('Privacidad', `<p>Las <b>fórmulas</b> de medidas no suelen ser datos sensibles, pero <b>no pegues datos reales</b> (cifras de clientes, importes) en un chat externo sin autorización. Para auditar lógica, las medidas bastan. Ver <span class="pill" data-go="ag-buenas">gobernanza</span>.</p>`)}
+  `
+});
+
+/* ---- AG: Caso 4 · Performance ---- */
+N({ id:'ag-caso-perf', parent:'ag-casos', title:'Caso 4 · Optimizar una Medida Lenta', icon:'🔴',
+  importancia:'★★★★☆', dificultad:'🔴', uso:'Informe que tarda',
+  deps:['ag-casos'], related:['performance','fn-iteradores'], fns:[],
+  subtitle:'Subagente Rendimiento. Detectar la medida lenta con el Analizador de rendimiento y pedirle a la IA una versión más rápida — con los clics para capturar el DAX exacto.',
+  html: ()=> `
+  <h3>🎯 Objetivo</h3>
+  <p>Una página tarda en cargar. Vamos a <b>medir cuál visual es el lento</b>, copiar su consulta DAX y pedir a la IA que la optimice.</p>
+
+  <h3>Paso 1 · Captura la consulta lenta (clic por clic)</h3>
+  ${best('', `<ol>
+    <li>Pestaña <b>Optimizar</b> → <b>Analizador de rendimiento</b> (en versiones antiguas está en la pestaña <b>Ver</b>).</li>
+    <li>Pulsa <b>Iniciar grabación</b> y luego <b>Actualizar objetos visuales</b> (o interactúa con la página).</li>
+    <li>En la lista, ordena por tiempo: el visual con mayor <b>"Consulta DAX"</b> (en ms) es el culpable.</li>
+    <li>Despliega ese visual → <b>Copiar consulta</b>. Acabas de copiar el DAX exacto que ejecuta.</li>
+  </ol>`)}
+  ${engine('Qué significa lo que ves', `<p>El Analizador separa el tiempo en <b>Consulta DAX</b> (cálculo del motor), <b>Presentación</b> (dibujar) y <b>Otro</b>. Si el grande es "Consulta DAX", el problema es la medida; si es "Presentación", el problema es el visual (demasiados datos). Más en <span class="pill" data-go="performance">Performance</span>.</p>`)}
+
+  <h3>Paso 2 · Pide la optimización</h3>
+  ${prompt(`Actúa como experto en optimización de DAX.
+Esta consulta tarda ~9 segundos. La tabla de hechos "Ventas" tiene ~8 millones de filas.
+Sospecho transición de contexto / iteración sobre la tabla de hechos.
+
+Dame:
+1) Un diagnóstico de POR QUÉ es lenta.
+2) Una versión reescrita más rápida de la(s) medida(s), explicando qué cambiaste.
+3) Cómo comprobar que da el MISMO resultado que la original.
+
+Consulta DAX:
+<<pega aquí la consulta copiada del Analizador de rendimiento>>`)}
+
+  <h3>Paso 3 · Aplica y vuelve a medir</h3>
+  ${best('', `<ol>
+    <li>Edita la medida con la versión optimizada (panel Datos → la medida → pega la nueva fórmula).</li>
+    <li><b>Verifica que el número no cambió</b> (compara contra una tarjeta con la medida original duplicada temporalmente).</li>
+    <li>Vuelve a grabar con el Analizador de rendimiento: ¿bajó el tiempo de "Consulta DAX"?</li>
+  </ol>`)}
+  ${err('', `<p>Si la versión "rápida" da un número distinto, <b>no la uses</b>: devuélvesela a la IA — <i>"tu versión da 1.250 pero la original da 1.200; manténla equivalente"</i>. Optimizar nunca debe cambiar el resultado. Para entender el porqué, ver <span class="pill" data-go="fn-iteradores">iteradores</span> y <span class="pill" data-go="transicion">transición</span>.</p>`)}
+  ${best('Aún más preciso', `<p>Con <b>DAX Studio</b> (Herramientas externas) activa <b>Server Timings</b> para ver tiempo de motor de almacenamiento vs de fórmulas, y pega también esos datos a la IA para un diagnóstico fino.</p>`)}
+  `
+});
+
+/* ---- AG: Caso 5 · Validación / cierre ---- */
+N({ id:'ag-caso-valid', parent:'ag-casos', title:'Caso 5 · Cuadrar el Cierre (validación con IA)', icon:'🔴',
+  importancia:'★★★★★', dificultad:'🔴', uso:'Cierre mensual',
+  deps:['ag-casos'], related:['casos-control','fn-errores'], fns:['calculate'],
+  subtitle:'Subagente Validación. Construir, con ayuda de la IA, medidas de control que comparen Power BI contra el sistema origen y marquen los descuadres.',
+  html: ()=> `
+  <h3>🎯 Objetivo</h3>
+  <p>Antes de presentar el cierre, asegurarte de que el EBITDA y las ventas de Power BI <b>coinciden con el sistema contable</b>, y que cualquier diferencia salte a la vista.</p>
+
+  <h3>Paso 1 · Pide las medidas de control</h3>
+  ${prompt(`Actúa como controller experto en Power BI.
+Tengo medidas [Ventas], [EBITDA] en mi modelo. Tengo también una tabla "ControlOrigen"
+con el valor oficial del sistema contable por mes: ControlOrigen[Concepto], ControlOrigen[Mes], ControlOrigen[Valor].
+
+Créame medidas de control que:
+1) [Dif Ventas vs Origen] = mis ventas - el valor oficial de "Ventas".
+2) [% Dif Ventas] con DIVIDE.
+3) [Estado Cuadre] = un texto/semaforo: "OK" si la diferencia absoluta < 1, "REVISAR" si no.
+Dame el DAX y dime cómo montar un panel de control simple para verlo por mes.`)}
+
+  <h3>Paso 2 · Móntalo (clic por clic)</h3>
+  ${best('', `<ol>
+    <li>Crea las medidas (panel Datos → clic derecho → Nueva medida → pega cada una).</li>
+    <li>Inserta una <b>matriz</b>: Filas = <code class="inl">Calendario[Mes]</code>; Valores = <code class="inl">[Ventas]</code>, valor oficial, <code class="inl">[Dif Ventas vs Origen]</code>, <code class="inl">[Estado Cuadre]</code>.</li>
+    <li>Aplica <b>formato condicional</b> a la columna de diferencia: selecciona el visual → campo → <b>Formato condicional → Color de fondo</b> (rojo si ≠ 0).</li>
+  </ol>`)}
+  ${engine('Qué verás', `<p>Una tabla mes a mes donde las filas que <b>no cuadran se pintan de rojo</b> y muestran "REVISAR". En segundos sabes dónde mirar, en vez de revisar todo a ojo.</p>`)}
+
+  <h3>✅ Cómo verificar</h3>
+  ${best('', `<ul>
+    <li>Provoca un descuadre a propósito (cambia un dato) y comprueba que el semáforo se pone en "REVISAR": así sabes que el control <b>funciona</b>.</li>
+    <li>El umbral (&lt; 1) ajústalo a tu tolerancia (céntimos, redondeos).</li>
+    <li>Conecta con el módulo <span class="pill" data-go="casos-control">Control de Gestión</span> para variaciones Real vs Ppto.</li>
+  </ul>`)}
+  ${warn('La IA construye el control; tú investigas el descuadre', `<p>La medida te dice <b>dónde</b> no cuadra, no <b>por qué</b>. La causa (un asiento faltante, un filtro, un tipo de cambio) la investigas tú. Ese es el trabajo de criterio que no se delega.</p>`)}
+  `
+});
+
+/* ---- AG: Caso 6 · Orquestación ---- */
+N({ id:'ag-caso-orq', parent:'ag-casos', title:'Caso 6 · Orquestar Subagentes (el flujo completo)', icon:'🔴⚠️⭐',
+  importancia:'★★★★★', dificultad:'🔴 Avanzado', uso:'Proyecto entero',
+  deps:['ag-caso-dax','ag-arquitectura'], related:['ag-powerbi','ag-buenas'], fns:[],
+  subtitle:'Cómo encadenar los subagentes para montar el tablero de cierre mensual de punta a punta — qué es posible hoy en la práctica y cómo hacerlo paso a paso.',
+  html: ()=> `
+  ${why('Orquestar es coordinar, no apretar un botón mágico', `<p>"Montar el tablero entero con un clic" todavía no es realista de forma totalmente autónoma y segura. Lo que <b>sí</b> puedes hacer hoy es usar un agente como <b>orquestador</b> que produce el plan y los entregables de cada subagente, y tú los vas aplicando y aprobando. Aquí está cómo.</p>`)}
+
+  <h3>Opción práctica de hoy: un orquestador "conversacional"</h3>
+  <p>Usas un chat IA potente como orquestador. Le das un <b>"prompt de sistema"</b> que define los subagentes y le pides que trabaje por fases, entregando lo de cada una para que tú lo apliques en Power BI.</p>
+  ${prompt(`Vas a actuar como ORQUESTADOR de un proyecto de Power BI (cierre mensual).
+Coordinas estos subagentes especialistas y entregas el resultado de cada uno por separado,
+esperando mi confirmación antes de pasar al siguiente:
+
+1) DATOS: qué orígenes conectar y cómo.
+2) POWER QUERY: pasos/M para limpiar (meses en columnas -> filas, tipos, merge con plan de cuentas).
+3) MODELADO: relaciones y star schema recomendado.
+4) DAX: medidas (Ventas, EBITDA, Var vs Ppto, YTD) listas para pegar.
+5) VISUALES: qué páginas y qué visual por pregunta.
+6) VALIDACIÓN: medidas de control para cuadrar contra el origen.
+7) DOCUMENTACIÓN: diccionario de medidas.
+
+Mi modelo: <<describe tus tablas y columnas>>.
+Empieza por la FASE 1 (DATOS). No avances a la siguiente hasta que yo diga "ok".`,'PROMPT DE SISTEMA — define el orquestador')}
+  ${engine('Cómo se siente trabajar así', `<p>El orquestador te entrega la Fase 1; tú la aplicas en Power BI (siguiendo los <span class="pill" data-go="ag-caso-pq">tutoriales</span> anteriores), dices "ok", y pasa a la Fase 2. Es un copiloto por fases: rápido, pero con tu control y verificación en cada paso. Cada fase es, en esencia, uno de los Casos 1-5.</p>`)}
+
+  <h3>Opción avanzada: agente con acceso real (MCP)</h3>
+  <p>Para que el agente <b>consulte tu modelo o tus datos directamente</b> (sin copiar/pegar), se usa <b>MCP</b> (ver <span class="pill" data-go="ag-arquitectura">qué es MCP</span>). Esquema con <b>Claude Desktop</b> como ejemplo:</p>
+  ${best('Paso a paso (concepto)', `<ol>
+    <li>Instala una app de agente que soporte MCP (p. ej. <b>Claude Desktop</b>).</li>
+    <li>Configura un <b>servidor MCP</b> hacia tu fuente de datos (por ejemplo, un servidor MCP de SQL apuntando a tu data warehouse) en el archivo de configuración de la app.</li>
+    <li>Ahora el agente puede <b>consultar los datos</b> y responder preguntas de negocio o ayudarte a diseñar medidas <b>viendo</b> la estructura real, sin que pegues nada.</li>
+  </ol>`)}
+  ${warn('Qué es realista y qué no (sé honesto con tu jefe)', `<ul>
+    <li><b>Realista hoy:</b> generar DAX/M, documentar, diagnosticar, y consultar datos vía MCP. La <b>aplicación</b> en Power BI la haces tú (o semi-automática vía APIs).</li>
+    <li><b>Emergente:</b> escritura automática de vuelta al informe y publicación autónoma (vía APIs REST/XMLA o "translytical task flows"). Existe, pero requiere montaje técnico y control estricto.</li>
+    <li><b>No delegable:</b> la aprobación final y la responsabilidad ante la dirección. Ver <span class="pill" data-go="ag-buenas">gobernanza</span>.</li>
+  </ul>`)}
+
+  <h3>El flujo completo del cierre mensual (resumen)</h3>
+  ${diagram(`
+   ORQUESTADOR
+     │
+     ├─►(1) DATOS ........... conecta y refresca el origen
+     ├─►(2) POWER QUERY .... limpia: unpivot, tipos, merge        [Caso 2]
+     ├─►(3) MODELADO ....... relaciona con Calendario y dimensiones
+     ├─►(4) DAX ............ EBITDA, desvíos, YTD                  [Caso 1]
+     ├─►(5) VISUALES ....... KPIs, cascada, matriz
+     ├─►(6) VALIDACIÓN ..... cuadra contra el origen              [Caso 5]
+     └─►(7) DOCUMENTACIÓN .. diccionario                          [Caso 3]
+                 │
+                 ▼
+         TÚ revisas, apruebas y PUBLICAS`)}
+  ${best('', `<p>Empieza orquestando solo 2-3 fases (p. ej. Power Query + DAX + Validación). Cuando te sientas cómodo, suma el resto. La meta no es quitarte del medio, sino <b>quitarte el trabajo repetitivo</b> para que dediques tu tiempo al criterio y al análisis.</p>`)}
   `
 });
 
