@@ -3914,39 +3914,84 @@ N({ id:'ag-powerbi', parent:'agentes', title:'Cómo Conectar Agentes y Subagente
   ${why('Conectar = darle "manos" sobre tu modelo', `<p>Un agente solo es útil en BI si puede <b>leer tu modelo, generar DAX/M y, opcionalmente, escribir o publicar</b>. Hay varias vías para lograrlo, desde activar una casilla hasta montar una integración a medida. Elige según tu entorno y tu nivel.</p>`)}
 
   <h3>Vía 1 · Copilot nativo de Power BI / Fabric (lo más fácil) 🟢</h3>
-  <p>Microsoft integra un <b>Copilot</b> dentro de Power BI Desktop y el Servicio (requiere capacidad Fabric / licencia con Copilot). Sin montar nada, puedes:</p>
-  <ul>
-    <li>Pedirle que <b>genere medidas DAX</b> describiéndolas en lenguaje natural.</li>
-    <li><b>Resumir</b> un informe o una página.</li>
-    <li><b>Crear páginas/visuales</b> a partir de una descripción.</li>
-    <li>Hacer <b>preguntas</b> sobre los datos (Q&A).</li>
-  </ul>
-  ${best('', `<p>Es el punto de entrada recomendado: ya está dentro de la herramienta, respeta los permisos de tu organización y no requiere programación.</p>`)}
+  <p>Microsoft integra un <b>Copilot</b> dentro de Power BI Desktop y el Servicio. <b>Requisito:</b> tu organización debe tener <b>capacidad Fabric (F2 o superior) o Premium con Copilot habilitado</b> por el administrador. Si no ves el botón, no está activado: usa un chat externo (Ruta A de los <span class="pill" data-go="ag-casos">tutoriales</span>).</p>
+  ${best('Comprobar que está disponible y usarlo (clic por clic)', `<ol>
+    <li>En <b>Power BI Desktop</b>, mira la pestaña <b>Inicio</b>: si hay un botón <b>Copilot</b>, lo tienes. (Si no, el admin lo habilita en el <b>portal de administración → Copilot</b>, sobre una capacidad Fabric.)</li>
+    <li>Pulsa <b>Copilot</b> → se abre un panel a la derecha.</li>
+    <li>Escribe lo que quieres en lenguaje natural. Ejemplos que funcionan bien:</li>
+  </ol>`)}
+  ${prompt(`Crea una medida que calcule la variación porcentual del EBITDA respecto al mes anterior, usando Calendario[Fecha].
 
-  <h3>Vía 2 · Copilot Studio y agentes de datos de Fabric 🟡</h3>
-  <p>Para <b>crear tus propios agentes</b> que respondan sobre tu modelo semántico o tus datos de Fabric (Lakehouse, Warehouse), sin código o con poco código. Útil para construir un "asistente de datos" para tu equipo que conteste preguntas de negocio sobre tus informes.</p>
+Resume esta página del informe en 3 puntos para dirección.
 
-  <h3>Vía 3 · MCP — conectar un LLM externo a tu modelo 🔴</h3>
-  <p>Con un <b>servidor MCP</b> expones tus datos/herramientas de forma estándar y un agente externo (p. ej. Claude) se conecta para consultar el modelo, generar y validar DAX, etc. Es la vía flexible cuando quieres usar un LLM concreto o un flujo a medida. Ver <span class="pill" data-go="ag-arquitectura">qué es MCP</span>.</p>
+Crea una página de informe con un resumen de ventas por región y su tendencia mensual.`,'EJEMPLOS para el panel de Copilot')}
+  ${engine('Qué verás', `<p>Copilot propone la medida o el visual; <b>revisas</b> y, si te convence, lo <b>agregas al modelo / a la página</b> con un botón. Respeta los permisos de tu organización (no ve más datos de los que tú ves).</p>`)}
+
+  <h3>Vía 2 · Agente de datos de Fabric (asistente para tu equipo) 🟡</h3>
+  <p>Permite <b>crear tu propio "asistente de datos"</b> que responde preguntas de negocio sobre tu modelo semántico o tus datos de Fabric, sin programar. Ideal para que el equipo pregunte "¿cuánto vendimos en LATAM en marzo?" en lenguaje natural.</p>
+  ${best('Crearlo (clic por clic)', `<ol>
+    <li>Entra al portal de <b>Fabric</b> (<code class="inl">app.fabric.microsoft.com</code>) con un <b>workspace en capacidad Fabric</b>.</li>
+    <li><b>+ Nuevo elemento</b> → busca y elige <b>Agente de datos</b> (Data agent).</li>
+    <li><b>Añade orígenes de datos</b>: tu modelo semántico, un Lakehouse o un Warehouse.</li>
+    <li>Dale <b>instrucciones y ejemplos</b> de preguntas (mejora mucho la precisión): "los importes están en USD", "el año fiscal cierra en junio"…</li>
+    <li><b>Prueba</b> con preguntas en el panel; cuando responda bien, <b>publícalo/compártelo</b> con tu equipo.</li>
+  </ol>`)}
+  ${warn('Dale contexto en las instrucciones', `<p>Un agente de datos sin instrucciones acierta menos. Dile cómo se llaman las cosas, qué significa cada métrica y da 3-5 ejemplos de preguntas y su respuesta esperada. Es como entrenar a un analista nuevo.</p>`)}
+
+  <h3>Vía 3 · MCP — conectar un LLM externo (ej. Claude Desktop) 🔴</h3>
+  <p>Con <b>MCP</b> (ver <span class="pill" data-go="ag-arquitectura">qué es MCP</span>) conectas un agente externo a tus <b>datos</b> para que los consulte directamente, sin copiar/pegar. Ejemplo con <b>Claude Desktop</b> apuntando a tu data warehouse:</p>
+  ${best('Configurarlo (clic por clic)', `<ol>
+    <li>Instala <b>Claude Desktop</b> (la app de escritorio).</li>
+    <li>Menú <b>Configuración → Desarrollador → Editar configuración</b>: abre el archivo <code class="inl">claude_desktop_config.json</code>.</li>
+    <li>Añade un <b>servidor MCP</b> hacia tu base de datos. Ejemplo para PostgreSQL (usa el servidor que corresponda a tu motor):</li>
+  </ol>`)}
+  ${mq(`{
+  "mcpServers": {
+    "mi-datawarehouse": {
+      "command": "npx",
+      "args": [
+        "-y", "@modelcontextprotocol/server-postgres",
+        "postgresql://USUARIO:CLAVE@HOST:5432/MI_BASE"
+      ]
+    }
+  }
+}`,'claude_desktop_config.json')}
+  ${best('', `<ol start="4">
+    <li><b>Guarda</b> el archivo y <b>reinicia</b> Claude Desktop.</li>
+    <li>Verás un icono de <b>herramientas/enchufe</b>: ya puede consultar tus datos. Pregúntale en lenguaje natural:</li>
+  </ol>`)}
+  ${prompt(`Conéctate a mi data warehouse y dime las 5 categorías con mayor caída de ventas en marzo vs febrero. Muéstrame la consulta SQL que usaste para que pueda verificarla.`)}
+  ${warn('', `<p>No hay (aún) un servidor MCP oficial y universal "de Power BI"; lo habitual es apuntar MCP a la <b>base de datos/origen</b> que alimenta tu modelo. Existen servidores MCP emergentes para Fabric/Power BI: valida su estado y permisos antes de usarlos en producción.</p>`)}
 
   <h3>Vía 4 · APIs de Power BI / Fabric (máximo control) 🔴⭐</h3>
-  <p>Para automatización a medida, el agente usa como <b>herramientas</b> las APIs oficiales:</p>
-  ${tbl(['API','Para qué sirve','Ejemplo de uso por un agente'],[
-    ['<b>Power BI REST API</b>','Gestionar workspaces, datasets, refrescos, informes','"Refresca el dataset y avísame si falla"'],
-    ['<b>Endpoint XMLA</b>','Leer/editar el modelo semántico (medidas, tablas) y consultarlo con DAX','"Lee las medidas existentes y crea una nueva sin duplicar"'],
-    ['<b>Fabric APIs</b>','Operar sobre Lakehouse/Warehouse y artefactos de Fabric','"Carga estos datos y actualiza el modelo"'],
-    ['<b>TMSL / Tabular</b>','Definición del modelo como objeto editable','"Añade esta relación al modelo"'],
+  <p>Para automatización a medida, el agente usa como <b>herramientas</b> las APIs oficiales. Requiere registrar una <b>aplicación en Microsoft Entra ID (Azure AD)</b> con un <b>service principal</b> y permisos sobre el workspace.</p>
+  ${tbl(['API','Para qué','Ejemplo de uso por un agente'],[
+    ['<b>Power BI REST API</b>','Workspaces, datasets, refrescos, informes','"Refresca el dataset y avísame si falla"'],
+    ['<b>Endpoint XMLA</b>','Leer/editar el modelo (medidas, tablas) y consultarlo con DAX','"Lee las medidas y crea una nueva sin duplicar"'],
+    ['<b>Fabric APIs</b>','Operar Lakehouse/Warehouse y artefactos','"Carga estos datos y actualiza el modelo"'],
+    ['<b>TMSL / TOM</b>','Definición del modelo como objeto editable','"Añade esta relación al modelo"'],
   ])}
-  ${engine('Cómo encaja con los subagentes', `<p>Cada subagente usa la herramienta que necesita: el de <b>Power Query</b> trabaja sobre el origen y las consultas; el de <b>DAX</b> lee/escribe medidas vía XMLA; el de <b>datos/publicación</b> usa la REST API para refrescar y publicar; el de <b>validación</b> ejecuta consultas DAX y compara resultados. El orquestador coordina la secuencia.</p>`)}
+  ${best('Ejemplo concreto · refrescar un dataset con la REST API', `<ol>
+    <li>El agente obtiene un <b>token</b> (vía el service principal de Entra ID).</li>
+    <li>Hace esta llamada:</li>
+  </ol>`)}
+  ${mq(`POST https://api.powerbi.com/v1.0/myorg/groups/{workspaceId}/datasets/{datasetId}/refreshes
+Authorization: Bearer <TOKEN>
+Content-Type: application/json
+
+{ "notifyOption": "MailOnFailure" }`,'REST · refrescar dataset')}
+  ${best('Ejemplo concreto · consultar el modelo por XMLA', `<p>Conectándose al endpoint XMLA del workspace (<code class="inl">powerbi://api.powerbi.com/v1.0/myorg/MI_WORKSPACE</code>), el agente ejecuta DAX para validar:</p>`)}
+  ${dax(`EVALUATE ROW ( "Ventas Totales", [Ventas] )`)}
+  ${engine('Cómo encaja con los subagentes', `<p>Cada subagente usa la herramienta que necesita: <b>Power Query</b> trabaja sobre el origen; <b>DAX</b> lee/escribe medidas vía XMLA; <b>Datos/Publicación</b> usa la REST API para refrescar y publicar; <b>Validación</b> ejecuta DAX y compara. El orquestador coordina la secuencia.</p>`)}
 
   <h3>Tabla de decisión: ¿qué vía elijo?</h3>
   ${tbl(['Tu situación','Vía recomendada'],[
     ['Quiero ayuda dentro de Power BI sin montar nada','1 · Copilot nativo'],
-    ['Quiero un asistente de datos para mi equipo','2 · Copilot Studio / agentes Fabric'],
-    ['Quiero usar un LLM concreto sobre mi modelo','3 · MCP'],
-    ['Quiero automatización a medida (refrescos, despliegue, edición del modelo)','4 · APIs (REST/XMLA/Fabric)'],
+    ['Quiero un asistente de datos para mi equipo','2 · Agente de datos de Fabric'],
+    ['Quiero usar un LLM concreto sobre mis datos','3 · MCP'],
+    ['Quiero automatización a medida (refrescos, despliegue, editar el modelo)','4 · APIs (REST/XMLA/Fabric)'],
   ])}
-  ${warn('Permisos y seguridad de datos', `<p>Conectar un agente a Power BI significa darle acceso a <b>datos reales</b>. Respeta los permisos (RLS, roles), usa credenciales con el <b>mínimo privilegio</b> necesario, y nunca envíes datos sensibles a un servicio externo sin autorización. Más en <span class="pill" data-go="ag-buenas">buenas prácticas y riesgos</span>.</p>`)}
+  ${warn('Permisos y seguridad de datos', `<p>Conectar un agente a Power BI significa darle acceso a <b>datos reales</b>. Respeta los permisos (RLS, roles), usa un service principal con el <b>mínimo privilegio</b> necesario, guarda las credenciales en un sitio seguro (nunca en el prompt), y nunca envíes datos sensibles a un servicio externo sin autorización. Más en <span class="pill" data-go="ag-buenas">buenas prácticas y riesgos</span>.</p>`)}
   `
 });
 
@@ -3970,6 +4015,36 @@ N({ id:'ag-usar', parent:'agentes', title:'Cómo Empezar a Usarlos (paso a paso)
     ['"Optimiza esto"','"Esta medida tarda 15s sobre 8M de filas (pego el código). Sospecho transición de contexto. Propón una versión más rápida y explica qué cambiaste."'],
     ['"Documenta el modelo"','"Recorre estas 12 medidas (las pego) y genera un diccionario: nombre, qué calcula en una frase de negocio, y dependencias. Formato tabla."'],
   ])}
+
+  <h3>Plantilla de prompt reutilizable (rellena los huecos)</h3>
+  <p>Guarda esta plantilla y reúsala para casi cualquier pedido de BI. Solo cambias lo que está entre &lt;&lt; &gt;&gt;:</p>
+  ${prompt(`Actúa como experto senior en Power BI (DAX y Power Query).
+
+CONTEXTO DE MI MODELO:
+- Tablas y columnas: <<lista tus tablas con sus columnas y tipos>>
+- Relaciones: <<ej. Calendario[Fecha] 1 -> * Ventas[Fecha]>>
+- Reglas de negocio: <<ej. importes en USD, año fiscal cierra en junio>>
+
+LO QUE NECESITO:
+<<describe el objetivo en términos de negocio>>
+
+QUIERO QUE ME DEVUELVAS:
+1) La solución lista para pegar (DAX o pasos/M de Power Query).
+2) Una explicación en una frase, en lenguaje sencillo.
+3) Cómo verificar que el resultado es correcto.
+Si te falta algún dato para hacerlo bien, pregúntame antes de asumir.`,'PLANTILLA — cópiala y reúsala siempre')}
+  ${best('Por qué funciona', `<p>Le das <b>contexto</b> (qué hay), <b>objetivo</b> (qué quieres) y <b>formato de salida</b> (qué te devuelva). Y la última línea —"pregúntame si te falta algo"— evita que <b>invente</b> nombres o supuestos.</p>`)}
+
+  <h3>Tu primera sesión en 10 minutos (guiada)</h3>
+  ${best('Hazlo ahora mismo con un archivo de prueba', `<ol>
+    <li><b>Abre un chat IA</b> (Claude/ChatGPT/Copilot) en el navegador, en una pestaña al lado de Power BI.</li>
+    <li><b>Copia la plantilla de arriba</b> y rellénala con un caso simple, por ejemplo: tabla <code class="inl">Ventas(Fecha, Importe)</code> + <code class="inl">Calendario</code>, y objetivo "medida de Ventas del mes actual".</li>
+    <li><b>Envía</b> y lee la respuesta. Copia la medida.</li>
+    <li>En Power BI: panel <b>Datos</b> → clic derecho en <code class="inl">Ventas</code> → <b>Nueva medida</b> → pega → <span class="kbd">Enter</span>.</li>
+    <li>Arrástrala a una <b>tarjeta</b> y comprueba el número contra un filtro manual de ese mes.</li>
+    <li><b>Pide que te la explique</b>: "explícame esta medida línea por línea como si fuera principiante". Acabas de aprender, no solo copiar.</li>
+  </ol>`)}
+  <p>Cuando esto te resulte natural, pasa a los <span class="pill" data-go="ag-casos">6 tutoriales</span> (más completos) y luego a <span class="pill" data-go="ag-caso-orq">orquestar subagentes</span>.</p>
 
   <h3>El patrón de trabajo seguro</h3>
   ${diagram(`
