@@ -121,12 +121,16 @@ summary.cat-sum:hover{background:var(--panel)}
 a.navlink{display:block;color:var(--muted);text-decoration:none;padding:6px 8px;border-left:2px solid transparent;border-radius:0 6px 6px 0;line-height:1.3}
 a.navlink:hover{background:var(--panel);color:var(--text)}
 a.navlink.cat-leaf{font-weight:700;color:#fff;font-size:13.5px;padding:11px 10px}
-a.cat-self{color:var(--accent);font-size:11px;opacity:.8}
-a.navlink.d0{color:var(--text);font-weight:600;padding-left:12px}
-a.navlink.d1{padding-left:24px}
-a.navlink.d2{padding-left:38px;font-size:12px}
-a.navlink.d3{padding-left:52px;font-size:11.5px;color:var(--faint)}
-a.navlink.d4{padding-left:64px;font-size:11.5px;color:var(--faint)}
+a.cat-self.d0{color:var(--accent);font-size:11px;opacity:.85;padding:4px 8px 8px 12px}
+/* nivel 1 = módulos: sub-encabezados dentro de la categoría */
+a.navlink.d1{color:var(--accent2);font-weight:700;font-size:12.5px;padding:8px 8px 7px 14px;margin-top:4px;border-top:1px solid var(--border)}
+a.navlink.d1:hover{background:var(--panel);color:#fff}
+/* nivel 2 = subtemas (claramente subordinados) */
+a.navlink.d2{padding:5px 8px 5px 30px;color:var(--muted);font-size:12px}
+a.navlink.d2::before{content:"·";color:var(--faint);margin-right:6px}
+/* niveles 3-4 = sub-subtemas */
+a.navlink.d3{padding:4px 8px 4px 44px;color:var(--faint);font-size:11.5px}
+a.navlink.d4{padding:4px 8px 4px 56px;color:var(--faint);font-size:11.5px}
 
 /* Active node highlight (CSS :has — degrades gracefully if unsupported) */
 ${activeRule}
