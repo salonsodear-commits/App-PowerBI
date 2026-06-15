@@ -219,6 +219,7 @@ const pre = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
     ${sections}
   </main>
 </div>
+<a href="#top" class="fab-top" title="Volver arriba">↑</a>
 ${bakeScript}
 </body></html>`;
 

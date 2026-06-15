@@ -153,12 +153,32 @@
   .modprog .bar{flex:1;min-width:120px;height:6px;background:var(--panel2);border-radius:6px;overflow:hidden;border:1px solid var(--border)}
   .modprog .fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:6px}
 
-  /* Learning roadmap (plan) */
-  .road-phase{border:1px solid var(--border);border-left:4px solid var(--accent);background:rgba(255,255,255,.02);border-radius:10px;padding:14px 16px;margin:14px 0}
-  .road-phase .ph-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
-  .road-phase .ph-n{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--purple));color:#0b0f16;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
-  .road-phase .ph-t{font-size:16px;font-weight:700;color:#fff}
-  .road-phase .ph-goal{font-size:13px;color:var(--muted);margin:2px 0 8px}
+  /* Learning roadmap (timeline) */
+  .timeline{position:relative;margin:18px 0}
+  .tl-step{position:relative;padding:0 0 2px 50px;margin:0 0 16px}
+  .tl-step::before{content:"";position:absolute;left:18px;top:40px;bottom:-16px;width:2px;background:var(--border2)}
+  .tl-step:last-child::before{display:none}
+  .tl-num{position:absolute;left:0;top:2px;width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));color:#0b0f16;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;border:3px solid var(--bg);z-index:1}
+  .tl-card{background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+  .tl-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px}
+  .tl-t{font-size:15.5px;font-weight:700;color:#fff}
+  .tl-badge{font-size:10.5px;color:var(--faint);border:1px solid var(--border2);border-radius:20px;padding:1px 9px;white-space:nowrap}
+  .tl-out{font-size:12.5px;color:var(--accent2);margin:5px 0 9px}
+  .tl-topics{display:flex;flex-wrap:wrap;gap:6px}
+
+  /* Floating "back to top" button */
+  .fab-top{position:fixed;right:16px;bottom:18px;z-index:200;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));color:#0b0f16;font-size:21px;font-weight:800;display:flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer;border:1px solid rgba(255,255,255,.18);box-shadow:0 4px 18px rgba(0,0,0,.55)}
+  .fab-top:hover{filter:brightness(1.12)}
+
+  /* Assistant (recomendador) */
+  .asst-q{border:1px solid var(--border);border-left:3px solid var(--accent2);border-radius:9px;margin:8px 0;background:rgba(255,255,255,.02)}
+  .asst-q>summary{list-style:none;cursor:pointer;padding:11px 14px;font-weight:600;color:#fff;font-size:13.5px}
+  .asst-q>summary::-webkit-details-marker{display:none}
+  .asst-q>summary::before{content:"💬 "}
+  .asst-q[open]>summary{border-bottom:1px solid var(--border)}
+  .asst-a{padding:11px 14px 13px}
+  .asst-a .rec{font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin-bottom:7px}
+  .asst-cat{font-size:13px;font-weight:700;color:var(--accent);margin:20px 0 4px;border-bottom:1px solid var(--border);padding-bottom:5px}
 
   /* code blocks */
   pre{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;overflow-x:auto;margin:14px 0;position:relative}
@@ -288,6 +308,7 @@ a.navlink.d4{padding:4px 8px 4px 56px;color:var(--faint);font-size:11.5px}
 /* Active node highlight (CSS :has — degrades gracefully if unsupported) */
 body:has(#home:target) a[data-nav="home"],
 body:has(#plan:target) a[data-nav="plan"],
+body:has(#asistente:target) a[data-nav="asistente"],
 body:has(#powerbi:target) a[data-nav="powerbi"],
 body:has(#prioridades:target) a[data-nav="prioridades"],
 body:has(#motor:target) a[data-nav="motor"],
@@ -399,7 +420,7 @@ body:has(#ag-buenas:target) a[data-nav="ag-buenas"]{background:#1d3a5f;color:#ff
   <aside id="menu" class="side">
     <a href="#contenido" class="side-close" title="Cerrar">✕</a>
     <div class="side-head">Categorías · toca una para desplegar sus subtemas</div>
-    <nav class="nav"><a class="navlink cat-leaf" data-nav="home" href="#home">🏠 Inicio · Cómo usar este Atlas</a><a class="navlink cat-leaf" data-nav="plan" href="#plan">🧭 Plan de Aprendizaje (ruta del más básico al más avanzado)</a><details class="cat"><summary class="cat-sum">📊 Power BI / DAX</summary><div class="cat-body"><a class="navlink cat-self d0" data-nav="powerbi" href="#powerbi">▸ Abrir «Power BI / DAX»</a><a class="navlink d1" data-nav="prioridades" href="#prioridades">🗺️ Mapa de Prioridades DAX</a><a class="navlink d1" data-nav="motor" href="#motor">⚙️ Fundamentos del Motor DAX</a><a class="navlink d2" data-nav="ctx-fila" href="#ctx-fila">🟢 Contexto de Fila</a><a class="navlink d2" data-nav="ctx-filtro" href="#ctx-filtro">🟢⚠️ Contexto de Filtro</a><a class="navlink d2" data-nav="transicion" href="#transicion">🔴⚠️⭐ Transición de Contexto</a><a class="navlink d2" data-nav="relaciones" href="#relaciones">🟡 Relaciones, Propagación, Cardinalidad y Dirección</a><a class="navlink d2" data-nav="modelado" href="#modelado">🟡⭐ Modelado Dimensional: Hechos, Dimensiones, Star vs Snowflake</a><a class="navlink d2" data-nav="evaluacion" href="#evaluacion">🔴⭐ Flujo Completo de Evaluación de una Medida</a><a class="navlink d1" data-nav="calculate" href="#calculate">⭐⚠️ CALCULATE — El Corazón de DAX</a><a class="navlink d2" data-nav="calc-niveles" href="#calc-niveles">🪜⭐ CALCULATE en 9 Niveles Progresivos</a><a class="navlink d2" data-nav="calc-leer" href="#calc-leer">🔍⭐ Leer, Depurar y Anticipar Medidas Complejas</a><a class="navlink d1" data-nav="funciones" href="#funciones">📚 Catálogo de Funciones DAX</a><a class="navlink d2" data-nav="fn-agregacion" href="#fn-agregacion">🟢 Agregación: SUM, AVERAGE, COUNT, DISTINCTCOUNT, MIN, MAX</a><a class="navlink d2" data-nav="fn-filtros" href="#fn-filtros">🔴⚠️⭐ Filtros: CALCULATE, FILTER, ALL, ALLEXCEPT, ALLSELECTED, REMOVEFILTERS, KEEPFILTERS</a><a class="navlink d2" data-nav="fn-iteradores" href="#fn-iteradores">🟡⭐ Iteradores: SUMX, AVERAGEX, COUNTX, RANKX</a><a class="navlink d2" data-nav="fn-variables" href="#fn-variables">🟢⭐ Variables: VAR / RETURN</a><a class="navlink d2" data-nav="fn-logica" href="#fn-logica">🟢 Lógica: IF, SWITCH</a><a class="navlink d2" data-nav="fn-errores" href="#fn-errores">🟢 Manejo de Errores: DIVIDE, COALESCE, ISBLANK</a><a class="navlink d2" data-nav="fn-tablas" href="#fn-tablas">🟡⭐ Tablas: VALUES, DISTINCT, SELECTEDVALUE, RELATED, RELATEDTABLE, LOOKUPVALUE</a><a class="navlink d2" data-nav="fn-ranking" href="#fn-ranking">🔴⭐ Ranking: RANKX, TOPN</a><a class="navlink d2" data-nav="fn-tiempo" href="#fn-tiempo">🔴⭐ Inteligencia del Tiempo: DATESYTD, TOTALYTD, SAMEPERIODLASTYEAR, DATEADD, DATESINPERIOD, PARALLELPERIOD, PREVIOUSMONTH</a><a class="navlink d1" data-nav="simuladores" href="#simuladores">🎛️⭐ Simuladores Corporativos y Slicers Avanzados</a><a class="navlink d2" data-nav="sim-guia" href="#sim-guia">🟢⭐ Guía Paso a Paso desde Cero (solo con slicers)</a><a class="navlink d2" data-nav="sim-1" href="#sim-1">🟢 Escenario 1 · Ajuste Global de Ventas</a><a class="navlink d2" data-nav="sim-2" href="#sim-2">🟡⚠️ Escenario 2 · Ajuste de un Único Cliente</a><a class="navlink d2" data-nav="sim-3" href="#sim-3">🔴 Escenario 3 · Ajuste de Varios Clientes</a><a class="navlink d2" data-nav="sim-4" href="#sim-4">🔴⚠️⭐ Escenario 4 · Ajuste Global + Ajuste Individual</a><a class="navlink d2" data-nav="sim-5" href="#sim-5">🔴 Escenario 5 · Selección Dinámica de Cliente</a><a class="navlink d2" data-nav="sim-6" href="#sim-6">🔴⚠️⭐ Escenario 6 · Matriz de Ventas Proyectadas (Meses × Clientes)</a><a class="navlink d2" data-nav="sim-7" href="#sim-7">🔴⭐ Escenario 7 · Forecast Corporativo (Base / Optimista / Pesimista)</a><a class="navlink d2" data-nav="sim-8" href="#sim-8">🔴⭐ Escenario 8 · Impacto en KPIs (cascada hasta EBITDA)</a><a class="navlink d2" data-nav="sim-9" href="#sim-9">🔴⚠️⭐ Escenario 9 · Funcionamiento Interno (flujo paso a paso)</a><a class="navlink d2" data-nav="sim-envivo" href="#sim-envivo">🔴⭐ Edición Dinámica en Vivo con Muchos Clientes (30–50+)</a><a class="navlink d1" data-nav="performance" href="#performance">🚀⭐ Performance y Optimización</a><a class="navlink d1" data-nav="casos" href="#casos">🏢⭐ Casos Reales de Negocio</a><a class="navlink d2" data-nav="casos-pyl" href="#casos-pyl">🔴 P&amp;L: OPEX, CAPEX, EBITDA y Margen</a><a class="navlink d2" data-nav="casos-tesoreria" href="#casos-tesoreria">🔴⭐ Tesorería: Aging, Cobranzas, Deuda y Provisiones</a><a class="navlink d2" data-nav="casos-control" href="#casos-control">🔴⭐ Control de Gestión: Presupuesto, Forecast y Variaciones</a><a class="navlink d2" data-nav="casos-comercial" href="#casos-comercial">🔴⭐ Inteligencia Comercial: Clientes, Mix, Pareto y Retención</a><a class="navlink d2" data-nav="casos-cashflow" href="#casos-cashflow">🔴⭐ Flujo de Caja y Capital de Trabajo</a><a class="navlink d2" data-nav="casos-inventario" href="#casos-inventario">🔴 Inventarios: Rotación, Cobertura y Obsolescencia</a><a class="navlink d2" data-nav="casos-compras" href="#casos-compras">🔴 Compras y Cuentas por Pagar (Spend Analysis)</a><a class="navlink d2" data-nav="casos-rrhh" href="#casos-rrhh">🔴 RRHH / Capital Humano: Headcount, Rotación y Costo Laboral</a><a class="navlink d2" data-nav="casos-ratios" href="#casos-ratios">🔴 Ratios Financieros: Liquidez, Endeudamiento y Rentabilidad</a></div></details><details class="cat"><summary class="cat-sum">🔌 Power Query / M</summary><div class="cat-body"><a class="navlink cat-self d0" data-nav="powerquery" href="#powerquery">▸ Abrir «Power Query / M»</a><a class="navlink d1" data-nav="pq-intro" href="#pq-intro">🟢 Qué es Power Query y cómo abrirlo</a><a class="navlink d1" data-nav="pq-pasos" href="#pq-pasos">🟢⭐ Pasos Aplicados: la receta que se ejecuta sola</a><a class="navlink d1" data-nav="pq-encabezados" href="#pq-encabezados">🟢 Promover Encabezados y Renombrar Columnas</a><a class="navlink d1" data-nav="pq-filas-columnas" href="#pq-filas-columnas">🟢 Quitar Filas y Eliminar Columnas</a><a class="navlink d1" data-nav="pq-tipos" href="#pq-tipos">🟡⚠️⭐ Cambiar el Tipo de Datos</a><a class="navlink d1" data-nav="pq-reemplazar" href="#pq-reemplazar">🟢 Reemplazar Valores</a><a class="navlink d1" data-nav="pq-pivot" href="#pq-pivot">🔴⭐ Anular Dinamización (Unpivot) y Dinamización (Pivot)</a><a class="navlink d1" data-nav="pq-combinar" href="#pq-combinar">🔴 Combinar Consultas: Merge (unir) y Append (anexar)</a><a class="navlink d1" data-nav="pq-perfiles" href="#pq-perfiles">🟡 Perfiles de Datos (calidad y diagnóstico)</a><a class="navlink d1" data-nav="pq-m" href="#pq-m">🔴⭐ Editor Avanzado y Lenguaje M</a><a class="navlink d1" data-nav="pq-prioridades" href="#pq-prioridades">🗺️ Mapa de Prioridades M (funciones más usadas)</a><a class="navlink d1" data-nav="pq-buenas" href="#pq-buenas">🟡⭐ Buenas Prácticas en Power Query</a><a class="navlink d1" data-nav="pq-errores" href="#pq-errores">🟡⚠️ Errores Comunes en Power Query</a><a class="navlink d1" data-nav="pq-casos" href="#pq-casos">🔴⭐ Caso Real Completo: de Excel sucio a tabla de hechos</a><a class="navlink d1" data-nav="pq-casos-fin" href="#pq-casos-fin">🔴⭐ Casos Financieros: Consolidar Aging y Limpiar el Mayor Contable</a></div></details><details class="cat"><summary class="cat-sum">📈 Visualización y Dashboards Ejecutivos</summary><div class="cat-body"><a class="navlink cat-self d0" data-nav="dashboards" href="#dashboards">▸ Abrir «Visualización y Dashboards Ejecutivos»</a><a class="navlink d1" data-nav="dash-principios" href="#dash-principios">🟡⭐ Principios de Diseño de Dashboards</a><a class="navlink d1" data-nav="dash-visuales" href="#dash-visuales">🟡 Qué Visual Usar para Cada Pregunta</a><a class="navlink d1" data-nav="dash-ejecutivo" href="#dash-ejecutivo">🔴⭐ Anatomía de un Dashboard Ejecutivo Financiero</a><a class="navlink d1" data-nav="dash-buenas" href="#dash-buenas">🟡 Buenas Prácticas y Performance Visual</a></div></details><a class="navlink cat-leaf" data-nav="glosario" href="#glosario">📖 Glosario Financiero</a><details class="cat"><summary class="cat-sum">🤖 Agentes y Subagentes</summary><div class="cat-body"><a class="navlink cat-self d0" data-nav="agentes" href="#agentes">▸ Abrir «Agentes y Subagentes»</a><a class="navlink d1" data-nav="ag-que-son" href="#ag-que-son">🟢⭐ Qué son: Chat IA vs Agente vs Subagentes</a><a class="navlink d1" data-nav="ag-arquitectura" href="#ag-arquitectura">🔴⭐ Arquitectura: Orquestador, Subagentes y Herramientas</a><a class="navlink d1" data-nav="ag-powerbi" href="#ag-powerbi">🔴⭐ Cómo Conectar Agentes y Subagentes con Power BI</a><a class="navlink d1" data-nav="ag-usar" href="#ag-usar">🟡 Cómo Empezar a Usarlos (paso a paso)</a><a class="navlink d1" data-nav="ag-casos" href="#ag-casos">🔴⭐ Casos de Uso Reales (tutoriales paso a paso)</a><a class="navlink d2" data-nav="ag-caso-dax" href="#ag-caso-dax">🟢⭐ Caso 1 · Generar una Medida DAX con IA</a><a class="navlink d2" data-nav="ag-caso-pq" href="#ag-caso-pq">🟡 Caso 2 · Limpiar un Excel con IA + Power Query</a><a class="navlink d2" data-nav="ag-caso-doc" href="#ag-caso-doc">🟡 Caso 3 · Documentar y Auditar un Modelo Heredado</a><a class="navlink d2" data-nav="ag-caso-perf" href="#ag-caso-perf">🔴 Caso 4 · Optimizar una Medida Lenta</a><a class="navlink d2" data-nav="ag-caso-valid" href="#ag-caso-valid">🔴 Caso 5 · Cuadrar el Cierre (validación con IA)</a><a class="navlink d2" data-nav="ag-caso-orq" href="#ag-caso-orq">🔴⚠️⭐ Caso 6 · Orquestar Subagentes (el flujo completo)</a><a class="navlink d1" data-nav="ag-buenas" href="#ag-buenas">🟡⚠️⭐ Buenas Prácticas, Riesgos y Gobernanza</a></div></details></nav>
+    <nav class="nav"><a class="navlink cat-leaf" data-nav="home" href="#home">🏠 Inicio · Cómo usar este Atlas</a><a class="navlink cat-leaf" data-nav="plan" href="#plan">🧭 Plan de Aprendizaje (ruta del más básico al más avanzado)</a><a class="navlink cat-leaf" data-nav="asistente" href="#asistente">🔎 Asistente · ¿Qué necesito hacer?</a><details class="cat"><summary class="cat-sum">📊 Power BI / DAX</summary><div class="cat-body"><a class="navlink cat-self d0" data-nav="powerbi" href="#powerbi">▸ Abrir «Power BI / DAX»</a><a class="navlink d1" data-nav="prioridades" href="#prioridades">🗺️ Mapa de Prioridades DAX</a><a class="navlink d1" data-nav="motor" href="#motor">⚙️ Fundamentos del Motor DAX</a><a class="navlink d2" data-nav="ctx-fila" href="#ctx-fila">🟢 Contexto de Fila</a><a class="navlink d2" data-nav="ctx-filtro" href="#ctx-filtro">🟢⚠️ Contexto de Filtro</a><a class="navlink d2" data-nav="transicion" href="#transicion">🔴⚠️⭐ Transición de Contexto</a><a class="navlink d2" data-nav="relaciones" href="#relaciones">🟡 Relaciones, Propagación, Cardinalidad y Dirección</a><a class="navlink d2" data-nav="modelado" href="#modelado">🟡⭐ Modelado Dimensional: Hechos, Dimensiones, Star vs Snowflake</a><a class="navlink d2" data-nav="evaluacion" href="#evaluacion">🔴⭐ Flujo Completo de Evaluación de una Medida</a><a class="navlink d1" data-nav="calculate" href="#calculate">⭐⚠️ CALCULATE — El Corazón de DAX</a><a class="navlink d2" data-nav="calc-niveles" href="#calc-niveles">🪜⭐ CALCULATE en 9 Niveles Progresivos</a><a class="navlink d2" data-nav="calc-leer" href="#calc-leer">🔍⭐ Leer, Depurar y Anticipar Medidas Complejas</a><a class="navlink d1" data-nav="funciones" href="#funciones">📚 Catálogo de Funciones DAX</a><a class="navlink d2" data-nav="fn-agregacion" href="#fn-agregacion">🟢 Agregación: SUM, AVERAGE, COUNT, DISTINCTCOUNT, MIN, MAX</a><a class="navlink d2" data-nav="fn-filtros" href="#fn-filtros">🔴⚠️⭐ Filtros: CALCULATE, FILTER, ALL, ALLEXCEPT, ALLSELECTED, REMOVEFILTERS, KEEPFILTERS</a><a class="navlink d2" data-nav="fn-iteradores" href="#fn-iteradores">🟡⭐ Iteradores: SUMX, AVERAGEX, COUNTX, RANKX</a><a class="navlink d2" data-nav="fn-variables" href="#fn-variables">🟢⭐ Variables: VAR / RETURN</a><a class="navlink d2" data-nav="fn-logica" href="#fn-logica">🟢 Lógica: IF, SWITCH</a><a class="navlink d2" data-nav="fn-errores" href="#fn-errores">🟢 Manejo de Errores: DIVIDE, COALESCE, ISBLANK</a><a class="navlink d2" data-nav="fn-tablas" href="#fn-tablas">🟡⭐ Tablas: VALUES, DISTINCT, SELECTEDVALUE, RELATED, RELATEDTABLE, LOOKUPVALUE</a><a class="navlink d2" data-nav="fn-ranking" href="#fn-ranking">🔴⭐ Ranking: RANKX, TOPN</a><a class="navlink d2" data-nav="fn-tiempo" href="#fn-tiempo">🔴⭐ Inteligencia del Tiempo: DATESYTD, TOTALYTD, SAMEPERIODLASTYEAR, DATEADD, DATESINPERIOD, PARALLELPERIOD, PREVIOUSMONTH</a><a class="navlink d1" data-nav="simuladores" href="#simuladores">🎛️⭐ Simuladores Corporativos y Slicers Avanzados</a><a class="navlink d2" data-nav="sim-guia" href="#sim-guia">🟢⭐ Guía Paso a Paso desde Cero (solo con slicers)</a><a class="navlink d2" data-nav="sim-1" href="#sim-1">🟢 Escenario 1 · Ajuste Global de Ventas</a><a class="navlink d2" data-nav="sim-2" href="#sim-2">🟡⚠️ Escenario 2 · Ajuste de un Único Cliente</a><a class="navlink d2" data-nav="sim-3" href="#sim-3">🔴 Escenario 3 · Ajuste de Varios Clientes</a><a class="navlink d2" data-nav="sim-4" href="#sim-4">🔴⚠️⭐ Escenario 4 · Ajuste Global + Ajuste Individual</a><a class="navlink d2" data-nav="sim-5" href="#sim-5">🔴 Escenario 5 · Selección Dinámica de Cliente</a><a class="navlink d2" data-nav="sim-6" href="#sim-6">🔴⚠️⭐ Escenario 6 · Matriz de Ventas Proyectadas (Meses × Clientes)</a><a class="navlink d2" data-nav="sim-7" href="#sim-7">🔴⭐ Escenario 7 · Forecast Corporativo (Base / Optimista / Pesimista)</a><a class="navlink d2" data-nav="sim-8" href="#sim-8">🔴⭐ Escenario 8 · Impacto en KPIs (cascada hasta EBITDA)</a><a class="navlink d2" data-nav="sim-9" href="#sim-9">🔴⚠️⭐ Escenario 9 · Funcionamiento Interno (flujo paso a paso)</a><a class="navlink d2" data-nav="sim-envivo" href="#sim-envivo">🔴⭐ Edición Dinámica en Vivo con Muchos Clientes (30–50+)</a><a class="navlink d1" data-nav="performance" href="#performance">🚀⭐ Performance y Optimización</a><a class="navlink d1" data-nav="casos" href="#casos">🏢⭐ Casos Reales de Negocio</a><a class="navlink d2" data-nav="casos-pyl" href="#casos-pyl">🔴 P&amp;L: OPEX, CAPEX, EBITDA y Margen</a><a class="navlink d2" data-nav="casos-tesoreria" href="#casos-tesoreria">🔴⭐ Tesorería: Aging, Cobranzas, Deuda y Provisiones</a><a class="navlink d2" data-nav="casos-control" href="#casos-control">🔴⭐ Control de Gestión: Presupuesto, Forecast y Variaciones</a><a class="navlink d2" data-nav="casos-comercial" href="#casos-comercial">🔴⭐ Inteligencia Comercial: Clientes, Mix, Pareto y Retención</a><a class="navlink d2" data-nav="casos-cashflow" href="#casos-cashflow">🔴⭐ Flujo de Caja y Capital de Trabajo</a><a class="navlink d2" data-nav="casos-inventario" href="#casos-inventario">🔴 Inventarios: Rotación, Cobertura y Obsolescencia</a><a class="navlink d2" data-nav="casos-compras" href="#casos-compras">🔴 Compras y Cuentas por Pagar (Spend Analysis)</a><a class="navlink d2" data-nav="casos-rrhh" href="#casos-rrhh">🔴 RRHH / Capital Humano: Headcount, Rotación y Costo Laboral</a><a class="navlink d2" data-nav="casos-ratios" href="#casos-ratios">🔴 Ratios Financieros: Liquidez, Endeudamiento y Rentabilidad</a></div></details><details class="cat"><summary class="cat-sum">🔌 Power Query / M</summary><div class="cat-body"><a class="navlink cat-self d0" data-nav="powerquery" href="#powerquery">▸ Abrir «Power Query / M»</a><a class="navlink d1" data-nav="pq-intro" href="#pq-intro">🟢 Qué es Power Query y cómo abrirlo</a><a class="navlink d1" data-nav="pq-pasos" href="#pq-pasos">🟢⭐ Pasos Aplicados: la receta que se ejecuta sola</a><a class="navlink d1" data-nav="pq-encabezados" href="#pq-encabezados">🟢 Promover Encabezados y Renombrar Columnas</a><a class="navlink d1" data-nav="pq-filas-columnas" href="#pq-filas-columnas">🟢 Quitar Filas y Eliminar Columnas</a><a class="navlink d1" data-nav="pq-tipos" href="#pq-tipos">🟡⚠️⭐ Cambiar el Tipo de Datos</a><a class="navlink d1" data-nav="pq-reemplazar" href="#pq-reemplazar">🟢 Reemplazar Valores</a><a class="navlink d1" data-nav="pq-pivot" href="#pq-pivot">🔴⭐ Anular Dinamización (Unpivot) y Dinamización (Pivot)</a><a class="navlink d1" data-nav="pq-combinar" href="#pq-combinar">🔴 Combinar Consultas: Merge (unir) y Append (anexar)</a><a class="navlink d1" data-nav="pq-perfiles" href="#pq-perfiles">🟡 Perfiles de Datos (calidad y diagnóstico)</a><a class="navlink d1" data-nav="pq-m" href="#pq-m">🔴⭐ Editor Avanzado y Lenguaje M</a><a class="navlink d1" data-nav="pq-prioridades" href="#pq-prioridades">🗺️ Mapa de Prioridades M (funciones más usadas)</a><a class="navlink d1" data-nav="pq-buenas" href="#pq-buenas">🟡⭐ Buenas Prácticas en Power Query</a><a class="navlink d1" data-nav="pq-errores" href="#pq-errores">🟡⚠️ Errores Comunes en Power Query</a><a class="navlink d1" data-nav="pq-casos" href="#pq-casos">🔴⭐ Caso Real Completo: de Excel sucio a tabla de hechos</a><a class="navlink d1" data-nav="pq-casos-fin" href="#pq-casos-fin">🔴⭐ Casos Financieros: Consolidar Aging y Limpiar el Mayor Contable</a></div></details><details class="cat"><summary class="cat-sum">📈 Visualización y Dashboards Ejecutivos</summary><div class="cat-body"><a class="navlink cat-self d0" data-nav="dashboards" href="#dashboards">▸ Abrir «Visualización y Dashboards Ejecutivos»</a><a class="navlink d1" data-nav="dash-principios" href="#dash-principios">🟡⭐ Principios de Diseño de Dashboards</a><a class="navlink d1" data-nav="dash-visuales" href="#dash-visuales">🟡 Qué Visual Usar para Cada Pregunta</a><a class="navlink d1" data-nav="dash-ejecutivo" href="#dash-ejecutivo">🔴⭐ Anatomía de un Dashboard Ejecutivo Financiero</a><a class="navlink d1" data-nav="dash-buenas" href="#dash-buenas">🟡 Buenas Prácticas y Performance Visual</a></div></details><a class="navlink cat-leaf" data-nav="glosario" href="#glosario">📖 Glosario Financiero</a><details class="cat"><summary class="cat-sum">🤖 Agentes y Subagentes</summary><div class="cat-body"><a class="navlink cat-self d0" data-nav="agentes" href="#agentes">▸ Abrir «Agentes y Subagentes»</a><a class="navlink d1" data-nav="ag-que-son" href="#ag-que-son">🟢⭐ Qué son: Chat IA vs Agente vs Subagentes</a><a class="navlink d1" data-nav="ag-arquitectura" href="#ag-arquitectura">🔴⭐ Arquitectura: Orquestador, Subagentes y Herramientas</a><a class="navlink d1" data-nav="ag-powerbi" href="#ag-powerbi">🔴⭐ Cómo Conectar Agentes y Subagentes con Power BI</a><a class="navlink d1" data-nav="ag-usar" href="#ag-usar">🟡 Cómo Empezar a Usarlos (paso a paso)</a><a class="navlink d1" data-nav="ag-casos" href="#ag-casos">🔴⭐ Casos de Uso Reales (tutoriales paso a paso)</a><a class="navlink d2" data-nav="ag-caso-dax" href="#ag-caso-dax">🟢⭐ Caso 1 · Generar una Medida DAX con IA</a><a class="navlink d2" data-nav="ag-caso-pq" href="#ag-caso-pq">🟡 Caso 2 · Limpiar un Excel con IA + Power Query</a><a class="navlink d2" data-nav="ag-caso-doc" href="#ag-caso-doc">🟡 Caso 3 · Documentar y Auditar un Modelo Heredado</a><a class="navlink d2" data-nav="ag-caso-perf" href="#ag-caso-perf">🔴 Caso 4 · Optimizar una Medida Lenta</a><a class="navlink d2" data-nav="ag-caso-valid" href="#ag-caso-valid">🔴 Caso 5 · Cuadrar el Cierre (validación con IA)</a><a class="navlink d2" data-nav="ag-caso-orq" href="#ag-caso-orq">🔴⚠️⭐ Caso 6 · Orquestar Subagentes (el flujo completo)</a><a class="navlink d1" data-nav="ag-buenas" href="#ag-buenas">🟡⚠️⭐ Buenas Prácticas, Riesgos y Gobernanza</a></div></details></nav>
   </aside>
   <a href="#contenido" class="nav-overlay" aria-hidden="true"></a>
   <main id="contenido" class="docs">
@@ -410,6 +431,7 @@ body:has(#ag-buenas:target) a[data-nav="ag-buenas"]{background:#1d3a5f;color:#ff
   <p>El conocimiento está dividido en dos grandes bloques que cubren el flujo completo de un proyecto de BI: <b>primero preparas los datos</b> (Power Query) y <b>luego los modelas y mides</b> (Power BI / DAX).</p>
   <div class="home-grid">
     <a href="#plan" class="home-card"><div class="ic">🧭</div><div class="t">Plan de Aprendizaje</div><div class="d">¿No sabes por dónde empezar? Sigue la ruta de 10 etapas, del tema más básico al más avanzado.</div></a>
+    <a href="#asistente" class="home-card"><div class="ic">🔎</div><div class="t">Asistente · ¿Qué necesito hacer?</div><div class="d">Dime tu objetivo (p. ej. "meses en columnas", "informe lento") y te recomiendo la sección.</div></a>
     <a href="#powerquery" class="home-card"><div class="ic">🔌</div><div class="t">Power Query / M</div><div class="d">Limpieza y transformación de datos paso a paso: encabezados, tipos, unpivot/pivot, combinar consultas, lenguaje M. El "antes" de todo modelo.</div></a>
     <a href="#powerbi" class="home-card"><div class="ic">📊</div><div class="t">Power BI / DAX</div><div class="d">Modelado, motor DAX, CALCULATE, catálogo de funciones, simuladores corporativos, performance y casos de negocio. El "después": medir y analizar.</div></a>
     <a href="#dashboards" class="home-card"><div class="ic">📈</div><div class="t">Visualización y Dashboards</div><div class="d">Diseño de tableros ejecutivos: principios, qué visual usar, anatomía de un dashboard financiero y buenas prácticas. El "para qué": comunicar y decidir.</div></a>
@@ -455,97 +477,73 @@ body:has(#ag-buenas:target) a[data-nav="ag-buenas"]{background:#1d3a5f;color:#ff
    (Power Query)        (el motor)        (CALCULATE)    (catálogo)      (simul./    (dashboards)  (agentes)
                                                                          casos)</pre></div>
 
-  <h3>Ruta recomendada (10 etapas)</h3>
+  <h3>La ruta, de un vistazo</h3>
+  <div class="tw-wrap"><table class="dx"><thead><tr><th>Etapa</th><th>Foco</th><th>Nivel</th><th>Tiempo aprox.</th></tr></thead><tbody><tr><td>1</td><td>Orientación</td><td>🟢</td><td>30 min</td></tr><tr><td>2</td><td>Power Query básico</td><td>🟢</td><td>3 h</td></tr><tr><td>3</td><td>Power Query intermedio</td><td>🟡</td><td>3 h</td></tr><tr><td>4</td><td>Motor DAX (contextos)</td><td>🟡→🔴</td><td>4 h</td></tr><tr><td>5</td><td>CALCULATE</td><td>🔴⭐</td><td>4 h</td></tr><tr><td>6</td><td>Catálogo de funciones</td><td>🟡</td><td>5 h</td></tr><tr><td>7</td><td>Simuladores</td><td>🔴⭐</td><td>4 h</td></tr><tr><td>8</td><td>Rendimiento y casos</td><td>🔴</td><td>3 h</td></tr><tr><td>9</td><td>Dashboards</td><td>🟡→🔴</td><td>2 h</td></tr><tr><td>10</td><td>Agentes / IA</td><td>🟡→🔴</td><td>2 h</td></tr></tbody></table></div>
 
-  <div class="road-phase"><div class="ph-h"><span class="ph-n">1</span><span class="ph-t">Orientación</span> 🟢</div>
-  <div class="ph-goal">Entender cómo se usa el Atlas y qué vas a aprender.</div>
-  <ol>
-    <li><a href="#home" class="pill">Inicio · Cómo usar este Atlas</a></li>
-    <li><a href="#prioridades" class="pill">Mapa de Prioridades DAX</a> — qué funciones importan primero (solo ojéalo; volverás).</li>
-  </ol></div>
+  <h3>La ruta paso a paso</h3>
+  <div class="timeline">
 
-  <div class="road-phase"><div class="ph-h"><span class="ph-n">2</span><span class="ph-t">Preparar los datos · Power Query básico</span> 🟢</div>
-  <div class="ph-goal">Limpiar y dar forma a los datos. Es el "antes" de todo modelo.</div>
-  <ol>
-    <li><a href="#pq-intro" class="pill">Qué es y cómo abrirlo</a></li>
-    <li><a href="#pq-pasos" class="pill">Pasos aplicados</a> (la receta que se ejecuta sola)</li>
-    <li><a href="#pq-encabezados" class="pill">Encabezados y renombrar</a></li>
-    <li><a href="#pq-filas-columnas" class="pill">Quitar filas y columnas</a></li>
-    <li><a href="#pq-tipos" class="pill">Cambiar el tipo de datos</a> ⚠️ clave</li>
-    <li><a href="#pq-reemplazar" class="pill">Reemplazar valores</a></li>
-  </ol></div>
+    <div class="tl-step"><div class="tl-num">1</div><div class="tl-card">
+      <div class="tl-top"><span class="tl-t">Orientación</span><span class="tl-badge">🟢 Fácil</span><span class="tl-badge">~30 min</span></div>
+      <div class="tl-out">✓ Al terminar: sabes moverte por el Atlas y qué vas a aprender.</div>
+      <div class="tl-topics"><a href="#home" class="pill">Cómo usar este Atlas</a><a href="#prioridades" class="pill">Mapa de Prioridades DAX</a></div>
+    </div></div>
 
-  <div class="road-phase"><div class="ph-h"><span class="ph-n">3</span><span class="ph-t">Power Query intermedio</span> 🟡</div>
-  <div class="ph-goal">Las transformaciones que más usarás en Finanzas.</div>
-  <ol>
-    <li><a href="#pq-pivot" class="pill">Unpivot / Pivot</a> — meses en columnas → filas</li>
-    <li><a href="#pq-combinar" class="pill">Combinar consultas</a> (Merge y Append)</li>
-    <li><a href="#pq-perfiles" class="pill">Perfiles de datos</a></li>
-    <li><a href="#pq-m" class="pill">Lenguaje M</a> y <a href="#pq-prioridades" class="pill">Mapa de prioridades M</a></li>
-    <li><a href="#pq-casos-fin" class="pill">Casos financieros</a> (aging, mayor contable)</li>
-  </ol></div>
+    <div class="tl-step"><div class="tl-num">2</div><div class="tl-card">
+      <div class="tl-top"><span class="tl-t">Preparar los datos · Power Query básico</span><span class="tl-badge">🟢 Fácil</span><span class="tl-badge">~3 h</span></div>
+      <div class="tl-out">✓ Al terminar: limpias y das forma a un Excel sucio para dejarlo listo.</div>
+      <div class="tl-topics"><a href="#pq-intro" class="pill">Qué es y abrirlo</a><a href="#pq-pasos" class="pill">Pasos aplicados</a><a href="#pq-encabezados" class="pill">Encabezados</a><a href="#pq-filas-columnas" class="pill">Filas y columnas</a><a href="#pq-tipos" class="pill">Tipos de datos ⚠️</a><a href="#pq-reemplazar" class="pill">Reemplazar valores</a></div>
+    </div></div>
 
-  <div class="road-phase"><div class="ph-h"><span class="ph-n">4</span><span class="ph-t">Pensar en DAX · el motor</span> 🟡→🔴</div>
-  <div class="ph-goal">El modelo mental imprescindible. Sin esto, DAX parece magia.</div>
-  <ol>
-    <li><a href="#modelado" class="pill">Modelado dimensional</a> (star schema, calendario)</li>
-    <li><a href="#ctx-fila" class="pill">Contexto de fila</a></li>
-    <li><a href="#ctx-filtro" class="pill">Contexto de filtro</a></li>
-    <li><a href="#transicion" class="pill">Transición de contexto</a> ⭐</li>
-    <li><a href="#relaciones" class="pill">Relaciones y propagación</a></li>
-    <li><a href="#evaluacion" class="pill">Flujo de evaluación</a> (junta todo)</li>
-  </ol></div>
+    <div class="tl-step"><div class="tl-num">3</div><div class="tl-card">
+      <div class="tl-top"><span class="tl-t">Power Query intermedio</span><span class="tl-badge">🟡 Medio</span><span class="tl-badge">~3 h</span></div>
+      <div class="tl-out">✓ Al terminar: pasas meses-en-columnas a filas y combinas fuentes.</div>
+      <div class="tl-topics"><a href="#pq-pivot" class="pill">Unpivot / Pivot</a><a href="#pq-combinar" class="pill">Combinar consultas</a><a href="#pq-perfiles" class="pill">Perfiles de datos</a><a href="#pq-m" class="pill">Lenguaje M</a><a href="#pq-prioridades" class="pill">Prioridades M</a><a href="#pq-casos-fin" class="pill">Casos financieros</a></div>
+    </div></div>
 
-  <div class="road-phase"><div class="ph-h"><span class="ph-n">5</span><span class="ph-t">El corazón · CALCULATE</span> 🔴⭐</div>
-  <div class="ph-goal">La función más importante. El objetivo central de aprendizaje.</div>
-  <ol>
-    <li><a href="#calculate" class="pill">CALCULATE</a> — qué agrega/reemplaza/conserva</li>
-    <li><a href="#calc-niveles" class="pill">CALCULATE en 9 niveles</a></li>
-    <li><a href="#calc-leer" class="pill">Leer, depurar y anticipar medidas</a></li>
-  </ol></div>
+    <div class="tl-step"><div class="tl-num">4</div><div class="tl-card">
+      <div class="tl-top"><span class="tl-t">Pensar en DAX · el motor</span><span class="tl-badge">🟡→🔴</span><span class="tl-badge">~4 h</span></div>
+      <div class="tl-out">✓ Al terminar: entiendes contexto de fila/filtro y predices resultados.</div>
+      <div class="tl-topics"><a href="#modelado" class="pill">Modelado (star schema)</a><a href="#ctx-fila" class="pill">Contexto de fila</a><a href="#ctx-filtro" class="pill">Contexto de filtro</a><a href="#transicion" class="pill">Transición ⭐</a><a href="#relaciones" class="pill">Relaciones</a><a href="#evaluacion" class="pill">Flujo de evaluación</a></div>
+    </div></div>
 
-  <div class="road-phase"><div class="ph-h"><span class="ph-n">6</span><span class="ph-t">Herramientas · catálogo de funciones</span> 🟡</div>
-  <div class="ph-goal">Aprende las familias por prioridad; consúltalas cuando las necesites.</div>
-  <ol>
-    <li><a href="#fn-agregacion" class="pill">Agregación</a> y <a href="#fn-variables" class="pill">Variables</a></li>
-    <li><a href="#fn-filtros" class="pill">Filtros</a> (ALL, FILTER, KEEPFILTERS…) ⭐</li>
-    <li><a href="#fn-iteradores" class="pill">Iteradores</a> y <a href="#fn-logica" class="pill">Lógica</a></li>
-    <li><a href="#fn-errores" class="pill">Errores</a> y <a href="#fn-tablas" class="pill">Tablas</a></li>
-    <li><a href="#fn-tiempo" class="pill">Inteligencia del tiempo</a> y <a href="#fn-ranking" class="pill">Ranking</a></li>
-  </ol></div>
+    <div class="tl-step"><div class="tl-num">5</div><div class="tl-card">
+      <div class="tl-top"><span class="tl-t">El corazón · CALCULATE</span><span class="tl-badge">🔴⭐ Clave</span><span class="tl-badge">~4 h</span></div>
+      <div class="tl-out">✓ Al terminar: dominas la función más importante de DAX.</div>
+      <div class="tl-topics"><a href="#calculate" class="pill">CALCULATE</a><a href="#calc-niveles" class="pill">9 niveles</a><a href="#calc-leer" class="pill">Leer y depurar medidas</a></div>
+    </div></div>
 
-  <div class="road-phase"><div class="ph-h"><span class="ph-n">7</span><span class="ph-t">Aplicar · simuladores</span> 🔴⭐</div>
-  <div class="ph-goal">Convertir informes en herramientas de decisión (slicers, What-If).</div>
-  <ol>
-    <li><a href="#sim-guia" class="pill">Guía paso a paso desde cero</a> (empieza aquí)</li>
-    <li><a href="#simuladores" class="pill">Escenarios 1 a 9</a> en orden</li>
-    <li><a href="#sim-envivo" class="pill">Edición en vivo con muchos clientes</a></li>
-  </ol></div>
+    <div class="tl-step"><div class="tl-num">6</div><div class="tl-card">
+      <div class="tl-top"><span class="tl-t">Herramientas · catálogo de funciones</span><span class="tl-badge">🟡 Medio</span><span class="tl-badge">~5 h</span></div>
+      <div class="tl-out">✓ Al terminar: conoces las familias y cuál usar para cada problema.</div>
+      <div class="tl-topics"><a href="#fn-agregacion" class="pill">Agregación</a><a href="#fn-variables" class="pill">Variables</a><a href="#fn-filtros" class="pill">Filtros ⭐</a><a href="#fn-iteradores" class="pill">Iteradores</a><a href="#fn-logica" class="pill">Lógica</a><a href="#fn-errores" class="pill">Errores</a><a href="#fn-tablas" class="pill">Tablas</a><a href="#fn-tiempo" class="pill">Tiempo</a><a href="#fn-ranking" class="pill">Ranking</a></div>
+    </div></div>
 
-  <div class="road-phase"><div class="ph-h"><span class="ph-n">8</span><span class="ph-t">Rendimiento y casos de negocio</span> 🔴</div>
-  <div class="ph-goal">Que sea rápido y que resuelva problemas reales.</div>
-  <ol>
-    <li><a href="#performance" class="pill">Performance y optimización</a></li>
-    <li><a href="#casos" class="pill">Casos reales de negocio</a> (P&amp;L, tesorería, RRHH, ratios…)</li>
-  </ol></div>
+    <div class="tl-step"><div class="tl-num">7</div><div class="tl-card">
+      <div class="tl-top"><span class="tl-t">Aplicar · simuladores</span><span class="tl-badge">🔴⭐</span><span class="tl-badge">~4 h</span></div>
+      <div class="tl-out">✓ Al terminar: construyes simuladores con slicers (What-If, forecast).</div>
+      <div class="tl-topics"><a href="#sim-guia" class="pill">Guía desde cero</a><a href="#simuladores" class="pill">Escenarios 1-9</a><a href="#sim-envivo" class="pill">Edición en vivo (muchos clientes)</a></div>
+    </div></div>
 
-  <div class="road-phase"><div class="ph-h"><span class="ph-n">9</span><span class="ph-t">Comunicar · dashboards</span> 🟡→🔴</div>
-  <div class="ph-goal">Que un ejecutivo lo entienda en segundos.</div>
-  <ol>
-    <li><a href="#dash-principios" class="pill">Principios de diseño</a></li>
-    <li><a href="#dash-visuales" class="pill">Qué visual usar</a></li>
-    <li><a href="#dash-ejecutivo" class="pill">Anatomía de un dashboard ejecutivo</a></li>
-    <li><a href="#dash-buenas" class="pill">Buenas prácticas y performance visual</a></li>
-  </ol></div>
+    <div class="tl-step"><div class="tl-num">8</div><div class="tl-card">
+      <div class="tl-top"><span class="tl-t">Rendimiento y casos de negocio</span><span class="tl-badge">🔴</span><span class="tl-badge">~3 h</span></div>
+      <div class="tl-out">✓ Al terminar: optimizas medidas y resuelves casos reales.</div>
+      <div class="tl-topics"><a href="#performance" class="pill">Performance</a><a href="#casos" class="pill">Casos de negocio (P&amp;L, tesorería, RRHH…)</a></div>
+    </div></div>
 
-  <div class="road-phase"><div class="ph-h"><span class="ph-n">10</span><span class="ph-t">Potenciar · agentes e IA</span> 🟡→🔴</div>
-  <div class="ph-goal">Acelerar tu trabajo con IA, manteniendo tu criterio.</div>
-  <ol>
-    <li><a href="#ag-que-son" class="pill">Qué son: chat vs agente vs subagentes</a></li>
-    <li><a href="#ag-usar" class="pill">Cómo empezar a usarlos</a></li>
-    <li><a href="#ag-casos" class="pill">6 tutoriales de casos reales</a></li>
-    <li><a href="#ag-powerbi" class="pill">Conectarlos a Power BI</a> y <a href="#ag-buenas" class="pill">gobernanza</a></li>
-  </ol></div>
+    <div class="tl-step"><div class="tl-num">9</div><div class="tl-card">
+      <div class="tl-top"><span class="tl-t">Comunicar · dashboards</span><span class="tl-badge">🟡→🔴</span><span class="tl-badge">~2 h</span></div>
+      <div class="tl-out">✓ Al terminar: diseñas tableros que se entienden en segundos.</div>
+      <div class="tl-topics"><a href="#dash-principios" class="pill">Principios</a><a href="#dash-visuales" class="pill">Qué visual usar</a><a href="#dash-ejecutivo" class="pill">Dashboard ejecutivo</a><a href="#dash-buenas" class="pill">Buenas prácticas</a></div>
+    </div></div>
+
+    <div class="tl-step"><div class="tl-num">10</div><div class="tl-card">
+      <div class="tl-top"><span class="tl-t">Potenciar · agentes e IA</span><span class="tl-badge">🟡→🔴</span><span class="tl-badge">~2 h</span></div>
+      <div class="tl-out">✓ Al terminar: usas IA para acelerar, manteniendo tu criterio.</div>
+      <div class="tl-topics"><a href="#ag-que-son" class="pill">Qué son</a><a href="#ag-usar" class="pill">Cómo empezar</a><a href="#ag-casos" class="pill">6 tutoriales</a><a href="#ag-powerbi" class="pill">Conectar a Power BI</a><a href="#ag-buenas" class="pill">Gobernanza</a></div>
+    </div></div>
+
+  </div>
 
   <div class="box best"><div class="bt">✅ Cómo usar este plan</div><ul>
     <li><b>Sigue el orden</b> la primera vez; cada etapa prepara la siguiente.</li>
@@ -553,6 +551,65 @@ body:has(#ag-buenas:target) a[data-nav="ag-buenas"]{background:#1d3a5f;color:#ff
     <li>El <a href="#glosario" class="pill">Glosario Financiero</a> es tu apoyo transversal en cualquier etapa.</li>
     <li><b>Ritmo sugerido:</b> etapas 1-3 (semana 1-2), 4-6 (semana 3-5), 7-8 (semana 6-7), 9-10 (semana 8). Ajusta a tu tiempo.</li>
   </ul></div>
+  <a class="backtop" href="#top">↑ Inicio</a></section><section class="content node-sec" id="asistente"><h2 class="title">🔎 Asistente · ¿Qué necesito hacer?</h2><p class="lead">Dime qué tienes que lograr y te indico a qué sección (o secciones) del Atlas ir para conseguirlo. Toca la pregunta que más se parezca a tu necesidad y se despliega la recomendación con enlaces directos.</p><div class="meta-bar"><span class="chip"><span>Importancia</span><b>★★★★★</b></span><span class="chip "><span>Dificultad</span><b>🟢 Atajo</b></span><span class="chip"><span>Uso</span><b>Dime tu objetivo → te recomiendo secciones</b></span></div><div class="rel-grid"><div class="rel-card"><div class="h">🧭 Conceptos relacionados</div><a href="#plan" class="pill ">Plan de Aprendizaje (ruta del más básico al más avanzado)</a><a href="#home" class="pill ">Inicio · Cómo usar este Atlas</a></div></div>
+  <div class="box why"><div class="bt">💡 Por qué importa: Un atajo desde tu problema hasta la solución</div><p>A veces no sabes <i>qué</i> tema necesitas, pero sí <b>qué tienes que lograr</b> ("tengo los meses en columnas", "mi informe va lento", "quiero un simulador"). Este asistente traduce tu necesidad en las secciones concretas del Atlas que la resuelven. Busca tu caso abajo y toca para ver la recomendación.</p></div>
+  <div class="box engine"><div class="bt">ℹ️ Cómo funciona (versión sin conexión)</div><p>Esta es una <b>guía de recomendación</b>: elige tu necesidad de la lista y te lleva a la sección adecuada. No es un chat de texto libre porque esta versión funciona <b>sin conexión ni JavaScript</b> (para que abra en cualquier visor). Si no encuentras tu caso, usa el <a href="#plan" class="pill">Plan de Aprendizaje</a> o la búsqueda de la versión interactiva.</p></div>
+
+  <div class="asst-cat">📊 Cálculos y medidas (DAX)</div>
+  <details class="asst-q"><summary>Necesito un acumulado del año (YTD)</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#fn-tiempo" class="pill">Inteligencia del tiempo</a><a href="#calc-niveles" class="pill">CALCULATE nivel 7</a></div><p>Usa <code class="inl">TOTALYTD</code> / <code class="inl">DATESYTD</code> con tu tabla Calendario.</p></div></details>
+  <details class="asst-q"><summary>Comparar contra el año anterior (YoY) o el mes anterior (MoM)</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#fn-tiempo" class="pill">Inteligencia del tiempo</a></div><p><code class="inl">SAMEPERIODLASTYEAR</code> para YoY; <code class="inl">DATEADD(...,-1,MONTH)</code> para MoM.</p></div></details>
+  <details class="asst-q"><summary>Calcular un % sobre el total</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#fn-filtros" class="pill">Filtros (ALL)</a><a href="#calc-niveles" class="pill">CALCULATE niveles 4-5</a></div><p><code class="inl">DIVIDE([X], CALCULATE([X], ALL(Dim)))</code>.</p></div></details>
+  <details class="asst-q"><summary>Sumar precio × cantidad (o algo fila a fila)</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#fn-iteradores" class="pill">Iteradores (SUMX)</a></div><p>Necesitas <code class="inl">SUMX</code>, no <code class="inl">SUM</code>.</p></div></details>
+  <details class="asst-q"><summary>Un ranking o Top N de clientes/productos</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#fn-ranking" class="pill">Ranking (RANKX, TOPN)</a></div></div></details>
+  <details class="asst-q"><summary>Evitar el error al dividir por cero</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#fn-errores" class="pill">Manejo de errores (DIVIDE)</a></div></div></details>
+  <details class="asst-q"><summary>Mi medida muestra el gran total en TODAS las filas</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#transicion" class="pill">Transición de contexto</a></div><p>Falta envolver en <code class="inl">CALCULATE</code> (transición).</p></div></details>
+  <details class="asst-q"><summary>No entiendo por qué una medida da ese número</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#calc-leer" class="pill">Leer y depurar medidas</a><a href="#evaluacion" class="pill">Flujo de evaluación</a></div></div></details>
+
+  <div class="asst-cat">🔌 Datos y limpieza (Power Query)</div>
+  <details class="asst-q"><summary>Tengo los meses en columnas (Ene, Feb, Mar…)</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#pq-pivot" class="pill">Unpivot / Pivot</a></div><p>"Anular dinamización de otras columnas" → una fila por mes.</p></div></details>
+  <details class="asst-q"><summary>Mi Excel tiene título/notas/basura arriba</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#pq-filas-columnas" class="pill">Quitar filas</a><a href="#pq-encabezados" class="pill">Promover encabezados</a></div></div></details>
+  <details class="asst-q"><summary>Los importes vienen como texto, o las fechas salen mal</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#pq-tipos" class="pill">Cambiar el tipo de datos</a></div><p>Usa "con configuración regional".</p></div></details>
+  <details class="asst-q"><summary>Juntar datos de varios archivos o tablas</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#pq-combinar" class="pill">Combinar consultas</a><a href="#pq-casos-fin" class="pill">Consolidar desde carpeta</a></div></div></details>
+  <details class="asst-q"><summary>Limpiar un mayor contable exportado del ERP</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#pq-casos-fin" class="pill">Caso: mayor contable</a></div><p>Rellenar hacia abajo + quitar subtotales.</p></div></details>
+  <details class="asst-q"><summary>Saber si mis datos tienen errores o vacíos</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#pq-perfiles" class="pill">Perfiles de datos</a></div></div></details>
+
+  <div class="asst-cat">◫ Modelo y relaciones</div>
+  <details class="asst-q"><summary>Cómo estructurar mi modelo (qué tablas y relaciones)</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#modelado" class="pill">Modelado dimensional</a></div></div></details>
+  <details class="asst-q"><summary>Un slicer no afecta a una medida</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#relaciones" class="pill">Relaciones y propagación</a></div></div></details>
+  <details class="asst-q"><summary>Necesito una tabla de calendario para fechas</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#modelado" class="pill">Modelado (Calendario)</a><a href="#fn-tiempo" class="pill">Inteligencia del tiempo</a></div></div></details>
+
+  <div class="asst-cat">🎛️ Simuladores y What-If</div>
+  <details class="asst-q"><summary>Un simulador donde un slicer cambie las ventas</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#sim-guia" class="pill">Guía desde cero</a><a href="#simuladores" class="pill">Simuladores</a></div></div></details>
+  <details class="asst-q"><summary>Ajustar un % distinto por cada cliente</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#sim-3" class="pill">Escenario 3</a><a href="#sim-4" class="pill">Escenario 4</a><a href="#sim-envivo" class="pill">Edición en vivo</a></div></div></details>
+  <details class="asst-q"><summary>Un forecast Base / Optimista / Pesimista</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#sim-7" class="pill">Escenario 7 · Forecast</a></div></div></details>
+  <details class="asst-q"><summary>Que el ajuste impacte el EBITDA y los KPIs</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#sim-8" class="pill">Escenario 8 · Impacto en KPIs</a></div></div></details>
+
+  <div class="asst-cat">🚀 Performance</div>
+  <details class="asst-q"><summary>Mi informe o una medida va lento</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#performance" class="pill">Performance y optimización</a><a href="#ag-caso-perf" class="pill">Optimizar con IA</a></div></div></details>
+
+  <div class="asst-cat">🏢 Negocio y Finanzas</div>
+  <details class="asst-q"><summary>Calcular EBITDA / armar el P&amp;L</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#casos-pyl" class="pill">P&amp;L: OPEX, CAPEX, EBITDA</a></div></div></details>
+  <details class="asst-q"><summary>Aging de cobranzas / días de cobro (DSO)</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#casos-tesoreria" class="pill">Tesorería: aging, cobranzas</a></div></div></details>
+  <details class="asst-q"><summary>Flujo de caja / capital de trabajo</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#casos-cashflow" class="pill">Flujo de caja y capital de trabajo</a></div></div></details>
+  <details class="asst-q"><summary>Rotación / cobertura de inventario</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#casos-inventario" class="pill">Inventarios</a></div></div></details>
+  <details class="asst-q"><summary>Headcount, rotación o costo de personal</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#casos-rrhh" class="pill">RRHH / Capital Humano</a></div></div></details>
+  <details class="asst-q"><summary>Ratios financieros (liquidez, endeudamiento, ROE)</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#casos-ratios" class="pill">Ratios financieros</a></div></div></details>
+  <details class="asst-q"><summary>Análisis de clientes: Pareto, ABC, churn, mix</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#casos-comercial" class="pill">Inteligencia comercial</a></div></div></details>
+  <details class="asst-q"><summary>Cuadrar el cierre contra el sistema contable</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#casos-control" class="pill">Control de gestión</a><a href="#ag-caso-valid" class="pill">Validar con IA</a></div></div></details>
+
+  <div class="asst-cat">📈 Visualización</div>
+  <details class="asst-q"><summary>No sé qué gráfico usar</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#dash-visuales" class="pill">Qué visual usar</a></div></div></details>
+  <details class="asst-q"><summary>Diseñar un dashboard ejecutivo</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#dash-ejecutivo" class="pill">Anatomía de un dashboard</a><a href="#dash-principios" class="pill">Principios de diseño</a></div></div></details>
+
+  <div class="asst-cat">🤖 IA y agentes</div>
+  <details class="asst-q"><summary>Que la IA me escriba una medida DAX</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#ag-caso-dax" class="pill">Caso 1 · Generar medida con IA</a></div></div></details>
+  <details class="asst-q"><summary>Conectar un agente / IA a Power BI</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#ag-powerbi" class="pill">Conectar agentes a Power BI</a></div></div></details>
+  <details class="asst-q"><summary>Documentar o auditar un modelo con IA</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#ag-caso-doc" class="pill">Caso 3 · Documentar/auditar</a></div></div></details>
+
+  <div class="asst-cat">📖 Términos</div>
+  <details class="asst-q"><summary>No sé qué significa un término (EBITDA, DSO, ROE…)</summary><div class="asst-a"><div class="rec">Ve a:</div><div class="tl-topics"><a href="#glosario" class="pill">Glosario Financiero</a></div></div></details>
+
+  <div class="box best"><div class="bt">✅ ¿No está tu caso?</div><p>Empieza por el <a href="#plan" class="pill">Plan de Aprendizaje</a> (ruta ordenada) o explora las categorías del menú. Si trabajas con un chat de IA, descríbele tu necesidad con contexto (ver la <a href="#ag-usar" class="pill">plantilla de prompt</a>).</p></div>
   <a class="backtop" href="#top">↑ Inicio</a></section><section class="content node-sec" id="powerbi"><h2 class="title">📊 Power BI / DAX</h2><p class="lead">Categoría completa de Power BI y DAX: del motor de evaluación al módulo estrella CALCULATE, el catálogo de funciones, los simuladores corporativos, la performance y los casos reales de negocio.</p><div class="meta-bar"><span class="chip"><span>Importancia</span><b>★★★★★</b></span><span class="chip "><span>Dificultad</span><b>🟢→🔴</b></span><span class="chip"><span>Uso</span><b>Modelar y medir</b></span></div>
   <div class="box why"><div class="bt">💡 Por qué importa: El "después" del flujo de datos: medir y analizar</div><p>Una vez que los datos están limpios y bien estructurados (eso lo hace <a href="#powerquery" class="pill">Power Query</a>), aquí los conviertes en <b>información de decisión</b>: relaciones, medidas DAX, KPIs, simuladores y dashboards. Esta categoría te lleva de intermedio a nivel profesional/senior.</p></div>
 
@@ -3478,6 +3535,7 @@ Empieza por la FASE 1 (DATOS). No avances a la siguiente hasta que yo diga "ok".
   <a class="backtop" href="#top">↑ Inicio</a></section>
   </main>
 </div>
+<a href="#top" class="fab-top" title="Volver arriba">↑</a>
 
 
 </body></html>
