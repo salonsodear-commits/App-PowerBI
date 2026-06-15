@@ -13,6 +13,7 @@ eval(block1);
 const NODES = globalThis.__NODES;
 const byId={}; NODES.forEach(n=>byId[n.id]=n);
 const childrenOf={}; NODES.forEach(n=>{const p=n.parent||'__root__';(childrenOf[p]=childrenOf[p]||[]).push(n);});
+const order=NODES.map(n=>n.id);   // linear reading order for Prev/Next
 
 // --- 3. Reimplement small render helpers (from engine) ---
 function metaChips(n){
@@ -76,14 +77,31 @@ function modProg(n){
   if(t<=1) return '';
   return '<div class="modprog"><span class="lbl">📍 <b>'+byId[n.parent].title+'</b> · '+i+' de '+t+'</span><div class="bar"><div class="fill" style="width:'+Math.round(i/t*100)+'%"></div></div></div>';
 }
+function crumbs(n){
+  const chain=[]; let c=n.parent;
+  while(c && byId[c]){ chain.unshift(byId[c]); c=byId[c].parent; }
+  let h='<div class="crumbs"><a href="#home">🏠 Inicio</a>';
+  chain.forEach(x=>{ h+='<span class="sep">›</span><a href="#'+x.id+'">'+(x.icon?x.icon+' ':'')+x.title+'</a>'; });
+  return h+'</div>';
+}
+function pager(n){
+  const i=order.indexOf(n.id);
+  const prev=i>0?byId[order[i-1]]:null, next=i<order.length-1?byId[order[i+1]]:null;
+  let h='<div class="pager">';
+  h+= prev? '<a class="pg prev" href="#'+prev.id+'"><span class="pg-d">← Anterior</span><span class="pg-t">'+prev.title+'</span></a>' : '<span class="pg empty"></span>';
+  h+= '<a class="pg up" href="#'+n.id+'" title="Subir">↑</a>';
+  h+= next? '<a class="pg next" href="#'+next.id+'"><span class="pg-d">Siguiente →</span><span class="pg-t">'+next.title+'</span></a>' : '<span class="pg empty"></span>';
+  return h+'</div>';
+}
 function section(n){
   const html = typeof n.html==='function'? n.html() : (n.html||'');
   return '<section class="content node-sec" id="'+n.id+'">'
+    + crumbs(n)
     + '<h2 class="title">'+(n.icon?n.icon+' ':'')+n.title+'</h2>'
     + modProg(n)
     + (n.subtitle?'<p class="lead">'+n.subtitle+'</p>':'')
     + metaChips(n) + relBlocks(n) + html + childrenIndex(n)
-    + '<a class="backtop" href="#top">↑ Inicio</a>'
+    + pager(n)
     + '</section>';
 }
 let sections=''; NODES.forEach(n=>{ sections+=section(n); });
@@ -112,9 +130,31 @@ a.home-card{display:block}
 .side-head{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--faint);padding:4px 10px 10px}
 .nav-overlay{display:none}
 .docs{flex:1;min-width:0}
-section.content{max-width:900px;margin:0 auto;padding:24px 30px 44px;border-top:1px solid var(--border)}
-section.content:first-of-type{border-top:none}
+section.content{max-width:900px;margin:0 auto;padding:18px 30px 60px}
 [id]{scroll-margin-top:14px}
+
+/* ===== Un tema por vez (ruta sin JS con :target) ===== */
+.node-sec{display:none}
+.node-sec:target{display:block}
+#home{display:block}
+body:has(.node-sec:target) #home{display:none}
+body:has(#home:target) #home{display:block}
+
+/* Breadcrumb (dónde estás) */
+.crumbs{font-size:11.5px;color:var(--faint);margin:0 0 10px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;line-height:1.5}
+.crumbs a{color:var(--muted);text-decoration:none}
+.crumbs a:hover{color:var(--accent)}
+.crumbs .sep{color:var(--faint)}
+
+/* Pager Anterior / Subir / Siguiente */
+.pager{display:flex;gap:10px;align-items:stretch;margin:36px 0 0;border-top:1px solid var(--border);padding-top:18px;flex-wrap:wrap}
+.pg{background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-decoration:none;display:flex;flex-direction:column;gap:2px;flex:1;min-width:130px}
+.pg:hover{border-color:var(--accent)}
+.pg.next{text-align:right}
+.pg.up{flex:0 0 auto;min-width:0;align-items:center;justify-content:center;color:var(--accent);font-size:18px;font-weight:800;padding:10px 14px}
+.pg .pg-d{font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.5px}
+.pg .pg-t{font-size:13px;color:var(--text)}
+.pg.empty{visibility:hidden}
 
 /* Sidebar nav */
 .nav{font-size:12.5px}
@@ -219,6 +259,7 @@ const pre = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
     ${sections}
   </main>
 </div>
+<a href="#home" class="fab-top" title="Volver al inicio">🏠</a>
 ${bakeScript}
 </body></html>`;
 
