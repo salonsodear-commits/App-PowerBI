@@ -141,6 +141,27 @@
   .box.exer{border-left-color:#ff9d5c;background:rgba(255,157,92,.08)}
   .box.exer .bt{color:#ff9d5c}
 
+  /* Numbered step badges for ordered lists ("paso a paso") */
+  .content ol{list-style:none;counter-reset:st;padding-left:0;margin:14px 0}
+  .content ol>li{counter-increment:st;position:relative;padding:3px 0 3px 40px;margin:9px 0;line-height:1.55}
+  .content ol>li::before{content:counter(st);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));color:#0b0f16;font-weight:800;font-size:12.5px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+  .content ol ol{margin:8px 0}
+  .content ol ol>li::before{background:var(--panel2);color:var(--accent);border:1px solid var(--border2);box-shadow:none}
+
+  /* Module progress indicator */
+  .modprog{display:flex;align-items:center;gap:10px;margin:8px 0 16px;flex-wrap:wrap}
+  .modprog .lbl{font-size:11.5px;color:var(--muted);white-space:nowrap}
+  .modprog .lbl b{color:var(--text)}
+  .modprog .bar{flex:1;min-width:120px;height:6px;background:var(--panel2);border-radius:6px;overflow:hidden;border:1px solid var(--border)}
+  .modprog .fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:6px}
+
+  /* Learning roadmap (plan) */
+  .road-phase{border:1px solid var(--border);border-left:4px solid var(--accent);background:rgba(255,255,255,.02);border-radius:10px;padding:14px 16px;margin:14px 0}
+  .road-phase .ph-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .road-phase .ph-n{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--purple));color:#0b0f16;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .road-phase .ph-t{font-size:16px;font-weight:700;color:#fff}
+  .road-phase .ph-goal{font-size:13px;color:var(--muted);margin:2px 0 8px}
+
   /* code blocks */
   pre{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;overflow-x:auto;margin:14px 0;position:relative}
   pre code{font-family:'Cascadia Code',Consolas,Monaco,monospace;font-size:13px;line-height:1.6;color:#c9d1d9;white-space:pre}
@@ -297,6 +318,7 @@ N({ id:'home', parent:null, title:'Inicio · Cómo usar este Atlas', icon:'🏠'
   <h3>Las dos categorías del Atlas</h3>
   <p>El conocimiento está dividido en dos grandes bloques que cubren el flujo completo de un proyecto de BI: <b>primero preparas los datos</b> (Power Query) y <b>luego los modelas y mides</b> (Power BI / DAX).</p>
   <div class="home-grid">
+    <div class="home-card" data-go="plan"><div class="ic">🧭</div><div class="t">Plan de Aprendizaje</div><div class="d">¿No sabes por dónde empezar? Sigue la ruta de 10 etapas, del tema más básico al más avanzado.</div></div>
     <div class="home-card" data-go="powerquery"><div class="ic">🔌</div><div class="t">Power Query / M</div><div class="d">Limpieza y transformación de datos paso a paso: encabezados, tipos, unpivot/pivot, combinar consultas, lenguaje M. El "antes" de todo modelo.</div></div>
     <div class="home-card" data-go="powerbi"><div class="ic">📊</div><div class="t">Power BI / DAX</div><div class="d">Modelado, motor DAX, CALCULATE, catálogo de funciones, simuladores corporativos, performance y casos de negocio. El "después": medir y analizar.</div></div>
     <div class="home-card" data-go="dashboards"><div class="ic">📈</div><div class="t">Visualización y Dashboards</div><div class="d">Diseño de tableros ejecutivos: principios, qué visual usar, anatomía de un dashboard financiero y buenas prácticas. El "para qué": comunicar y decidir.</div></div>
@@ -342,6 +364,120 @@ N({ id:'home', parent:null, title:'Inicio · Cómo usar este Atlas', icon:'🏠'
   </ul>`)}
 
   ${analogy('El motor DAX como una cocina', `<p>A lo largo del Atlas usaremos una analogía recurrente: el modelo de datos es la <b>despensa</b> (tablas de hechos = ingredientes, dimensiones = etiquetas/categorías), una medida es una <b>receta</b>, el <b>contexto de filtro</b> es la "comanda" que dice qué porción cocinar, y <b>CALCULATE</b> es el chef que reescribe la comanda antes de cocinar. Volveremos a esta cocina muchas veces.</p>`)}
+  `
+});
+
+/* ===================== PLAN DE APRENDIZAJE ===================== */
+N({ id:'plan', parent:null, title:'Plan de Aprendizaje (ruta del más básico al más avanzado)', icon:'🧭', wide:true,
+  importancia:'★★★★★', dificultad:'🟢 Empieza por aquí', uso:'Tu hoja de ruta',
+  subtitle:'Un mapa didáctico, en orden, para aprender todo el Atlas paso a paso: de preparar los datos a medir, visualizar y orquestar con IA. Cada etapa enlaza directo a sus temas; síguelas de arriba a abajo.',
+  related:['home','powerquery','powerbi'],
+  html: ()=> `
+  ${why('Por qué seguir un orden', `<p>El Atlas se puede explorar libremente, pero para <b>aprender</b> conviene un camino. Esta ruta va de lo más básico a lo más avanzado, respetando las dependencias: cada etapa se apoya en la anterior. Marca tu avance mentalmente y, al terminar una etapa, pasa a la siguiente. La barra "📍 … de …" arriba de cada tema te dice en qué punto del módulo estás.</p>`)}
+
+  ${diagram(`
+  PREPARAR LOS DATOS  →  PENSAR EN DAX  →  EL CORAZÓN  →  HERRAMIENTAS  →  APLICAR  →  COMUNICAR  →  IA
+   (Power Query)        (el motor)        (CALCULATE)    (catálogo)      (simul./    (dashboards)  (agentes)
+                                                                         casos)`)}
+
+  <h3>Ruta recomendada (10 etapas)</h3>
+
+  <div class="road-phase"><div class="ph-h"><span class="ph-n">1</span><span class="ph-t">Orientación</span> 🟢</div>
+  <div class="ph-goal">Entender cómo se usa el Atlas y qué vas a aprender.</div>
+  <ol>
+    <li><span class="pill" data-go="home">Inicio · Cómo usar este Atlas</span></li>
+    <li><span class="pill" data-go="prioridades">Mapa de Prioridades DAX</span> — qué funciones importan primero (solo ojéalo; volverás).</li>
+  </ol></div>
+
+  <div class="road-phase"><div class="ph-h"><span class="ph-n">2</span><span class="ph-t">Preparar los datos · Power Query básico</span> 🟢</div>
+  <div class="ph-goal">Limpiar y dar forma a los datos. Es el "antes" de todo modelo.</div>
+  <ol>
+    <li><span class="pill" data-go="pq-intro">Qué es y cómo abrirlo</span></li>
+    <li><span class="pill" data-go="pq-pasos">Pasos aplicados</span> (la receta que se ejecuta sola)</li>
+    <li><span class="pill" data-go="pq-encabezados">Encabezados y renombrar</span></li>
+    <li><span class="pill" data-go="pq-filas-columnas">Quitar filas y columnas</span></li>
+    <li><span class="pill" data-go="pq-tipos">Cambiar el tipo de datos</span> ⚠️ clave</li>
+    <li><span class="pill" data-go="pq-reemplazar">Reemplazar valores</span></li>
+  </ol></div>
+
+  <div class="road-phase"><div class="ph-h"><span class="ph-n">3</span><span class="ph-t">Power Query intermedio</span> 🟡</div>
+  <div class="ph-goal">Las transformaciones que más usarás en Finanzas.</div>
+  <ol>
+    <li><span class="pill" data-go="pq-pivot">Unpivot / Pivot</span> — meses en columnas → filas</li>
+    <li><span class="pill" data-go="pq-combinar">Combinar consultas</span> (Merge y Append)</li>
+    <li><span class="pill" data-go="pq-perfiles">Perfiles de datos</span></li>
+    <li><span class="pill" data-go="pq-m">Lenguaje M</span> y <span class="pill" data-go="pq-prioridades">Mapa de prioridades M</span></li>
+    <li><span class="pill" data-go="pq-casos-fin">Casos financieros</span> (aging, mayor contable)</li>
+  </ol></div>
+
+  <div class="road-phase"><div class="ph-h"><span class="ph-n">4</span><span class="ph-t">Pensar en DAX · el motor</span> 🟡→🔴</div>
+  <div class="ph-goal">El modelo mental imprescindible. Sin esto, DAX parece magia.</div>
+  <ol>
+    <li><span class="pill" data-go="modelado">Modelado dimensional</span> (star schema, calendario)</li>
+    <li><span class="pill" data-go="ctx-fila">Contexto de fila</span></li>
+    <li><span class="pill" data-go="ctx-filtro">Contexto de filtro</span></li>
+    <li><span class="pill" data-go="transicion">Transición de contexto</span> ⭐</li>
+    <li><span class="pill" data-go="relaciones">Relaciones y propagación</span></li>
+    <li><span class="pill" data-go="evaluacion">Flujo de evaluación</span> (junta todo)</li>
+  </ol></div>
+
+  <div class="road-phase"><div class="ph-h"><span class="ph-n">5</span><span class="ph-t">El corazón · CALCULATE</span> 🔴⭐</div>
+  <div class="ph-goal">La función más importante. El objetivo central de aprendizaje.</div>
+  <ol>
+    <li><span class="pill" data-go="calculate">CALCULATE</span> — qué agrega/reemplaza/conserva</li>
+    <li><span class="pill" data-go="calc-niveles">CALCULATE en 9 niveles</span></li>
+    <li><span class="pill" data-go="calc-leer">Leer, depurar y anticipar medidas</span></li>
+  </ol></div>
+
+  <div class="road-phase"><div class="ph-h"><span class="ph-n">6</span><span class="ph-t">Herramientas · catálogo de funciones</span> 🟡</div>
+  <div class="ph-goal">Aprende las familias por prioridad; consúltalas cuando las necesites.</div>
+  <ol>
+    <li><span class="pill" data-go="fn-agregacion">Agregación</span> y <span class="pill" data-go="fn-variables">Variables</span></li>
+    <li><span class="pill" data-go="fn-filtros">Filtros</span> (ALL, FILTER, KEEPFILTERS…) ⭐</li>
+    <li><span class="pill" data-go="fn-iteradores">Iteradores</span> y <span class="pill" data-go="fn-logica">Lógica</span></li>
+    <li><span class="pill" data-go="fn-errores">Errores</span> y <span class="pill" data-go="fn-tablas">Tablas</span></li>
+    <li><span class="pill" data-go="fn-tiempo">Inteligencia del tiempo</span> y <span class="pill" data-go="fn-ranking">Ranking</span></li>
+  </ol></div>
+
+  <div class="road-phase"><div class="ph-h"><span class="ph-n">7</span><span class="ph-t">Aplicar · simuladores</span> 🔴⭐</div>
+  <div class="ph-goal">Convertir informes en herramientas de decisión (slicers, What-If).</div>
+  <ol>
+    <li><span class="pill" data-go="sim-guia">Guía paso a paso desde cero</span> (empieza aquí)</li>
+    <li><span class="pill" data-go="simuladores">Escenarios 1 a 9</span> en orden</li>
+    <li><span class="pill" data-go="sim-envivo">Edición en vivo con muchos clientes</span></li>
+  </ol></div>
+
+  <div class="road-phase"><div class="ph-h"><span class="ph-n">8</span><span class="ph-t">Rendimiento y casos de negocio</span> 🔴</div>
+  <div class="ph-goal">Que sea rápido y que resuelva problemas reales.</div>
+  <ol>
+    <li><span class="pill" data-go="performance">Performance y optimización</span></li>
+    <li><span class="pill" data-go="casos">Casos reales de negocio</span> (P&L, tesorería, RRHH, ratios…)</li>
+  </ol></div>
+
+  <div class="road-phase"><div class="ph-h"><span class="ph-n">9</span><span class="ph-t">Comunicar · dashboards</span> 🟡→🔴</div>
+  <div class="ph-goal">Que un ejecutivo lo entienda en segundos.</div>
+  <ol>
+    <li><span class="pill" data-go="dash-principios">Principios de diseño</span></li>
+    <li><span class="pill" data-go="dash-visuales">Qué visual usar</span></li>
+    <li><span class="pill" data-go="dash-ejecutivo">Anatomía de un dashboard ejecutivo</span></li>
+    <li><span class="pill" data-go="dash-buenas">Buenas prácticas y performance visual</span></li>
+  </ol></div>
+
+  <div class="road-phase"><div class="ph-h"><span class="ph-n">10</span><span class="ph-t">Potenciar · agentes e IA</span> 🟡→🔴</div>
+  <div class="ph-goal">Acelerar tu trabajo con IA, manteniendo tu criterio.</div>
+  <ol>
+    <li><span class="pill" data-go="ag-que-son">Qué son: chat vs agente vs subagentes</span></li>
+    <li><span class="pill" data-go="ag-usar">Cómo empezar a usarlos</span></li>
+    <li><span class="pill" data-go="ag-casos">6 tutoriales de casos reales</span></li>
+    <li><span class="pill" data-go="ag-powerbi">Conectarlos a Power BI</span> y <span class="pill" data-go="ag-buenas">gobernanza</span></li>
+  </ol></div>
+
+  ${best('Cómo usar este plan', `<ul>
+    <li><b>Sigue el orden</b> la primera vez; cada etapa prepara la siguiente.</li>
+    <li>Usa la barra <b>"📍 … de …"</b> de cada tema para saber cuánto te queda en ese módulo.</li>
+    <li>El <span class="pill" data-go="glosario">Glosario Financiero</span> es tu apoyo transversal en cualquier etapa.</li>
+    <li><b>Ritmo sugerido:</b> etapas 1-3 (semana 1-2), 4-6 (semana 3-5), 7-8 (semana 6-7), 9-10 (semana 8). Ajusta a tu tiempo.</li>
+  </ul>`)}
   `
 });
 
@@ -4541,6 +4677,10 @@ function node(o){ NODES.push(o); return o; }
   function renderContent(n){
     let h='';
     h+='<h2 class="title">'+(n.icon? n.icon+' ':'')+n.title+'</h2>';
+    if(n.parent && byId[n.parent]){
+      const sibs=childrenOf[n.parent]||[]; const i=sibs.indexOf(n)+1, t=sibs.length;
+      if(t>1) h+='<div class="modprog"><span class="lbl">📍 <b>'+byId[n.parent].title+'</b> · '+i+' de '+t+'</span><div class="bar"><div class="fill" style="width:'+Math.round(i/t*100)+'%"></div></div></div>';
+    }
     if(n.subtitle) h+='<p class="lead">'+n.subtitle+'</p>';
     h+=metaChips(n);
     h+=relBlocks(n);

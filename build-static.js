@@ -70,10 +70,17 @@ const activeRule = NODES.map(n=>'body:has(#'+n.id+':target) a[data-nav="'+n.id+'
   + '{background:#1d3a5f;color:#fff !important;border-left-color:var(--accent) !important;font-weight:600}';
 
 // --- 5. Render all sections ---
+function modProg(n){
+  if(!n.parent || !byId[n.parent]) return '';
+  const sibs=childrenOf[n.parent]||[]; const i=sibs.indexOf(n)+1, t=sibs.length;
+  if(t<=1) return '';
+  return '<div class="modprog"><span class="lbl">📍 <b>'+byId[n.parent].title+'</b> · '+i+' de '+t+'</span><div class="bar"><div class="fill" style="width:'+Math.round(i/t*100)+'%"></div></div></div>';
+}
 function section(n){
   const html = typeof n.html==='function'? n.html() : (n.html||'');
   return '<section class="content node-sec" id="'+n.id+'">'
     + '<h2 class="title">'+(n.icon?n.icon+' ':'')+n.title+'</h2>'
+    + modProg(n)
     + (n.subtitle?'<p class="lead">'+n.subtitle+'</p>':'')
     + metaChips(n) + relBlocks(n) + html + childrenIndex(n)
     + '<a class="backtop" href="#top">↑ Inicio</a>'
