@@ -56,7 +56,7 @@ function navHtml(){
     if(!kids.length){
       h+='<a class="navlink cat-leaf" data-nav="'+top.id+'" href="#'+top.id+'">'+(top.icon?top.icon+' ':'')+top.title+'</a>';
     } else {
-      h+='<details class="cat" open><summary class="cat-sum">'+(top.icon?top.icon+' ':'')+top.title+'</summary>';
+      h+='<details class="cat"><summary class="cat-sum">'+(top.icon?top.icon+' ':'')+top.title+'</summary>';
       h+='<div class="cat-body">';
       h+='<a class="navlink cat-self d0" data-nav="'+top.id+'" href="#'+top.id+'">▸ Abrir «'+top.title+'»</a>';
       const out=[]; navFlat(top.id,1,out); h+=out.join('');
@@ -81,7 +81,7 @@ function section(n){
 }
 let sections=''; NODES.forEach(n=>{ sections+=section(n); });
 
-// --- 6. Extra CSS for static mode (layout + sidebar) ---
+// --- 6. Extra CSS for static mode (layout + left drawer) ---
 const extra = `
 /* ---- Static (no-JS) overrides ---- */
 .lvl-b{display:block !important}
@@ -92,34 +92,36 @@ a.pill,a.home-card,a.np{text-decoration:none}
 a.home-card{display:block}
 
 /* App bar */
-.appbar{background:linear-gradient(135deg,#16314f,#1a0f24);padding:12px 22px;border-bottom:1px solid var(--border)}
+.appbar{background:linear-gradient(135deg,#16314f,#1a0f24);padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px}
 .appbar h1{margin:0;font-size:16px;color:#fff}
 .appbar .s{font-size:11px;color:var(--muted);margin-top:2px}
+.hamburger{display:none}
 
-/* Two-column layout: persistent left sidebar + content */
+/* Two-column layout: persistent LEFT sidebar + content */
 .layout{display:flex;align-items:flex-start}
-.side{width:320px;min-width:320px;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg2);border-right:1px solid var(--border);padding:10px 6px 60px}
+.side{width:320px;min-width:320px;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg2);border-right:1px solid var(--border);padding:12px 8px 60px}
 .side::-webkit-scrollbar{width:9px}.side::-webkit-scrollbar-thumb{background:#222c3a;border-radius:8px}
-.side-head{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--faint);padding:6px 10px 8px}
+.side-close{display:none}
+.side-head{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--faint);padding:4px 10px 10px}
+.nav-overlay{display:none}
 .docs{flex:1;min-width:0}
 section.content{max-width:900px;margin:0 auto;padding:24px 30px 44px;border-top:1px solid var(--border)}
 section.content:first-of-type{border-top:none}
 [id]{scroll-margin-top:14px}
 
 /* Sidebar nav */
-.side-toggle{display:none}
 .nav{font-size:12.5px}
-details.cat{margin:2px 0;border-radius:8px}
-summary.cat-sum{list-style:none;cursor:pointer;padding:8px 10px;font-weight:700;color:#fff;font-size:13.5px;border-radius:8px;display:flex;align-items:center;gap:6px}
+details.cat{margin:1px 0;border-radius:8px}
+summary.cat-sum{list-style:none;cursor:pointer;padding:11px 10px;font-weight:700;color:#fff;font-size:13.5px;display:flex;align-items:center;gap:8px;border-radius:8px}
 summary.cat-sum::-webkit-details-marker{display:none}
-summary.cat-sum::before{content:"▾";color:var(--accent);font-size:11px;display:inline-block;width:12px;transition:transform .15s}
-details.cat:not([open])>summary.cat-sum::before{transform:rotate(-90deg)}
+summary.cat-sum::before{content:"▸";color:var(--accent);font-size:12px;display:inline-block;width:12px;transition:transform .15s}
+details.cat[open]>summary.cat-sum::before{transform:rotate(90deg)}
 summary.cat-sum:hover{background:var(--panel)}
-.cat-body{margin:2px 0 8px;border-left:1px solid var(--border);margin-left:12px;padding-left:2px}
-a.navlink{display:block;color:var(--muted);text-decoration:none;padding:4px 8px;border-left:2px solid transparent;border-radius:0 6px 6px 0;line-height:1.35}
+.cat-body{margin:0 0 10px 14px;border-left:1px solid var(--border);padding-left:2px}
+a.navlink{display:block;color:var(--muted);text-decoration:none;padding:6px 8px;border-left:2px solid transparent;border-radius:0 6px 6px 0;line-height:1.3}
 a.navlink:hover{background:var(--panel);color:var(--text)}
-a.navlink.cat-leaf{font-weight:700;color:#fff;font-size:13.5px;padding:8px 10px}
-a.cat-self{color:var(--accent);font-size:11px;opacity:.85}
+a.navlink.cat-leaf{font-weight:700;color:#fff;font-size:13.5px;padding:11px 10px}
+a.cat-self{color:var(--accent);font-size:11px;opacity:.8}
 a.navlink.d0{color:var(--text);font-weight:600;padding-left:12px}
 a.navlink.d1{padding-left:24px}
 a.navlink.d2{padding-left:38px;font-size:12px}
@@ -135,19 +137,19 @@ ${activeRule}
 @keyframes flash{0%{background:rgba(79,156,249,.16)}100%{background:transparent}}
 .backtop{display:inline-block;margin-top:26px;font-size:12.5px;color:var(--faint);border:1px solid var(--border2);padding:4px 10px;border-radius:7px;text-decoration:none}
 
-/* Mobile: sidebar becomes a collapsible sticky panel on top */
+/* ===== MOBILE: left drawer (off-canvas, pure CSS via :target) ===== */
 @media(max-width:880px){
-  .layout{flex-direction:column}
-  .side{position:sticky;top:0;width:100%;min-width:0;height:auto;max-height:60vh;border-right:none;border-bottom:2px solid var(--border2);z-index:45;padding:6px 8px 12px}
-  .side-toggle{display:block;cursor:pointer;list-style:none;font-weight:700;color:#fff;background:var(--panel2);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:13.5px}
-  .side-toggle::-webkit-details-marker{display:none}
-  .side-toggle::before{content:"📂 ";}
-  details.side-wrap:not([open]) .side-toggle::after{content:" ▸"}
-  details.side-wrap[open] .side-toggle::after{content:" ▾"}
-  section.content{padding:20px 16px 36px}
-}
-@media(min-width:881px){
-  .side-wrap>.side-toggle{display:none}
+  .appbar{position:sticky;top:0;z-index:90}
+  .hamburger{display:inline-flex;align-items:center;gap:6px;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.20);padding:8px 12px;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;flex:0 0 auto}
+  .layout{display:block}
+  .docs{width:100%}
+  .side{position:fixed;top:0;left:0;height:100vh;width:86%;max-width:330px;min-width:0;border-right:1px solid var(--border2);transform:translateX(-100%);transition:transform .25s ease;z-index:100;padding-top:46px}
+  #menu:target{transform:translateX(0);box-shadow:0 0 50px rgba(0,0,0,.7)}
+  .side-close{display:flex;align-items:center;justify-content:center;position:absolute;top:8px;right:10px;width:34px;height:34px;border-radius:8px;background:var(--panel2);border:1px solid var(--border2);color:#fff;font-size:16px;text-decoration:none}
+  .nav-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99}
+  #menu:target ~ .nav-overlay{display:block}
+  section.content{padding:18px 16px 34px}
+  [id]{scroll-margin-top:62px}
 }
 `;
 
@@ -191,16 +193,18 @@ const pre = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
 <title>Atlas DAX — Versión navegable (sin JavaScript)</title>
 <style>${css}${extra}</style></head>
 <body id="top">
-<div class="appbar"><h1>Σ Atlas DAX</h1><div class="s">Power BI · DAX · Power Query · Dashboards · Agentes · versión navegable sin JavaScript</div></div>
+<div class="appbar">
+  <a href="#menu" class="hamburger">☰ Categorías</a>
+  <div><h1>Σ Atlas DAX</h1><div class="s">Power BI · DAX · Power Query · Dashboards · Agentes</div></div>
+</div>
 <div class="layout">
-  <aside class="side">
-    <details class="side-wrap" open>
-      <summary class="side-toggle">Categorías</summary>
-      <div class="side-head">Categorías · toca una para desplegar sus subtemas</div>
-      ${navHtml()}
-    </details>
+  <aside id="menu" class="side">
+    <a href="#contenido" class="side-close" title="Cerrar">✕</a>
+    <div class="side-head">Categorías · toca una para desplegar sus subtemas</div>
+    ${navHtml()}
   </aside>
-  <main class="docs">
+  <a href="#contenido" class="nav-overlay" aria-hidden="true"></a>
+  <main id="contenido" class="docs">
     ${sections}
   </main>
 </div>
