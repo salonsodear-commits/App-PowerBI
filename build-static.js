@@ -40,21 +40,34 @@ function childrenIndex(n){
   return h+'</div>';
 }
 
-// --- 4. Build TOC (grouped by top-level) ---
-function tocBranch(id){
-  const kids=childrenOf[id]||[];
-  if(!kids.length) return '';
-  let h='<ol>';
-  kids.forEach(k=>{ h+='<li><a href="#'+k.id+'">'+(k.icon?k.icon+' ':'')+k.title+'</a>'+tocBranch(k.id)+'</li>'; });
-  return h+'</ol>';
-}
-function tocHtml(){
-  let h='<details class="toc"><summary>📑 Índice de navegación — toca para abrir / cerrar</summary><ol>';
-  (childrenOf['__root__']||[]).forEach(top=>{
-    h+='<li><a href="#'+top.id+'">'+(top.icon||'')+' '+top.title+'</a>'+tocBranch(top.id)+'</li>';
+// --- 4. Build the PERSISTENT LEFT SIDEBAR (categories + subtopics, no JS) ---
+// Flattened indented descendant links inside each top-level category.
+function navFlat(id, depth, out){
+  (childrenOf[id]||[]).forEach(k=>{
+    const d = Math.min(depth,4);
+    out.push('<a class="navlink d'+d+'" data-nav="'+k.id+'" href="#'+k.id+'">'+(k.icon?k.icon+' ':'')+k.title+'</a>');
+    navFlat(k.id, depth+1, out);
   });
-  return h+'</ol></details>';
 }
+function navHtml(){
+  let h='<nav class="nav">';
+  (childrenOf['__root__']||[]).forEach(top=>{
+    const kids=childrenOf[top.id]||[];
+    if(!kids.length){
+      h+='<a class="navlink cat-leaf" data-nav="'+top.id+'" href="#'+top.id+'">'+(top.icon?top.icon+' ':'')+top.title+'</a>';
+    } else {
+      h+='<details class="cat" open><summary class="cat-sum">'+(top.icon?top.icon+' ':'')+top.title+'</summary>';
+      h+='<div class="cat-body">';
+      h+='<a class="navlink cat-self d0" data-nav="'+top.id+'" href="#'+top.id+'">▸ Abrir «'+top.title+'»</a>';
+      const out=[]; navFlat(top.id,1,out); h+=out.join('');
+      h+='</div></details>';
+    }
+  });
+  return h+'</nav>';
+}
+// Active-node highlight: when a section is :target, highlight its nav link (CSS :has).
+const activeRule = NODES.map(n=>'body:has(#'+n.id+':target) a[data-nav="'+n.id+'"]').join(',\n')
+  + '{background:#1d3a5f;color:#fff !important;border-left-color:var(--accent) !important;font-weight:600}';
 
 // --- 5. Render all sections ---
 function section(n){
@@ -63,12 +76,12 @@ function section(n){
     + '<h2 class="title">'+(n.icon?n.icon+' ':'')+n.title+'</h2>'
     + (n.subtitle?'<p class="lead">'+n.subtitle+'</p>':'')
     + metaChips(n) + relBlocks(n) + html + childrenIndex(n)
-    + '<a class="backtop" href="#top">↑ Volver al índice</a>'
+    + '<a class="backtop" href="#top">↑ Inicio</a>'
     + '</section>';
 }
 let sections=''; NODES.forEach(n=>{ sections+=section(n); });
 
-// --- 6. Extra CSS for static mode ---
+// --- 6. Extra CSS for static mode (layout + sidebar) ---
 const extra = `
 /* ---- Static (no-JS) overrides ---- */
 .lvl-b{display:block !important}
@@ -77,24 +90,65 @@ const extra = `
 .lvl{margin:10px 0}
 a.pill,a.home-card,a.np{text-decoration:none}
 a.home-card{display:block}
-section.content{max-width:980px;margin:0 auto;padding:30px 26px 46px;border-top:1px solid var(--border)}
+
+/* App bar */
+.appbar{background:linear-gradient(135deg,#16314f,#1a0f24);padding:12px 22px;border-bottom:1px solid var(--border)}
+.appbar h1{margin:0;font-size:16px;color:#fff}
+.appbar .s{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* Two-column layout: persistent left sidebar + content */
+.layout{display:flex;align-items:flex-start}
+.side{width:320px;min-width:320px;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg2);border-right:1px solid var(--border);padding:10px 6px 60px}
+.side::-webkit-scrollbar{width:9px}.side::-webkit-scrollbar-thumb{background:#222c3a;border-radius:8px}
+.side-head{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--faint);padding:6px 10px 8px}
+.docs{flex:1;min-width:0}
+section.content{max-width:900px;margin:0 auto;padding:24px 30px 44px;border-top:1px solid var(--border)}
 section.content:first-of-type{border-top:none}
-[id]{scroll-margin-top:60px}
-.toc-wrap{position:sticky;top:0;z-index:40;background:rgba(13,17,23,.97);border-bottom:1px solid var(--border)}
-details.toc{max-width:980px;margin:0 auto;padding:8px 22px}
-details.toc summary{cursor:pointer;font-weight:600;color:#fff;padding:8px 0;font-size:14px;list-style:none}
-details.toc summary::-webkit-details-marker{display:none}
-details.toc summary:before{content:"☰ ";color:var(--accent)}
-details.toc ol{margin:6px 0;padding-left:20px;font-size:13.5px}
-details.toc li{margin:3px 0}
-details.toc a{color:var(--accent)}
-details.toc ol ol a{color:var(--muted)}
-.backtop{display:inline-block;margin-top:26px;font-size:12.5px;color:var(--faint);border:1px solid var(--border2);padding:4px 10px;border-radius:7px}
-.appbar{background:linear-gradient(135deg,#16314f,#1a0f24);padding:14px 22px;border-bottom:1px solid var(--border)}
-.appbar h1{margin:0;font-size:17px;color:#fff}
-.appbar .s{font-size:11.5px;color:var(--muted);margin-top:2px}
-:target{animation:flash 1.4s ease}
-@keyframes flash{0%{background:rgba(79,156,249,.18)}100%{background:transparent}}
+[id]{scroll-margin-top:14px}
+
+/* Sidebar nav */
+.side-toggle{display:none}
+.nav{font-size:12.5px}
+details.cat{margin:2px 0;border-radius:8px}
+summary.cat-sum{list-style:none;cursor:pointer;padding:8px 10px;font-weight:700;color:#fff;font-size:13.5px;border-radius:8px;display:flex;align-items:center;gap:6px}
+summary.cat-sum::-webkit-details-marker{display:none}
+summary.cat-sum::before{content:"▾";color:var(--accent);font-size:11px;display:inline-block;width:12px;transition:transform .15s}
+details.cat:not([open])>summary.cat-sum::before{transform:rotate(-90deg)}
+summary.cat-sum:hover{background:var(--panel)}
+.cat-body{margin:2px 0 8px;border-left:1px solid var(--border);margin-left:12px;padding-left:2px}
+a.navlink{display:block;color:var(--muted);text-decoration:none;padding:4px 8px;border-left:2px solid transparent;border-radius:0 6px 6px 0;line-height:1.35}
+a.navlink:hover{background:var(--panel);color:var(--text)}
+a.navlink.cat-leaf{font-weight:700;color:#fff;font-size:13.5px;padding:8px 10px}
+a.cat-self{color:var(--accent);font-size:11px;opacity:.85}
+a.navlink.d0{color:var(--text);font-weight:600;padding-left:12px}
+a.navlink.d1{padding-left:24px}
+a.navlink.d2{padding-left:38px;font-size:12px}
+a.navlink.d3{padding-left:52px;font-size:11.5px;color:var(--faint)}
+a.navlink.d4{padding-left:64px;font-size:11.5px;color:var(--faint)}
+
+/* Active node highlight (CSS :has — degrades gracefully if unsupported) */
+${activeRule}
+
+/* Content target flash */
+.node-sec:target>.title{color:#fff}
+.node-sec:target{animation:flash 1.6s ease}
+@keyframes flash{0%{background:rgba(79,156,249,.16)}100%{background:transparent}}
+.backtop{display:inline-block;margin-top:26px;font-size:12.5px;color:var(--faint);border:1px solid var(--border2);padding:4px 10px;border-radius:7px;text-decoration:none}
+
+/* Mobile: sidebar becomes a collapsible sticky panel on top */
+@media(max-width:880px){
+  .layout{flex-direction:column}
+  .side{position:sticky;top:0;width:100%;min-width:0;height:auto;max-height:60vh;border-right:none;border-bottom:2px solid var(--border2);z-index:45;padding:6px 8px 12px}
+  .side-toggle{display:block;cursor:pointer;list-style:none;font-weight:700;color:#fff;background:var(--panel2);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;font-size:13.5px}
+  .side-toggle::-webkit-details-marker{display:none}
+  .side-toggle::before{content:"📂 ";}
+  details.side-wrap:not([open]) .side-toggle::after{content:" ▸"}
+  details.side-wrap[open] .side-toggle::after{content:" ▾"}
+  section.content{padding:20px 16px 36px}
+}
+@media(min-width:881px){
+  .side-wrap>.side-toggle{display:none}
+}
 `;
 
 // --- 7. Assemble pre-bake HTML (with a temporary bake script) ---
@@ -137,9 +191,19 @@ const pre = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
 <title>Atlas DAX — Versión navegable (sin JavaScript)</title>
 <style>${css}${extra}</style></head>
 <body id="top">
-<div class="appbar"><h1>Σ Atlas DAX</h1><div class="s">Artefacto de aprendizaje · Power BI · DAX · Analítica Corporativa · versión navegable sin JavaScript</div></div>
-<div class="toc-wrap">${tocHtml()}</div>
-${sections}
+<div class="appbar"><h1>Σ Atlas DAX</h1><div class="s">Power BI · DAX · Power Query · Dashboards · Agentes · versión navegable sin JavaScript</div></div>
+<div class="layout">
+  <aside class="side">
+    <details class="side-wrap" open>
+      <summary class="side-toggle">Categorías</summary>
+      <div class="side-head">Categorías · toca una para desplegar sus subtemas</div>
+      ${navHtml()}
+    </details>
+  </aside>
+  <main class="docs">
+    ${sections}
+  </main>
+</div>
 ${bakeScript}
 </body></html>`;
 
@@ -153,5 +217,5 @@ console.log('Generado atlas-dax-movil.html');
 console.log('  tamaño:', (final.length/1024).toFixed(0)+' KB');
 console.log('  <script> restantes (debe ser 0):', (final.match(/<script/g)||[]).length);
 console.log('  secciones:', (final.match(/class="content node-sec"/g)||[]).length);
+console.log('  enlaces de nav (data-nav):', (final.match(/data-nav=/g)||[]).length);
 console.log('  code.dax resaltados (tok-fn):', (final.match(/tok-fn/g)||[]).length>0);
-console.log('  enlaces internos (#):', (final.match(/href="#/g)||[]).length);
